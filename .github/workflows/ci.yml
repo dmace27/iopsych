@@ -1,0 +1,66 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    name: Format, lint, type-check, and test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      DATABASE_URL: postgresql+psycopg://iopsych:iopsych@localhost:5432/iopsych
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: iopsych
+          POSTGRES_PASSWORD: iopsych
+          POSTGRES_USER: iopsych
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U iopsych -d iopsych" --health-interval 2s
+          --health-timeout 5s --health-retries 15
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version-file: .python-version
+          cache: pip
+          cache-dependency-path: apps/api/requirements*.txt
+
+      - name: Install JavaScript dependencies
+        run: npm ci
+
+      - name: Install API dependencies
+        run: npm run api:install
+
+      - name: Migrate, seed, and verify PostgreSQL
+        run: |
+          npm run db:migrate
+          npm run db:seed
+          npm run db:verify
+
+      - name: Run all checks
+        run: npm run check
+
+      - name: Build workspace packages
+        run: npm run build

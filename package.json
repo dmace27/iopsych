@@ -1,0 +1,55 @@
+{
+  "name": "iopsych",
+  "version": "0.1.0",
+  "private": true,
+  "description": "IOPsych MVP monorepo",
+  "engines": {
+    "node": ">=22",
+    "npm": ">=10"
+  },
+  "workspaces": [
+    "apps/web",
+    "packages/shared"
+  ],
+  "overrides": {
+    "@eslint/js": "9.39.5",
+    "eslint": "9.39.5"
+  },
+  "scripts": {
+    "setup": "bash scripts/bootstrap.sh",
+    "api:install": "bash scripts/install-api.sh",
+    "dev": "concurrently --kill-others-on-fail --names web,api --prefix-colors cyan,magenta \"npm:dev:web\" \"npm:dev:api\"",
+    "dev:web": "npm run dev --workspace @iopsych/web",
+    "dev:api": "bash scripts/run-api.sh",
+    "db:up": "docker compose up -d --wait postgres",
+    "db:down": "docker compose down",
+    "db:migrate": "cd apps/api && ../../.venv/bin/alembic upgrade head",
+    "db:seed": "cd apps/api && ../../.venv/bin/python -m app.database.seed",
+    "db:verify": "cd apps/api && ../../.venv/bin/python -m app.database.verify",
+    "format": "run-s format:js format:api",
+    "format:js": "prettier --write README.md compose.yaml package.json prettier.config.mjs tsconfig.base.json '.github/**/*.{yml,yaml}' 'apps/**/*.{css,js,json,md,mjs,ts,tsx}' 'packages/**/*.{css,js,json,md,mjs,ts,tsx}'",
+    "format:api": ".venv/bin/python -m ruff format --config apps/api/pyproject.toml apps/api packages/shared/python",
+    "format:check": "run-s format:check:js format:check:api",
+    "format:check:js": "prettier --check README.md compose.yaml package.json prettier.config.mjs tsconfig.base.json '.github/**/*.{yml,yaml}' 'apps/**/*.{css,js,json,md,mjs,ts,tsx}' 'packages/**/*.{css,js,json,md,mjs,ts,tsx}'",
+    "format:check:api": ".venv/bin/python -m ruff format --check --config apps/api/pyproject.toml apps/api packages/shared/python",
+    "lint": "run-s lint:js lint:api",
+    "lint:js": "npm run lint --workspaces --if-present",
+    "lint:api": ".venv/bin/python -m ruff check --config apps/api/pyproject.toml apps/api packages/shared/python",
+    "typecheck": "run-s typecheck:js typecheck:api",
+    "typecheck:js": "npm run typecheck --workspaces --if-present",
+    "typecheck:api": ".venv/bin/python -m mypy --config-file apps/api/pyproject.toml apps/api/app apps/api/tests packages/shared/python/iopsych_contracts packages/shared/python/tests",
+    "test": "run-s test:js test:contracts:python test:api",
+    "test:js": "npm run test --workspaces --if-present",
+    "test:contracts:python": ".venv/bin/python -m pytest -c packages/shared/python/pyproject.toml packages/shared/python/tests",
+    "test:api": ".venv/bin/python -m pytest apps/api",
+    "build": "run-s build:shared build:web",
+    "build:shared": "npm run build --workspace @iopsych/shared",
+    "build:web": "npm run build --workspace @iopsych/web",
+    "check": "run-s format:check lint typecheck test"
+  },
+  "devDependencies": {
+    "concurrently": "10.0.5",
+    "npm-run-all2": "9.0.3",
+    "prettier": "3.9.9"
+  }
+}

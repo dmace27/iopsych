@@ -1,0 +1,10 @@
+{
+  "contract": "api_problem",
+  "expected_valid": false,
+  "payload": {
+    "type": "https://iopsych.local/problems/invalid-request",
+    "title": "Invalid request",
+    "status": 200,
+    "code": "invalid_request"
+  }
+}

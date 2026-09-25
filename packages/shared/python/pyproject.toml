@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "iopsych-shared-contracts"
+version = "0.1.0"
+description = "Pydantic domain contracts for the IOPsych MVP"
+readme = "README.md"
+requires-python = ">=3.12,<3.15"
+dependencies = ["pydantic>=2.9,<3"]
+
+[tool.pytest.ini_options]
+addopts = "--strict-config --strict-markers --cov=iopsych_contracts --cov-report=term-missing --cov-fail-under=100"
+pythonpath = ["."]
+testpaths = ["tests"]
+
+[tool.coverage.run]
+branch = true
+
+[tool.coverage.report]
+show_missing = true

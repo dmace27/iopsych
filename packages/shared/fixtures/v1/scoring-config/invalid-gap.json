@@ -1,0 +1,35 @@
+{
+  "contract": "scoring_config",
+  "expected_valid": false,
+  "payload": {
+    "version": "1.0.0",
+    "choice_weights": {
+      "most_like": 1,
+      "least_like": -1
+    },
+    "rating_thresholds": [
+      { "rating": 1, "minimum_raw_score": -4, "maximum_raw_score": -3 },
+      { "rating": 2, "minimum_raw_score": -2, "maximum_raw_score": -1 },
+      { "rating": 3, "minimum_raw_score": 1, "maximum_raw_score": 1 },
+      { "rating": 4, "minimum_raw_score": 2, "maximum_raw_score": 2 },
+      { "rating": 5, "minimum_raw_score": 3, "maximum_raw_score": 4 }
+    ],
+    "candidate_confidence": {
+      "high": {
+        "level": "high",
+        "minimum_skipped_items": 0,
+        "maximum_skipped_items": 0
+      },
+      "medium": {
+        "level": "medium",
+        "minimum_skipped_items": 1,
+        "maximum_skipped_items": 1
+      },
+      "low": {
+        "level": "low",
+        "minimum_skipped_items": 2,
+        "maximum_skipped_items": null
+      }
+    }
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "contract": "api_problem",
+  "expected_valid": true,
+  "payload": {
+    "type": "https://iopsych.local/problems/invalid-request",
+    "title": "Invalid request",
+    "status": 422,
+    "detail": "One or more request fields are invalid.",
+    "instance": "/v1/roles",
+    "code": "invalid_request",
+    "errors": [
+      {
+        "pointer": "/title",
+        "code": "required",
+        "message": "Title is required."
+      }
+    ]
+  }
+}

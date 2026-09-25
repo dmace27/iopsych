@@ -1,0 +1,145 @@
+{
+  "$id": "https://iopsych.local/contracts/v1/role-extraction.schema.json",
+  "title": "Role extraction",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "constructs": {
+      "minItems": 6,
+      "maxItems": 6,
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string",
+            "enum": [
+              "autonomy",
+              "structure",
+              "ambiguity",
+              "collaboration",
+              "mastery",
+              "pace"
+            ]
+          },
+          "rating": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 5
+          },
+          "confidence": {
+            "type": "string",
+            "enum": ["low", "medium", "high"]
+          },
+          "rationale": {
+            "type": "string",
+            "minLength": 1
+          },
+          "evidence": {
+            "minItems": 1,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        },
+        "required": ["key", "rating", "confidence", "rationale", "evidence"],
+        "additionalProperties": false
+      },
+      "allOf": [
+        {
+          "contains": {
+            "type": "object",
+            "properties": {
+              "key": {
+                "const": "autonomy"
+              }
+            },
+            "required": ["key"]
+          },
+          "minContains": 1,
+          "maxContains": 1
+        },
+        {
+          "contains": {
+            "type": "object",
+            "properties": {
+              "key": {
+                "const": "structure"
+              }
+            },
+            "required": ["key"]
+          },
+          "minContains": 1,
+          "maxContains": 1
+        },
+        {
+          "contains": {
+            "type": "object",
+            "properties": {
+              "key": {
+                "const": "ambiguity"
+              }
+            },
+            "required": ["key"]
+          },
+          "minContains": 1,
+          "maxContains": 1
+        },
+        {
+          "contains": {
+            "type": "object",
+            "properties": {
+              "key": {
+                "const": "collaboration"
+              }
+            },
+            "required": ["key"]
+          },
+          "minContains": 1,
+          "maxContains": 1
+        },
+        {
+          "contains": {
+            "type": "object",
+            "properties": {
+              "key": {
+                "const": "mastery"
+              }
+            },
+            "required": ["key"]
+          },
+          "minContains": 1,
+          "maxContains": 1
+        },
+        {
+          "contains": {
+            "type": "object",
+            "properties": {
+              "key": {
+                "const": "pace"
+              }
+            },
+            "required": ["key"]
+          },
+          "minContains": 1,
+          "maxContains": 1
+        }
+      ]
+    },
+    "assumptions": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "needs_human_review": {
+      "type": "boolean",
+      "const": true
+    }
+  },
+  "required": ["constructs", "assumptions", "needs_human_review"],
+  "additionalProperties": false
+}

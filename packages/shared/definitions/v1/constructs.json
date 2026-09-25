@@ -1,0 +1,47 @@
+{
+  "contract_version": "1.0.0",
+  "constructs": [
+    {
+      "key": "autonomy",
+      "label": "Autonomy",
+      "role_prompt": "How independently the work must be organized",
+      "candidate_prompt": "How strongly the candidate prefers self-direction",
+      "comparison_target": "role_rating"
+    },
+    {
+      "key": "structure",
+      "label": "Structure",
+      "role_prompt": "How defined goals, routines, and requirements are",
+      "candidate_prompt": "How strongly the candidate prefers predictable direction",
+      "comparison_target": "inverse_role_rating"
+    },
+    {
+      "key": "ambiguity",
+      "label": "Ambiguity tolerance",
+      "role_prompt": "How often priorities or requirements are unclear or changing",
+      "candidate_prompt": "How comfortable the candidate is acting amid uncertainty",
+      "comparison_target": "role_rating"
+    },
+    {
+      "key": "collaboration",
+      "label": "Collaboration",
+      "role_prompt": "How much coordination, pairing, and stakeholder work the role needs",
+      "candidate_prompt": "How much the candidate prefers collaborative work",
+      "comparison_target": "role_rating"
+    },
+    {
+      "key": "mastery",
+      "label": "Technical mastery",
+      "role_prompt": "How much deep learning and complex problem solving the role offers",
+      "candidate_prompt": "How energizing the candidate finds skill development and hard problems",
+      "comparison_target": "role_rating"
+    },
+    {
+      "key": "pace",
+      "label": "Pace/context switching",
+      "role_prompt": "How often work requires urgency or shifting between priorities",
+      "candidate_prompt": "How comfortable the candidate is with variety and shifting priorities",
+      "comparison_target": "role_rating"
+    }
+  ]
+}

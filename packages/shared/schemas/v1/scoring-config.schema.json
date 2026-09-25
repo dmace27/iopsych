@@ -1,0 +1,136 @@
+{
+  "$id": "https://iopsych.local/contracts/v1/scoring-config.schema.json",
+  "title": "Assessment scoring configuration",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+    "choice_weights": {
+      "type": "object",
+      "properties": {
+        "most_like": {
+          "type": "number",
+          "const": 1
+        },
+        "least_like": {
+          "type": "number",
+          "const": -1
+        }
+      },
+      "required": ["most_like", "least_like"],
+      "additionalProperties": false
+    },
+    "rating_thresholds": {
+      "minItems": 5,
+      "maxItems": 5,
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "rating": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 5
+          },
+          "minimum_raw_score": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "maximum_raw_score": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          }
+        },
+        "required": ["rating", "minimum_raw_score", "maximum_raw_score"],
+        "additionalProperties": false
+      }
+    },
+    "candidate_confidence": {
+      "type": "object",
+      "properties": {
+        "high": {
+          "type": "object",
+          "properties": {
+            "level": {
+              "type": "string",
+              "const": "high"
+            },
+            "minimum_skipped_items": {
+              "type": "number",
+              "const": 0
+            },
+            "maximum_skipped_items": {
+              "type": "number",
+              "const": 0
+            }
+          },
+          "required": [
+            "level",
+            "minimum_skipped_items",
+            "maximum_skipped_items"
+          ],
+          "additionalProperties": false
+        },
+        "medium": {
+          "type": "object",
+          "properties": {
+            "level": {
+              "type": "string",
+              "const": "medium"
+            },
+            "minimum_skipped_items": {
+              "type": "number",
+              "const": 1
+            },
+            "maximum_skipped_items": {
+              "type": "number",
+              "const": 1
+            }
+          },
+          "required": [
+            "level",
+            "minimum_skipped_items",
+            "maximum_skipped_items"
+          ],
+          "additionalProperties": false
+        },
+        "low": {
+          "type": "object",
+          "properties": {
+            "level": {
+              "type": "string",
+              "const": "low"
+            },
+            "minimum_skipped_items": {
+              "type": "number",
+              "const": 2
+            },
+            "maximum_skipped_items": {
+              "type": "null"
+            }
+          },
+          "required": [
+            "level",
+            "minimum_skipped_items",
+            "maximum_skipped_items"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": ["high", "medium", "low"],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "version",
+    "choice_weights",
+    "rating_thresholds",
+    "candidate_confidence"
+  ],
+  "additionalProperties": false
+}

@@ -1,0 +1,26 @@
+# JavaScript dependencies and build output
+node_modules/
+.next/
+coverage/
+dist/
+*.tsbuildinfo
+
+# Python environments, caches, and coverage output
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Local configuration and editor files
+.env
+.env.*
+!.env.example
+!.env.*.example
+.DS_Store
+.idea/
+.vscode/

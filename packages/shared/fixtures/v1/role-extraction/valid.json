@@ -1,0 +1,61 @@
+{
+  "contract": "role_extraction",
+  "expected_valid": true,
+  "context": {
+    "job_description": "Organize your own delivery plan for assigned projects. Goals and next steps are defined in weekly planning. Priorities can change when pilot feedback arrives. Pair with teammates and coordinate with internal stakeholders. Solve technically difficult problems and learn unfamiliar tools. Switch between support questions and planned work when needed."
+  },
+  "payload": {
+    "constructs": [
+      {
+        "key": "autonomy",
+        "rating": 4,
+        "confidence": "high",
+        "rationale": "The role includes independent delivery planning.",
+        "evidence": ["Organize your own delivery plan for assigned projects."]
+      },
+      {
+        "key": "structure",
+        "rating": 4,
+        "confidence": "high",
+        "rationale": "Weekly planning defines goals and next steps.",
+        "evidence": ["Goals and next steps are defined in weekly planning."]
+      },
+      {
+        "key": "ambiguity",
+        "rating": 3,
+        "confidence": "medium",
+        "rationale": "Pilot feedback can change priorities.",
+        "evidence": ["Priorities can change when pilot feedback arrives."]
+      },
+      {
+        "key": "collaboration",
+        "rating": 4,
+        "confidence": "high",
+        "rationale": "The role requires pairing and stakeholder coordination.",
+        "evidence": [
+          "Pair with teammates and coordinate with internal stakeholders."
+        ]
+      },
+      {
+        "key": "mastery",
+        "rating": 4,
+        "confidence": "high",
+        "rationale": "The work includes difficult problems and learning.",
+        "evidence": [
+          "Solve technically difficult problems and learn unfamiliar tools."
+        ]
+      },
+      {
+        "key": "pace",
+        "rating": 3,
+        "confidence": "medium",
+        "rationale": "The role sometimes switches between planned and support work.",
+        "evidence": [
+          "Switch between support questions and planned work when needed."
+        ]
+      }
+    ],
+    "assumptions": ["The description may not cover every team routine."],
+    "needs_human_review": true
+  }
+}

@@ -1,0 +1,19 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: iopsych
+      POSTGRES_PASSWORD: iopsych
+      POSTGRES_USER: iopsych
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U iopsych -d iopsych"]
+      interval: 2s
+      timeout: 5s
+      retries: 15
+    ports:
+      - "5432:5432"
+    volumes:
+      - iopsych-postgres:/var/lib/postgresql/data
+
+volumes:
+  iopsych-postgres:

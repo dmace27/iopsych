@@ -1,0 +1,11 @@
+.next
+.venv
+coverage
+dist
+htmlcov
+node_modules
+package-lock.json
+
+# Next.js manages these agent guidance files and rewrites their generated blocks.
+apps/web/AGENTS.md
+apps/web/CLAUDE.md

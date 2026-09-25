@@ -1,0 +1,43 @@
+{
+  "$id": "https://iopsych.local/contracts/v1/construct-definition.schema.json",
+  "title": "Construct definition",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "key": {
+      "type": "string",
+      "enum": [
+        "autonomy",
+        "structure",
+        "ambiguity",
+        "collaboration",
+        "mastery",
+        "pace"
+      ]
+    },
+    "label": {
+      "type": "string",
+      "minLength": 1
+    },
+    "role_prompt": {
+      "type": "string",
+      "minLength": 1
+    },
+    "candidate_prompt": {
+      "type": "string",
+      "minLength": 1
+    },
+    "comparison_target": {
+      "type": "string",
+      "enum": ["role_rating", "inverse_role_rating"]
+    }
+  },
+  "required": [
+    "key",
+    "label",
+    "role_prompt",
+    "candidate_prompt",
+    "comparison_target"
+  ],
+  "additionalProperties": false
+}

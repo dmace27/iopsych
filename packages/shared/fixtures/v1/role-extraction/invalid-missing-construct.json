@@ -1,0 +1,20 @@
+{
+  "contract": "role_extraction",
+  "expected_valid": false,
+  "context": {
+    "job_description": "Organize your own delivery plan for assigned projects."
+  },
+  "payload": {
+    "constructs": [
+      {
+        "key": "autonomy",
+        "rating": 4,
+        "confidence": "high",
+        "rationale": "The role includes independent delivery planning.",
+        "evidence": ["Organize your own delivery plan for assigned projects."]
+      }
+    ],
+    "assumptions": [],
+    "needs_human_review": true
+  }
+}
