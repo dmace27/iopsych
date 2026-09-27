@@ -13,6 +13,7 @@ export default defineConfig({
       // own, so focused components and shared presentation logic are included.
       include: [
         "app/api/**/*.ts",
+        "app/candidate/**/*assessment.tsx",
         "app/roles/**/*workspace.tsx",
         "app/sign-in/sign-in-form.tsx",
         "app/ui/**/*.tsx",
