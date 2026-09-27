@@ -4,21 +4,12 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "type": "object",
   "properties": {
-    "version": {
-      "type": "string",
-      "pattern": "^\\d+\\.\\d+\\.\\d+$"
-    },
+    "version": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$" },
     "choice_weights": {
       "type": "object",
       "properties": {
-        "most_like": {
-          "type": "number",
-          "const": 1
-        },
-        "least_like": {
-          "type": "number",
-          "const": -1
-        }
+        "most_like": { "type": "number", "const": 1 },
+        "least_like": { "type": "number", "const": -1 }
       },
       "required": ["most_like", "least_like"],
       "additionalProperties": false
@@ -30,11 +21,7 @@
       "items": {
         "type": "object",
         "properties": {
-          "rating": {
-            "type": "integer",
-            "minimum": 1,
-            "maximum": 5
-          },
+          "rating": { "type": "integer", "minimum": 1, "maximum": 5 },
           "minimum_raw_score": {
             "type": "integer",
             "minimum": -9007199254740991,
@@ -56,18 +43,9 @@
         "high": {
           "type": "object",
           "properties": {
-            "level": {
-              "type": "string",
-              "const": "high"
-            },
-            "minimum_skipped_items": {
-              "type": "number",
-              "const": 0
-            },
-            "maximum_skipped_items": {
-              "type": "number",
-              "const": 0
-            }
+            "level": { "type": "string", "const": "high" },
+            "minimum_skipped_items": { "type": "number", "const": 0 },
+            "maximum_skipped_items": { "type": "number", "const": 0 }
           },
           "required": [
             "level",
@@ -79,18 +57,9 @@
         "medium": {
           "type": "object",
           "properties": {
-            "level": {
-              "type": "string",
-              "const": "medium"
-            },
-            "minimum_skipped_items": {
-              "type": "number",
-              "const": 1
-            },
-            "maximum_skipped_items": {
-              "type": "number",
-              "const": 1
-            }
+            "level": { "type": "string", "const": "medium" },
+            "minimum_skipped_items": { "type": "number", "const": 1 },
+            "maximum_skipped_items": { "type": "number", "const": 1 }
           },
           "required": [
             "level",
@@ -102,17 +71,9 @@
         "low": {
           "type": "object",
           "properties": {
-            "level": {
-              "type": "string",
-              "const": "low"
-            },
-            "minimum_skipped_items": {
-              "type": "number",
-              "const": 2
-            },
-            "maximum_skipped_items": {
-              "type": "null"
-            }
+            "level": { "type": "string", "const": "low" },
+            "minimum_skipped_items": { "type": "number", "const": 2 },
+            "maximum_skipped_items": { "type": "null" }
           },
           "required": [
             "level",

@@ -88,6 +88,51 @@ def resource_validation_failed(*, code: str, detail: str) -> AccessProblemError:
     )
 
 
+def resource_unavailable(*, code: str, detail: str) -> AccessProblemError:
+    """Return a non-disclosing gone response for an ended bearer lifecycle."""
+
+    return AccessProblemError(
+        status=410,
+        code=code,
+        title="Resource unavailable",
+        detail=detail,
+    )
+
+
+def service_unavailable(*, code: str, detail: str) -> AccessProblemError:
+    """Fail closed when a required security or delivery dependency is absent."""
+
+    return AccessProblemError(
+        status=503,
+        code=code,
+        title="Service unavailable",
+        detail=detail,
+    )
+
+
+def upstream_delivery_failed() -> AccessProblemError:
+    """Hide transactional-email provider details from API clients."""
+
+    return AccessProblemError(
+        status=502,
+        code="invitation_delivery_failed",
+        title="Invitation delivery failed",
+        detail="The invitation could not be delivered. No active invitation was created.",
+    )
+
+
+def rate_limit_exceeded(*, retry_after_seconds: int) -> AccessProblemError:
+    """Return a standard throttling response with a bounded retry hint."""
+
+    return AccessProblemError(
+        status=429,
+        code="rate_limit_exceeded",
+        title="Too many requests",
+        detail="Too many invitation requests were made. Try again later.",
+        headers={"Retry-After": str(retry_after_seconds)},
+    )
+
+
 async def access_problem_handler(request: Request, exc: Exception) -> JSONResponse:
     """Render authorization failures using the shared RFC 9457 contract."""
 

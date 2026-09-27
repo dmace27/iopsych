@@ -12,7 +12,9 @@ from app.database import seed, verify
 API_ROOT = Path(__file__).resolve().parents[1]
 EXPECTED_TABLES = {
     "alembic_version",
+    "assessment_invites",
     "audit_events",
+    "candidate_consents",
     "organizations",
     "role_construct_ratings",
     "role_profiles",

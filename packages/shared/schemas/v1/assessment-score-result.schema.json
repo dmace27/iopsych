@@ -1,0 +1,79 @@
+{
+  "$id": "https://iopsych.local/contracts/v1/assessment-score-result.schema.json",
+  "title": "Assessment score result",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "assessment_definition_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100,
+      "pattern": "^[a-z0-9]+(?:[._-][a-z0-9]+)*$"
+    },
+    "assessment_definition_version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+    "scoring_version": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$" },
+    "construct_scores": {
+      "minItems": 6,
+      "maxItems": 6,
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "construct_key": {
+            "type": "string",
+            "enum": [
+              "autonomy",
+              "structure",
+              "ambiguity",
+              "collaboration",
+              "mastery",
+              "pace"
+            ]
+          },
+          "raw_score": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "rating": { "type": "integer", "minimum": 1, "maximum": 5 },
+          "confidence": { "type": "string", "enum": ["low", "medium", "high"] },
+          "assigned_item_count": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "answered_item_count": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "skipped_item_count": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          }
+        },
+        "required": [
+          "construct_key",
+          "raw_score",
+          "rating",
+          "confidence",
+          "assigned_item_count",
+          "answered_item_count",
+          "skipped_item_count"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": [
+    "assessment_definition_id",
+    "assessment_definition_version",
+    "scoring_version",
+    "construct_scores"
+  ],
+  "additionalProperties": false
+}

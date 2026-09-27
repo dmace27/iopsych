@@ -1,0 +1,192 @@
+{
+  "id": "work-preferences-pilot",
+  "version": "1.0.0",
+  "status": "draft",
+  "title": "Pilot work-preference assessment",
+  "blocks": [
+    {
+      "id": "block-1",
+      "position": 1,
+      "items": [
+        {
+          "id": "b1-autonomy",
+          "construct_key": "autonomy",
+          "statement": "I prefer to decide how I organize my workday."
+        },
+        {
+          "id": "b1-mastery",
+          "construct_key": "mastery",
+          "statement": "I enjoy breaking down a technically difficult problem."
+        },
+        {
+          "id": "b1-structure",
+          "construct_key": "structure",
+          "statement": "I do my best work when goals and next steps are explicit."
+        },
+        {
+          "id": "b1-collaboration",
+          "construct_key": "collaboration",
+          "statement": "I gain energy from developing ideas with teammates."
+        }
+      ]
+    },
+    {
+      "id": "block-2",
+      "position": 2,
+      "items": [
+        {
+          "id": "b2-ambiguity",
+          "construct_key": "ambiguity",
+          "statement": "I can move work forward before every detail is known."
+        },
+        {
+          "id": "b2-pace",
+          "construct_key": "pace",
+          "statement": "I am comfortable shifting between priorities during the day."
+        },
+        {
+          "id": "b2-autonomy",
+          "construct_key": "autonomy",
+          "statement": "I like choosing my own approach to a clear outcome."
+        },
+        {
+          "id": "b2-mastery",
+          "construct_key": "mastery",
+          "statement": "I am energized by learning a skill in depth."
+        }
+      ]
+    },
+    {
+      "id": "block-3",
+      "position": 3,
+      "items": [
+        {
+          "id": "b3-structure",
+          "construct_key": "structure",
+          "statement": "I prefer work with dependable routines and expectations."
+        },
+        {
+          "id": "b3-collaboration",
+          "construct_key": "collaboration",
+          "statement": "I like checking ideas with others as work develops."
+        },
+        {
+          "id": "b3-ambiguity",
+          "construct_key": "ambiguity",
+          "statement": "I am comfortable testing a direction when requirements may change."
+        },
+        {
+          "id": "b3-pace",
+          "construct_key": "pace",
+          "statement": "I enjoy days that include several different kinds of work."
+        }
+      ]
+    },
+    {
+      "id": "block-4",
+      "position": 4,
+      "items": [
+        {
+          "id": "b4-autonomy",
+          "construct_key": "autonomy",
+          "statement": "I work well when trusted to make day-to-day decisions."
+        },
+        {
+          "id": "b4-collaboration",
+          "construct_key": "collaboration",
+          "statement": "I prefer solving problems through active discussion with others."
+        },
+        {
+          "id": "b4-ambiguity",
+          "construct_key": "ambiguity",
+          "statement": "I can choose a useful next step when the path is unclear."
+        },
+        {
+          "id": "b4-mastery",
+          "construct_key": "mastery",
+          "statement": "I like spending focused time improving a difficult solution."
+        }
+      ]
+    },
+    {
+      "id": "block-5",
+      "position": 5,
+      "items": [
+        {
+          "id": "b5-structure",
+          "construct_key": "structure",
+          "statement": "I value clear processes for recurring work."
+        },
+        {
+          "id": "b5-pace",
+          "construct_key": "pace",
+          "statement": "I stay effective when urgent work changes the plan."
+        },
+        {
+          "id": "b5-autonomy",
+          "construct_key": "autonomy",
+          "statement": "I prefer room to set the sequence of my tasks."
+        },
+        {
+          "id": "b5-collaboration",
+          "construct_key": "collaboration",
+          "statement": "I enjoy coordinating my work closely with a team."
+        }
+      ]
+    },
+    {
+      "id": "block-6",
+      "position": 6,
+      "items": [
+        {
+          "id": "b6-mastery",
+          "construct_key": "mastery",
+          "statement": "I seek work that stretches my technical understanding."
+        },
+        {
+          "id": "b6-ambiguity",
+          "construct_key": "ambiguity",
+          "statement": "I can act on partial information and adjust as I learn."
+        },
+        {
+          "id": "b6-structure",
+          "construct_key": "structure",
+          "statement": "I prefer knowing the criteria for a successful result up front."
+        },
+        {
+          "id": "b6-pace",
+          "construct_key": "pace",
+          "statement": "I am comfortable maintaining momentum across changing tasks."
+        }
+      ]
+    }
+  ],
+  "scoring": {
+    "version": "1.0.0",
+    "choice_weights": { "most_like": 1, "least_like": -1 },
+    "rating_thresholds": [
+      { "rating": 1, "minimum_raw_score": -4, "maximum_raw_score": -3 },
+      { "rating": 2, "minimum_raw_score": -2, "maximum_raw_score": -1 },
+      { "rating": 3, "minimum_raw_score": 0, "maximum_raw_score": 0 },
+      { "rating": 4, "minimum_raw_score": 1, "maximum_raw_score": 2 },
+      { "rating": 5, "minimum_raw_score": 3, "maximum_raw_score": 4 }
+    ],
+    "candidate_confidence": {
+      "high": {
+        "level": "high",
+        "minimum_skipped_items": 0,
+        "maximum_skipped_items": 0
+      },
+      "medium": {
+        "level": "medium",
+        "minimum_skipped_items": 1,
+        "maximum_skipped_items": 1
+      },
+      "low": {
+        "level": "low",
+        "minimum_skipped_items": 2,
+        "maximum_skipped_items": null
+      }
+    }
+  }
+}

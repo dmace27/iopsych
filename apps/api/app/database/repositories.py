@@ -12,6 +12,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.database.models import (
+    AssessmentInvite,
     AuditEvent,
     Role,
     RoleConstructRating,
@@ -142,6 +143,23 @@ class OrganizationDataAccess:
             .where(
                 RoleConstructRating.profile_id == profile_id,
                 RoleConstructRating.construct_key == construct_key,
+                Role.organization_id == self.organization_id,
+            )
+        )
+        return self._session.scalar(statement)
+
+    def get_assessment_invite_for_role(
+        self, role_id: UUID, invite_id: UUID
+    ) -> AssessmentInvite | None:
+        """Read an invite only through matching role and tenant ownership."""
+
+        statement = (
+            select(AssessmentInvite)
+            .join(RoleProfile, RoleProfile.id == AssessmentInvite.role_profile_id)
+            .join(Role, Role.id == RoleProfile.role_id)
+            .where(
+                AssessmentInvite.id == invite_id,
+                RoleProfile.role_id == role_id,
                 Role.organization_id == self.organization_id,
             )
         )

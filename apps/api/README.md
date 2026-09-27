@@ -38,3 +38,29 @@ requests may change a subset, but still create a complete copied version.
 Evidence excerpts must occur verbatim in the role's job description, and the
 description is locked once profile versioning begins so historical evidence
 remains traceable.
+
+## Candidate invitations and consent
+
+Package 2B adds recruiter invitation creation at
+`POST /v1/roles/{role_id}/invites`, revocation below that resource, and
+token-scoped candidate landing and consent routes below
+`/v1/candidate/invites/{token}`. Invitations can target only an approved role
+profile in the authenticated organization. Candidate links expire, can be
+revoked immediately, and are rate-limited independently from internal-user
+actions.
+
+Invite tokens contain 32 random bytes plus an HMAC signature. Only a SHA-256
+fingerprint is stored; neither API responses nor audit metadata include the raw
+token, and the Uvicorn access logger redacts candidate token path segments.
+Email is rendered through a narrow delivery interface that accepts no assessment
+questions, responses, or scores. The default adapter fails closed without
+logging the link, so a hosted deployment must install a transactional email
+adapter explicitly.
+
+Consent is an explicit `consent` or `decline` decision tied to a versioned
+notice. A decision is terminal for its invitation, repeated identical requests
+are idempotent, and only affirmative consent makes `can_start_assessment=true`.
+Assessment code must call the shared `require_consented_invite` gate before
+creating or updating candidate work. Configure the signing key, candidate URL,
+expiry policy, rate limits, notice version, and privacy/accommodation contacts
+using the `INVITE_*` settings shown in `.env.example`.

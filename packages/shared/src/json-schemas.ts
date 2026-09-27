@@ -1,5 +1,10 @@
 import { z } from "zod";
 
+import {
+  AssessmentDefinitionSchema,
+  AssessmentResponseSetSchema,
+  AssessmentScoreResultSchema,
+} from "./assessment";
 import { CONSTRUCT_KEYS, ConstructDefinitionSchema } from "./constructs";
 import { ApiProblemSchema } from "./problem-details";
 import { RoleExtractionSchema } from "./role-extraction";
@@ -52,6 +57,21 @@ function requireEveryConstructKey(schema: JsonSchema): JsonSchema {
 
 /** Checked-in JSON Schema documents are generated from these Zod contracts. */
 export const JSON_SCHEMA_DOCUMENTS = {
+  "assessment-definition.schema.json": createJsonSchema(
+    AssessmentDefinitionSchema,
+    "assessment-definition.schema.json",
+    "Assessment definition",
+  ),
+  "assessment-response-set.schema.json": createJsonSchema(
+    AssessmentResponseSetSchema,
+    "assessment-response-set.schema.json",
+    "Assessment response set",
+  ),
+  "assessment-score-result.schema.json": createJsonSchema(
+    AssessmentScoreResultSchema,
+    "assessment-score-result.schema.json",
+    "Assessment score result",
+  ),
   "api-problem.schema.json": createJsonSchema(
     ApiProblemSchema,
     "api-problem.schema.json",

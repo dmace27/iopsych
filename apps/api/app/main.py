@@ -20,6 +20,15 @@ from app.auth.errors import (
 from app.auth.tokens import HmacJwtVerifier, TokenVerifier
 from app.database.models import InternalUserRole
 from app.database.session import create_database_engine, create_session_factory
+from app.invitations.config import InvitationSettings
+from app.invitations.delivery import (
+    InvitationDeliveryAdapter,
+    UnconfiguredInvitationDelivery,
+)
+from app.invitations.logging import install_invite_token_log_filter
+from app.invitations.rate_limit import InMemoryRateLimiter
+from app.invitations.router import router as invitations_router
+from app.invitations.tokens import InviteTokenCodec
 from app.roles.router import router as roles_router
 
 
@@ -44,12 +53,17 @@ class CurrentUserResponse(BaseModel):
 def create_app(
     *,
     authentication_settings: AuthenticationSettings | None = None,
+    invitation_settings: InvitationSettings | None = None,
+    invitation_delivery: InvitationDeliveryAdapter | None = None,
+    invitation_rate_limiter: InMemoryRateLimiter | None = None,
     session_factory: sessionmaker[Session] | None = None,
     token_verifier: TokenVerifier | None = None,
 ) -> FastAPI:
     """Create an application with injectable auth and database boundaries."""
 
     settings = authentication_settings or AuthenticationSettings()
+    invite_settings = invitation_settings or InvitationSettings()
+    install_invite_token_log_filter()
     resolved_session_factory = session_factory or create_session_factory(create_database_engine())
     resolved_verifier = token_verifier
     if resolved_verifier is None and settings.jwt_secret is not None:
@@ -67,10 +81,19 @@ def create_app(
     )
     application.state.session_factory = resolved_session_factory
     application.state.token_verifier = resolved_verifier
+    application.state.invitation_settings = invite_settings
+    application.state.invitation_delivery = invitation_delivery or UnconfiguredInvitationDelivery()
+    application.state.invitation_rate_limiter = invitation_rate_limiter or InMemoryRateLimiter()
+    application.state.invite_token_codec = (
+        InviteTokenCodec(invite_settings.token_signing_secret.get_secret_value())
+        if invite_settings.token_signing_secret is not None
+        else None
+    )
     application.add_exception_handler(AccessProblemError, access_problem_handler)
     application.add_exception_handler(RequestValidationError, request_validation_problem_handler)
     application.add_middleware(AuditMiddleware, session_factory=resolved_session_factory)
     application.include_router(roles_router)
+    application.include_router(invitations_router)
 
     @application.get("/health", response_model=HealthResponse, tags=["operations"])
     async def health() -> HealthResponse:

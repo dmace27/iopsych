@@ -1,0 +1,84 @@
+{
+  "$id": "https://iopsych.local/contracts/v1/assessment-response-set.schema.json",
+  "title": "Assessment response set",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "assessment_definition_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100,
+      "pattern": "^[a-z0-9]+(?:[._-][a-z0-9]+)*$"
+    },
+    "assessment_definition_version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+    "responses": {
+      "maxItems": 6,
+      "type": "array",
+      "items": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "block_id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 100,
+                "pattern": "^[a-z0-9]+(?:[._-][a-z0-9]+)*$"
+              },
+              "skipped": { "type": "boolean", "const": false },
+              "most_like_item_id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 100,
+                "pattern": "^[a-z0-9]+(?:[._-][a-z0-9]+)*$"
+              },
+              "least_like_item_id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 100,
+                "pattern": "^[a-z0-9]+(?:[._-][a-z0-9]+)*$"
+              }
+            },
+            "required": [
+              "block_id",
+              "skipped",
+              "most_like_item_id",
+              "least_like_item_id"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "block_id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 100,
+                "pattern": "^[a-z0-9]+(?:[._-][a-z0-9]+)*$"
+              },
+              "skipped": { "type": "boolean", "const": true },
+              "most_like_item_id": { "type": "null" },
+              "least_like_item_id": { "type": "null" }
+            },
+            "required": [
+              "block_id",
+              "skipped",
+              "most_like_item_id",
+              "least_like_item_id"
+            ],
+            "additionalProperties": false
+          }
+        ]
+      }
+    }
+  },
+  "required": [
+    "assessment_definition_id",
+    "assessment_definition_version",
+    "responses"
+  ],
+  "additionalProperties": false
+}

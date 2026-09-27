@@ -52,6 +52,24 @@ class RoleProfileStatus(StrEnum):
     SUPERSEDED = "superseded"
 
 
+class AssessmentInviteStatus(StrEnum):
+    """Security and consent lifecycle for one candidate invitation."""
+
+    PENDING_DELIVERY = "pending_delivery"
+    ACTIVE = "active"
+    CONSENTED = "consented"
+    DECLINED = "declined"
+    REVOKED = "revoked"
+    EXPIRED = "expired"
+
+
+class ConsentDecision(StrEnum):
+    """The two explicit choices a candidate can record."""
+
+    CONSENT = "consent"
+    DECLINE = "decline"
+
+
 def enum_type(enum_class: type[StrEnum], name: str, length: int) -> Enum:
     """Create a portable string enum with a database check constraint."""
 
@@ -169,6 +187,54 @@ class RoleConstructRating(Base):
     )
     rationale: Mapped[str] = mapped_column(Text, nullable=False)
     evidence_json: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+
+
+class AssessmentInvite(UuidPrimaryKeyMixin, CreatedAtMixin, Base):
+    """An expiring bearer invitation whose raw token is never persisted."""
+
+    __tablename__ = "assessment_invites"
+    __table_args__ = (
+        Index("ix_assessment_invites_profile_id", "role_profile_id"),
+        Index("ix_assessment_invites_expires_at", "expires_at"),
+        UniqueConstraint("token_hash", name="uq_assessment_invites_token_hash"),
+    )
+
+    role_profile_id: Mapped[UUID] = mapped_column(
+        Uuid(as_uuid=True),
+        ForeignKey("role_profiles.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    email: Mapped[str] = mapped_column(String(320), nullable=False)
+    token_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    expires_at: Mapped[datetime] = mapped_column(UtcDateTime(), nullable=False)
+    status: Mapped[AssessmentInviteStatus] = mapped_column(
+        enum_type(AssessmentInviteStatus, "assessment_invite_status", 32), nullable=False
+    )
+    sent_at: Mapped[datetime | None] = mapped_column(UtcDateTime(), nullable=True)
+    revoked_at: Mapped[datetime | None] = mapped_column(UtcDateTime(), nullable=True)
+    revoked_by: Mapped[UUID | None] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("users.id", ondelete="RESTRICT"), nullable=True
+    )
+
+
+class CandidateConsent(UuidPrimaryKeyMixin, CreatedAtMixin, Base):
+    """A terminal affirmative-consent or decline record for one invite."""
+
+    __tablename__ = "candidate_consents"
+    __table_args__ = (
+        UniqueConstraint("invite_id", name="uq_candidate_consents_invite_id"),
+        Index("ix_candidate_consents_invite_id", "invite_id"),
+    )
+
+    invite_id: Mapped[UUID] = mapped_column(
+        Uuid(as_uuid=True),
+        ForeignKey("assessment_invites.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    decision: Mapped[ConsentDecision] = mapped_column(
+        enum_type(ConsentDecision, "consent_decision", 16), nullable=False
+    )
+    notice_version: Mapped[str] = mapped_column(String(80), nullable=False)
 
 
 class AuditEvent(UuidPrimaryKeyMixin, CreatedAtMixin, Base):
