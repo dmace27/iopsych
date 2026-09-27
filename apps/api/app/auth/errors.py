@@ -1,17 +1,18 @@
-"""Problem-detail exceptions shared by auth and tenant authorization."""
+"""Problem-detail exceptions shared by authorization and API domain layers."""
 
 from dataclasses import dataclass, field
 from typing import cast
 
 from fastapi import Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
-from iopsych_contracts import ApiProblem
+from iopsych_contracts import ApiFieldError, ApiProblem
 
 
 @dataclass
 class AccessProblemError(Exception):
-    """A safe, machine-readable authentication or authorization failure."""
+    """A safe, machine-readable API failure rendered by one shared handler."""
 
     status: int
     code: str
@@ -65,6 +66,28 @@ def organization_resource_not_found() -> AccessProblemError:
     )
 
 
+def resource_conflict(*, code: str, detail: str) -> AccessProblemError:
+    """Return a stable conflict for an invalid resource lifecycle transition."""
+
+    return AccessProblemError(
+        status=409,
+        code=code,
+        title="Resource conflict",
+        detail=detail,
+    )
+
+
+def resource_validation_failed(*, code: str, detail: str) -> AccessProblemError:
+    """Return a domain validation error that cannot be expressed structurally."""
+
+    return AccessProblemError(
+        status=422,
+        code=code,
+        title="Validation failed",
+        detail=detail,
+    )
+
+
 async def access_problem_handler(request: Request, exc: Exception) -> JSONResponse:
     """Render authorization failures using the shared RFC 9457 contract."""
 
@@ -82,3 +105,38 @@ async def access_problem_handler(request: Request, exc: Exception) -> JSONRespon
         headers=access_error.headers,
         media_type="application/problem+json",
     )
+
+
+async def request_validation_problem_handler(request: Request, exc: Exception) -> JSONResponse:
+    """Render FastAPI/Pydantic request errors using the shared API contract."""
+
+    validation_error = cast(RequestValidationError, exc)
+    field_errors = [
+        ApiFieldError(
+            pointer=_json_pointer(error["loc"]),
+            code=str(error["type"]).replace(".", "_"),
+            message=str(error["msg"]),
+        )
+        for error in validation_error.errors()
+    ]
+    problem = ApiProblem(
+        title="Request validation failed",
+        status=422,
+        detail="One or more request values are invalid.",
+        instance=request.url.path,
+        code="request_validation_failed",
+        errors=field_errors,
+    )
+    return JSONResponse(
+        status_code=422,
+        content=problem.model_dump(exclude_none=True),
+        media_type="application/problem+json",
+    )
+
+
+def _json_pointer(location: tuple[str | int, ...]) -> str:
+    """Convert a FastAPI error location into an escaped JSON Pointer."""
+
+    parts = location[1:] if location and location[0] in {"body", "path", "query"} else location
+    escaped = [str(part).replace("~", "~0").replace("/", "~1") for part in parts]
+    return "/" + "/".join(escaped) if escaped else ""

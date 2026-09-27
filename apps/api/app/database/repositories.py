@@ -55,7 +55,11 @@ class OrganizationDataAccess:
     def list_roles(self) -> list[Role]:
         """Return roles in the active organization."""
 
-        statement = select(Role).where(Role.organization_id == self.organization_id)
+        statement = (
+            select(Role)
+            .where(Role.organization_id == self.organization_id)
+            .order_by(Role.created_at, Role.id)
+        )
         return list(self._session.scalars(statement))
 
     def get_role(self, role_id: UUID) -> Role | None:
@@ -79,6 +83,52 @@ class OrganizationDataAccess:
             )
         )
         return self._session.scalar(statement)
+
+    def get_role_profile_for_role(
+        self,
+        role_id: UUID,
+        profile_id: UUID,
+    ) -> RoleProfile | None:
+        """Read a profile only when both route IDs and tenant ownership match."""
+
+        statement = (
+            select(RoleProfile)
+            .join(Role, Role.id == RoleProfile.role_id)
+            .where(
+                RoleProfile.id == profile_id,
+                RoleProfile.role_id == role_id,
+                Role.organization_id == self.organization_id,
+            )
+        )
+        return self._session.scalar(statement)
+
+    def list_role_profiles(self, role_id: UUID) -> list[RoleProfile]:
+        """Return a role's profile history only inside the active tenant."""
+
+        statement = (
+            select(RoleProfile)
+            .join(Role, Role.id == RoleProfile.role_id)
+            .where(
+                RoleProfile.role_id == role_id,
+                Role.organization_id == self.organization_id,
+            )
+            .order_by(RoleProfile.version)
+        )
+        return list(self._session.scalars(statement))
+
+    def list_role_construct_ratings(self, profile_id: UUID) -> list[RoleConstructRating]:
+        """Return all ratings for a tenant-owned profile."""
+
+        statement = (
+            select(RoleConstructRating)
+            .join(RoleProfile, RoleProfile.id == RoleConstructRating.profile_id)
+            .join(Role, Role.id == RoleProfile.role_id)
+            .where(
+                RoleConstructRating.profile_id == profile_id,
+                Role.organization_id == self.organization_id,
+            )
+        )
+        return list(self._session.scalars(statement))
 
     def get_role_construct_rating(
         self, profile_id: UUID, construct_key: ConstructKey

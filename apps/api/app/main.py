@@ -4,6 +4,7 @@ from typing import Annotated, Literal
 from uuid import UUID
 
 from fastapi import Depends, FastAPI
+from fastapi.exceptions import RequestValidationError
 from pydantic import BaseModel
 from sqlalchemy.orm import Session, sessionmaker
 
@@ -11,10 +12,15 @@ from app.audit import AuditMiddleware, audited
 from app.auth.config import AuthenticationSettings
 from app.auth.context import AuthorizationContext
 from app.auth.dependencies import require_roles
-from app.auth.errors import AccessProblemError, access_problem_handler
+from app.auth.errors import (
+    AccessProblemError,
+    access_problem_handler,
+    request_validation_problem_handler,
+)
 from app.auth.tokens import HmacJwtVerifier, TokenVerifier
 from app.database.models import InternalUserRole
 from app.database.session import create_database_engine, create_session_factory
+from app.roles.router import router as roles_router
 
 
 class HealthResponse(BaseModel):
@@ -62,7 +68,9 @@ def create_app(
     application.state.session_factory = resolved_session_factory
     application.state.token_verifier = resolved_verifier
     application.add_exception_handler(AccessProblemError, access_problem_handler)
+    application.add_exception_handler(RequestValidationError, request_validation_problem_handler)
     application.add_middleware(AuditMiddleware, session_factory=resolved_session_factory)
+    application.include_router(roles_router)
 
     @application.get("/health", response_model=HealthResponse, tags=["operations"])
     async def health() -> HealthResponse:

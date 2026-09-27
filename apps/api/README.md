@@ -20,3 +20,20 @@ from the current database user rather than token claims, and organization
 lookups use the verified token tenant plus the scoped repository. Sensitive
 endpoints marked with `@audited(...)` append an immutable audit event for
 successful, rejected, and failed authenticated requests.
+
+## Role and profile lifecycle
+
+Package 1B exposes organization-scoped role CRUD at `/v1/roles` and versioned
+profiles below `/v1/roles/{role_id}/profiles`. Recruiters and explicitly
+authorized administrators can create, update, and archive roles and can create
+or revise profile drafts. A profile revision creates a new immutable snapshot;
+it never overwrites prior construct ratings. Only a hiring manager can approve
+the latest draft. Approval activates the role, freezes that version for API
+editing, and supersedes the previously approved version. Archived roles remain
+readable for history but reject further writes.
+
+Every profile draft must contain all six version-one constructs. Later PATCH
+requests may change a subset, but still create a complete copied version.
+Evidence excerpts must occur verbatim in the role's job description, and the
+description is locked once profile versioning begins so historical evidence
+remains traceable.

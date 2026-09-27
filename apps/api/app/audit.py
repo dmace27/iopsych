@@ -20,6 +20,7 @@ from iopsych_contracts import ApiProblem
 P = ParamSpec("P")
 R = TypeVar("R")
 AUDIT_POLICY_ATTRIBUTE = "__iopsych_audit_policy__"
+AUDIT_ENTITY_STATE_ATTRIBUTE = "audit_entity_id"
 
 
 @dataclass(frozen=True)
@@ -75,7 +76,11 @@ class AuditMiddleware(BaseHTTPMiddleware):
         if not isinstance(policy, AuditPolicy) or not isinstance(context, AuthorizationContext):
             return response
 
-        entity_id, target_is_valid = self._resolve_entity_id(request, policy, context)
+        explicit_entity_id = getattr(request.state, AUDIT_ENTITY_STATE_ATTRIBUTE, None)
+        if isinstance(explicit_entity_id, UUID):
+            entity_id, target_is_valid = explicit_entity_id, True
+        else:
+            entity_id, target_is_valid = self._resolve_entity_id(request, policy, context)
         metadata = {
             "http_method": request.method,
             "http_status": response.status_code,
@@ -151,3 +156,9 @@ def get_audit_policy(endpoint: object) -> AuditPolicy | None:
     """Expose attached policy metadata for tests and integration tooling."""
 
     return cast(AuditPolicy | None, getattr(endpoint, AUDIT_POLICY_ATTRIBUTE, None))
+
+
+def set_audit_entity(request: Request, entity_id: UUID) -> None:
+    """Attribute a create/version action to the entity produced by its endpoint."""
+
+    setattr(request.state, AUDIT_ENTITY_STATE_ATTRIBUTE, entity_id)
