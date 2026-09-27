@@ -1,6 +1,11 @@
 import { defineConfig } from "vitest/config";
 
 export default defineConfig({
+  // Next preserves JSX for its compiler; Vitest needs an explicit transform in
+  // order to exercise semantic React output in the Node test environment.
+  oxc: {
+    jsx: { runtime: "automatic" },
+  },
   test: {
     coverage: {
       include: ["app/api/**/*.ts"],

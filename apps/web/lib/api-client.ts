@@ -1,0 +1,150 @@
+import { ApiProblemSchema, type ApiFieldError } from "@iopsych/shared";
+import type { z } from "zod";
+
+import {
+  CurrentUserSchema,
+  RoleListSchema,
+  RoleProfileListSchema,
+  RoleProfileSchema,
+  RoleSchema,
+  type CurrentUser,
+  type Role,
+  type RoleCreateInput,
+  type RoleProfile,
+  type RoleProfileInput,
+} from "./contracts";
+
+/** A safe client-facing representation of an API problem response. */
+export class ApiClientError extends Error {
+  readonly status: number;
+  readonly code: string;
+  readonly fieldErrors: ApiFieldError[];
+
+  constructor(
+    message: string,
+    options: { status: number; code: string; fieldErrors?: ApiFieldError[] },
+  ) {
+    super(message);
+    this.name = "ApiClientError";
+    this.status = options.status;
+    this.code = options.code;
+    this.fieldErrors = options.fieldErrors ?? [];
+  }
+}
+
+/** Parse a successful JSON response and normalize API/network failures. */
+async function requestJson<T>(
+  path: string,
+  schema: z.ZodType<T>,
+  init?: RequestInit,
+): Promise<T> {
+  let response: Response;
+  try {
+    response = await fetch(`/api/internal${path}`, {
+      ...init,
+      cache: "no-store",
+      headers: {
+        Accept: "application/json",
+        ...(init?.body ? { "Content-Type": "application/json" } : {}),
+        ...init?.headers,
+      },
+    });
+  } catch {
+    throw new ApiClientError("The API could not be reached. Try again.", {
+      status: 0,
+      code: "network_error",
+    });
+  }
+
+  const payload: unknown = await response.json().catch(() => null);
+  if (!response.ok) {
+    const problem = ApiProblemSchema.safeParse(payload);
+    throw new ApiClientError(
+      problem.success
+        ? (problem.data.detail ?? problem.data.title)
+        : "The request could not be completed.",
+      {
+        status: response.status,
+        code: problem.success ? problem.data.code : "unexpected_response",
+        fieldErrors: problem.success ? problem.data.errors : undefined,
+      },
+    );
+  }
+
+  const parsed = schema.safeParse(payload);
+  if (!parsed.success) {
+    throw new ApiClientError("The API returned an unexpected response.", {
+      status: response.status,
+      code: "invalid_api_response",
+    });
+  }
+  return parsed.data;
+}
+
+/** Load current user state from the authenticated FastAPI boundary. */
+export function getCurrentUser(): Promise<CurrentUser> {
+  return requestJson("/auth/me", CurrentUserSchema);
+}
+
+/** Load roles belonging to the current organization. */
+export function getRoles(): Promise<Role[]> {
+  return requestJson("/roles", RoleListSchema);
+}
+
+/** Load one organization-scoped role. */
+export function getRole(roleId: string): Promise<Role> {
+  return requestJson(`/roles/${encodeURIComponent(roleId)}`, RoleSchema);
+}
+
+/** Create a draft role through the package 1B endpoint. */
+export function createRole(input: RoleCreateInput): Promise<Role> {
+  return requestJson("/roles", RoleSchema, {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+/** Load complete profile history in ascending version order. */
+export function getRoleProfiles(roleId: string): Promise<RoleProfile[]> {
+  return requestJson(
+    `/roles/${encodeURIComponent(roleId)}/profiles`,
+    RoleProfileListSchema,
+  );
+}
+
+/** Create a complete initial or replacement draft profile. */
+export function createRoleProfile(
+  roleId: string,
+  input: RoleProfileInput,
+): Promise<RoleProfile> {
+  return requestJson(
+    `/roles/${encodeURIComponent(roleId)}/profiles`,
+    RoleProfileSchema,
+    { method: "POST", body: JSON.stringify(input) },
+  );
+}
+
+/** Save construct edits as a new immutable profile version. */
+export function reviseRoleProfile(
+  roleId: string,
+  profileId: string,
+  input: RoleProfileInput,
+): Promise<RoleProfile> {
+  return requestJson(
+    `/roles/${encodeURIComponent(roleId)}/profiles/${encodeURIComponent(profileId)}`,
+    RoleProfileSchema,
+    { method: "PATCH", body: JSON.stringify(input) },
+  );
+}
+
+/** Approve the latest draft through the hiring-manager-only endpoint. */
+export function approveRoleProfile(
+  roleId: string,
+  profileId: string,
+): Promise<RoleProfile> {
+  return requestJson(
+    `/roles/${encodeURIComponent(roleId)}/profiles/${encodeURIComponent(profileId)}/approve`,
+    RoleProfileSchema,
+    { method: "POST" },
+  );
+}

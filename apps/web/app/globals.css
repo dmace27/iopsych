@@ -10,10 +10,119 @@
     BlinkMacSystemFont,
     "Segoe UI",
     sans-serif;
+  --ink: #13202f;
+  --muted: #5d6b7b;
+  --canvas: #f4f2eb;
+  --paper: #fffefa;
+  --teal: #0e625f;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  background: var(--canvas);
 }
 
 body {
   margin: 0;
-  background: #f8fafc;
+  min-height: 100vh;
+  background:
+    radial-gradient(
+      circle at 92% 4%,
+      rgb(196 224 217 / 45%),
+      transparent 28rem
+    ),
+    var(--canvas);
+  color: var(--ink);
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button:not(:disabled),
+select:not(:disabled) {
+  cursor: pointer;
+}
+
+button:disabled,
+input:disabled,
+select:disabled,
+textarea:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
+::selection {
+  background: #bce8df;
+  color: #092f2e;
+}
+
+.skip-link {
+  position: fixed;
+  top: 0.75rem;
+  left: 0.75rem;
+  z-index: 100;
+  translate: 0 -200%;
+  border-radius: 0.5rem;
+  background: white;
+  padding: 0.75rem 1rem;
+  font-weight: 700;
   color: #0f172a;
+  box-shadow: 0 4px 20px rgb(15 23 42 / 20%);
+}
+
+.skip-link:focus {
+  translate: 0;
+  outline: 3px solid #0f766e;
+  outline-offset: 2px;
+}
+
+.field-control {
+  width: 100%;
+  border: 1px solid #cbd5e1;
+  border-radius: 0.65rem;
+  background: white;
+  padding: 0.7rem 0.8rem;
+  color: #0f172a;
+  transition:
+    border-color 120ms ease,
+    box-shadow 120ms ease;
+}
+
+.field-control:focus-visible {
+  border-color: #0f766e;
+  box-shadow: 0 0 0 3px rgb(13 148 136 / 18%);
+  outline: none;
+}
+
+.skeleton-shimmer {
+  background: linear-gradient(90deg, #e8e6df 25%, #f8f7f2 50%, #e8e6df 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s infinite;
+}
+
+@keyframes shimmer {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

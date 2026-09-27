@@ -1,9 +1,10 @@
 # IOPsych MVP
 
-Technical foundation for the consented, human-reviewed IOPsych pilot described
-in [`mvp-spec.md`](./mvp-spec.md). This package contains infrastructure only: a
-Next.js web shell, a FastAPI service, shared domain contracts, PostgreSQL data
-models, and the developer quality gates.
+Implementation of the consented, human-reviewed IOPsych pilot described in
+[`mvp-spec.md`](./mvp-spec.md). The current phase includes the internal role and
+versioned-profile workflow, its authorization boundary, shared domain contracts,
+PostgreSQL data models, and the developer quality gates. Candidate functionality
+is intentionally not present yet.
 
 ## Prerequisites
 
@@ -50,6 +51,13 @@ The web app is available at <http://localhost:3000> and the API at
 - API: <http://localhost:8000/health>
 
 Run either app independently with `npm run dev:web` or `npm run dev:api`.
+
+The internal web workspace forwards requests through a same-origin server route,
+so bearer credentials are never placed in browser JavaScript. In local
+development, set `IOPSYCH_API_BEARER_TOKEN` in `apps/web/.env.local` to a valid
+internal-user token. A hosted identity provider can instead set the HTTP-only
+`iopsych_internal_token` cookie. The web server reads the FastAPI origin from
+`API_BASE_URL`; both options are documented in `apps/web/.env.example`.
 
 ## Database commands
 
