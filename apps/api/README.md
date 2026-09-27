@@ -26,11 +26,12 @@ successful, rejected, and failed authenticated requests.
 Package 1B exposes organization-scoped role CRUD at `/v1/roles` and versioned
 profiles below `/v1/roles/{role_id}/profiles`. Recruiters and explicitly
 authorized administrators can create, update, and archive roles and can create
-or revise profile drafts. A profile revision creates a new immutable snapshot;
-it never overwrites prior construct ratings. Only a hiring manager can approve
-the latest draft. Approval activates the role, freezes that version for API
-editing, and supersedes the previously approved version. Archived roles remain
-readable for history but reject further writes.
+profile drafts. Recruiters, hiring managers, and administrators can revise the
+latest draft. A profile revision creates a new immutable snapshot; it never
+overwrites prior construct ratings. Only a hiring manager can approve the latest
+draft. Approval activates the role, freezes that version for API editing, and
+supersedes the previously approved version. Archived roles remain readable for
+history but reject further writes.
 
 Every profile draft must contain all six version-one constructs. Later PATCH
 requests may change a subset, but still create a complete copied version.

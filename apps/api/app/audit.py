@@ -67,14 +67,30 @@ class AuditMiddleware(BaseHTTPMiddleware):
         self._session_factory = session_factory
 
     async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
-        """Run the endpoint, then append its authenticated audit outcome."""
+        """Run the endpoint and append every authenticated outcome, including exceptions."""
 
-        response = await call_next(request)
+        try:
+            response = await call_next(request)
+        except Exception:
+            # Starlette's outer error middleware will render the final 500. The
+            # audit entry must be committed before the exception leaves this
+            # middleware or the failed sensitive action would disappear.
+            audit_failure = self._append_event(request, status_code=500)
+            if audit_failure is not None:
+                return audit_failure
+            raise
+
+        audit_failure = self._append_event(request, status_code=response.status_code)
+        return audit_failure or response
+
+    def _append_event(self, request: Request, *, status_code: int) -> JSONResponse | None:
+        """Persist one event when the resolved endpoint and actor are auditable."""
+
         endpoint = request.scope.get("endpoint")
         policy = getattr(endpoint, AUDIT_POLICY_ATTRIBUTE, None)
         context = getattr(request.state, "authorization_context", None)
         if not isinstance(policy, AuditPolicy) or not isinstance(context, AuthorizationContext):
-            return response
+            return None
 
         explicit_entity_id = getattr(request.state, AUDIT_ENTITY_STATE_ATTRIBUTE, None)
         if isinstance(explicit_entity_id, UUID):
@@ -83,8 +99,8 @@ class AuditMiddleware(BaseHTTPMiddleware):
             entity_id, target_is_valid = self._resolve_entity_id(request, policy, context)
         metadata = {
             "http_method": request.method,
-            "http_status": response.status_code,
-            "outcome": _outcome_for_status(response.status_code),
+            "http_status": status_code,
+            "outcome": _outcome_for_status(status_code),
         }
         if not target_is_valid:
             metadata["target_path_parameter_valid"] = False
@@ -104,7 +120,7 @@ class AuditMiddleware(BaseHTTPMiddleware):
             # Sensitive operations fail closed when their required audit trail
             # cannot be written. No database exception detail reaches clients.
             return _audit_failure_response(request)
-        return response
+        return None
 
     @staticmethod
     def _resolve_entity_id(

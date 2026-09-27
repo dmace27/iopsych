@@ -36,6 +36,16 @@ EditContext = Annotated[
     AuthorizationContext,
     Depends(require_roles(InternalUserRole.ADMIN, InternalUserRole.RECRUITER)),
 ]
+ProfileEditContext = Annotated[
+    AuthorizationContext,
+    Depends(
+        require_roles(
+            InternalUserRole.ADMIN,
+            InternalUserRole.RECRUITER,
+            InternalUserRole.HIRING_MANAGER,
+        )
+    ),
+]
 ApprovalContext = Annotated[
     AuthorizationContext,
     Depends(require_roles(InternalUserRole.HIRING_MANAGER)),
@@ -158,10 +168,10 @@ async def revise_profile(
     profile_id: UUID,
     payload: RoleProfileUpdateRequest,
     request: Request,
-    context: EditContext,
+    context: ProfileEditContext,
     session: DatabaseSession,
 ) -> RoleProfileResponse:
-    """Create a new draft version from edits to the current draft."""
+    """Create a new draft version from recruiter, manager, or administrator edits."""
 
     profile = _service(session, context).revise_profile(role_id, profile_id, payload)
     set_audit_entity(request, profile.id)

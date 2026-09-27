@@ -53,11 +53,12 @@ The web app is available at <http://localhost:3000> and the API at
 Run either app independently with `npm run dev:web` or `npm run dev:api`.
 
 The internal web workspace forwards requests through a same-origin server route,
-so bearer credentials are never placed in browser JavaScript. In local
-development, set `IOPSYCH_API_BEARER_TOKEN` in `apps/web/.env.local` to a valid
-internal-user token. A hosted identity provider can instead set the HTTP-only
-`iopsych_internal_token` cookie. The web server reads the FastAPI origin from
-`API_BASE_URL`; both options are documented in `apps/web/.env.example`.
+so bearer credentials are never persisted in browser JavaScript or shared
+through a process-wide fallback. Open <http://localhost:3000/sign-in> and submit
+a valid identity-provider token. The server validates it with FastAPI before
+creating an HTTP-only, `SameSite=Strict` session cookie. Mutating browser
+requests are also restricted to the same origin. The web server reads the
+FastAPI origin from `API_BASE_URL`, documented in `apps/web/.env.example`.
 
 ## Database commands
 

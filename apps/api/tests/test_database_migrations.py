@@ -43,6 +43,14 @@ def test_migration_upgrades_and_downgrades_empty_database(
     inspector = inspect(engine)
     assert set(inspector.get_table_names()) == EXPECTED_TABLES
     assert "auth_subject" in {column["name"] for column in inspector.get_columns("users")}
+    with engine.connect() as connection:
+        trigger_names = set(
+            connection.scalars(text("SELECT name FROM sqlite_master WHERE type = 'trigger'"))
+        )
+    assert trigger_names == {
+        "trg_audit_events_no_delete",
+        "trg_audit_events_no_update",
+    }
     engine.dispose()
 
     command.downgrade(config, "base")

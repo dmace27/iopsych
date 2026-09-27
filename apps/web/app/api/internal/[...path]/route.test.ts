@@ -10,7 +10,6 @@ vi.mock("next/headers", () => ({ cookies: headerMocks.cookies }));
 import { DELETE, GET, PATCH, POST } from "./route";
 
 const ORIGINAL_API_BASE_URL = process.env.API_BASE_URL;
-const ORIGINAL_BEARER_TOKEN = process.env.IOPSYCH_API_BEARER_TOKEN;
 
 /** Build the shape supplied to a Next catch-all route without a Next runtime. */
 function context(...path: string[]) {
@@ -23,7 +22,6 @@ describe("internal API proxy", () => {
     headerMocks.cookies.mockReset();
     headerMocks.cookies.mockResolvedValue({ get: headerMocks.cookieGet });
     delete process.env.API_BASE_URL;
-    delete process.env.IOPSYCH_API_BEARER_TOKEN;
     vi.stubGlobal("fetch", vi.fn());
   });
 
@@ -31,11 +29,22 @@ describe("internal API proxy", () => {
     vi.unstubAllGlobals();
     if (ORIGINAL_API_BASE_URL === undefined) delete process.env.API_BASE_URL;
     else process.env.API_BASE_URL = ORIGINAL_API_BASE_URL;
-    if (ORIGINAL_BEARER_TOKEN === undefined) {
-      delete process.env.IOPSYCH_API_BEARER_TOKEN;
-    } else {
-      process.env.IOPSYCH_API_BEARER_TOKEN = ORIGINAL_BEARER_TOKEN;
-    }
+  });
+
+  it("rejects a cross-site state-changing request before reading credentials", async () => {
+    const response = await POST(
+      new Request("http://web.test/api/internal/roles", {
+        headers: { Origin: "https://attacker.example" },
+        method: "POST",
+      }),
+      context("roles"),
+    );
+
+    expect(response.status).toBe(403);
+    await expect(response.json()).resolves.toMatchObject({
+      code: "cross_site_request_denied",
+    });
+    expect(headerMocks.cookies).not.toHaveBeenCalled();
   });
 
   it("rejects a request when neither session credential is configured", async () => {
@@ -116,10 +125,9 @@ describe("internal API proxy", () => {
     await expect(response.json()).resolves.toEqual({ id: "role-response" });
   });
 
-  it("uses the server-only fallback for a JSON POST body", async () => {
-    headerMocks.cookieGet.mockReturnValue({ value: "" });
+  it("forwards a same-origin cookie-authenticated JSON POST body", async () => {
+    headerMocks.cookieGet.mockReturnValue({ value: "cookie-token" });
     process.env.API_BASE_URL = "https://api.internal.example/base";
-    process.env.IOPSYCH_API_BEARER_TOKEN = "server-token";
     const upstream = new Response(JSON.stringify({ created: true }), {
       status: 201,
     });
@@ -127,7 +135,10 @@ describe("internal API proxy", () => {
     vi.mocked(fetch).mockResolvedValue(upstream);
     const request = new Request("http://web.test/api/internal/roles", {
       body: JSON.stringify({ title: "Engineer" }),
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        Origin: "http://web.test",
+      },
       method: "POST",
     });
 
@@ -137,7 +148,7 @@ describe("internal API proxy", () => {
     expect(String(url)).toBe("https://api.internal.example/v1/roles");
     expect(init?.method).toBe("POST");
     expect(new Headers(init?.headers).get("Authorization")).toBe(
-      "Bearer server-token",
+      "Bearer cookie-token",
     );
     expect(new Headers(init?.headers).get("Content-Type")).toBe(
       "application/json",
@@ -155,7 +166,10 @@ describe("internal API proxy", () => {
       new Response(JSON.stringify({ revised: true }), { status: 200 }),
     );
     const request = new Request("http://web.test/api/internal/roles/1", {
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        "Sec-Fetch-Site": "same-origin",
+      },
       method: "PATCH",
     });
 
@@ -170,7 +184,10 @@ describe("internal API proxy", () => {
     vi.mocked(fetch).mockResolvedValue(new Response(null, { status: 204 }));
 
     const response = await DELETE(
-      new Request("http://web.test/api/internal/roles/1", { method: "DELETE" }),
+      new Request("http://web.test/api/internal/roles/1", {
+        headers: { Origin: "http://web.test" },
+        method: "DELETE",
+      }),
       context("roles", "1"),
     );
 

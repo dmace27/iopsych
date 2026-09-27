@@ -1,6 +1,10 @@
 import { cookies } from "next/headers";
 
-const SESSION_COOKIE = "iopsych_internal_token";
+import {
+  INTERNAL_SESSION_COOKIE,
+  internalApiUrl,
+  isTrustedMutationRequest,
+} from "../../../../lib/internal-session";
 
 interface RouteContext {
   params: Promise<{ path: string[] }>;
@@ -27,10 +31,9 @@ function problem(
   );
 }
 
-/** Resolve an HTTP-only session token, with a server-only local fallback. */
+/** Resolve the per-browser token stored only in the HTTP-only session cookie. */
 async function getBearerToken(): Promise<string | undefined> {
-  const cookieToken = (await cookies()).get(SESSION_COOKIE)?.value;
-  return cookieToken || process.env.IOPSYCH_API_BEARER_TOKEN || undefined;
+  return (await cookies()).get(INTERNAL_SESSION_COOKIE)?.value;
 }
 
 /** Forward one same-origin request to the unchanged FastAPI `/v1` surface. */
@@ -48,6 +51,15 @@ async function proxyInternalApi(
     );
   }
 
+  if (!isTrustedMutationRequest(request)) {
+    return problem(
+      403,
+      "cross_site_request_denied",
+      "Cross-site request denied",
+      "State-changing requests must originate from this application.",
+    );
+  }
+
   const token = await getBearerToken();
   if (!token) {
     return problem(
@@ -58,10 +70,8 @@ async function proxyInternalApi(
     );
   }
 
-  const baseUrl = process.env.API_BASE_URL ?? "http://localhost:8000";
-  const upstreamUrl = new URL(
+  const upstreamUrl = internalApiUrl(
     `/v1/${path.map((segment) => encodeURIComponent(segment)).join("/")}`,
-    baseUrl,
   );
   const body = await request.arrayBuffer();
   const headers = new Headers({

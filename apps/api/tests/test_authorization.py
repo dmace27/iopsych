@@ -133,6 +133,19 @@ def auth_app(api_session_factory: sessionmaker[Session]) -> FastAPI:
         del context
         return JSONResponse(status_code=503, content={"available": False})
 
+    @application.get("/test/raised-failure")
+    @audited("test.raised_failure", "user")
+    async def raised_failure(
+        context: Annotated[
+            AuthorizationContext,
+            Depends(require_roles(InternalUserRole.RECRUITER)),
+        ],
+    ) -> None:
+        """Raise after authentication to verify exception-path auditing."""
+
+        del context
+        raise RuntimeError("synthetic endpoint failure")
+
     return application
 
 
@@ -341,6 +354,31 @@ async def test_failed_sensitive_response_is_audited(
         assert event.metadata_json["outcome"] == "failed"
 
 
+@pytest.mark.anyio
+async def test_raised_sensitive_exception_is_audited_before_propagation(
+    client: AsyncClient,
+    api_session_factory: sessionmaker[Session],
+) -> None:
+    """Unhandled failures retain an audit event even when error middleware renders the 500."""
+
+    with pytest.raises(RuntimeError, match="synthetic endpoint failure"):
+        await client.get(
+            "/test/raised-failure",
+            headers=auth_header("provider-alpha", ALPHA_ORGANIZATION_ID),
+        )
+
+    with api_session_factory() as session:
+        event = session.scalar(
+            select(AuditEvent).where(AuditEvent.event_type == "test.raised_failure")
+        )
+        assert event is not None
+        assert event.metadata_json == {
+            "http_method": "GET",
+            "http_status": 500,
+            "outcome": "failed",
+        }
+
+
 def test_organization_scope_and_policy_configuration_helpers() -> None:
     """Tenant matching and decorator validation enforce safe defaults."""
 
@@ -410,9 +448,26 @@ async def test_audit_failure_returns_problem_instead_of_sensitive_response() -> 
         )
         return {"sensitive": True}
 
+    @application.get("/failing-sensitive")
+    @audited("test.raised_failure", "user")
+    async def failing_sensitive(request: Request) -> None:
+        """Prove audit persistence still fails closed during endpoint errors."""
+
+        request.state.authorization_context = AuthorizationContext(
+            user_id=ALPHA_USER_ID,
+            organization=OrganizationScope(ALPHA_ORGANIZATION_ID),
+            email="recruiter@alpha.example.invalid",
+            name="Alpha Recruiter",
+            role=InternalUserRole.RECRUITER,
+        )
+        raise RuntimeError("the audit failure must replace this detail")
+
     async with AsyncClient(
         transport=ASGITransport(app=application), base_url="http://test"
     ) as audit_client:
         response = await audit_client.get("/sensitive")
+        raised_response = await audit_client.get("/failing-sensitive")
     assert response.status_code == 500
     assert response.json()["code"] == "audit_persistence_failed"
+    assert raised_response.status_code == 500
+    assert raised_response.json()["code"] == "audit_persistence_failed"

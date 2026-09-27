@@ -4,8 +4,8 @@ from datetime import UTC, datetime, timedelta, timezone
 from unittest.mock import MagicMock, patch
 
 import pytest
-from sqlalchemy import Engine, func, select
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy import Engine, delete, func, select, update
+from sqlalchemy.exc import DBAPIError, IntegrityError
 from sqlalchemy.orm import Session
 
 from app.database.base import UtcDateTime
@@ -89,6 +89,20 @@ def test_audit_events_are_immutable(seeded_session: Session) -> None:
     assert event is not None
     event.event_type = "tampered"
     with pytest.raises(TypeError, match="immutable"):
+        seeded_session.commit()
+    seeded_session.rollback()
+
+    with pytest.raises(DBAPIError, match="audit events are immutable"):
+        seeded_session.execute(
+            update(AuditEvent)
+            .where(AuditEvent.id == ALPHA_AUDIT_EVENT_ID)
+            .values(event_type="bulk-tampered")
+        )
+        seeded_session.commit()
+    seeded_session.rollback()
+
+    with pytest.raises(DBAPIError, match="audit events are immutable"):
+        seeded_session.execute(delete(AuditEvent).where(AuditEvent.id == ALPHA_AUDIT_EVENT_ID))
         seeded_session.commit()
     seeded_session.rollback()
 

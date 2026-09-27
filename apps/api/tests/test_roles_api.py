@@ -313,7 +313,7 @@ async def test_profile_edits_create_versions_and_hiring_manager_approval_is_immu
     revised_rating["rating"] = 5
     revised = await role_client.patch(
         f"/v1/roles/{role['id']}/profiles/{first['id']}",
-        headers=recruiter_headers,
+        headers=manager_headers,
         json={"constructs": [revised_rating]},
     )
     assert revised.status_code == 200

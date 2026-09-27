@@ -26,6 +26,7 @@ import type {
 import {
   blankConstructs,
   canApproveProfiles,
+  canCreateProfiles,
   canEditProfiles,
   formatDate,
   sortProfiles,
@@ -197,7 +198,7 @@ export function RoleProfileWorkspace({ roleId }: { roleId: string }) {
   const canStartReplacement =
     selectedProfile?.status === "approved" &&
     selectedProfile.id === latest?.id &&
-    canEditProfiles(state.user.role) &&
+    canCreateProfiles(state.user.role) &&
     state.role.status !== "archived";
 
   return (
@@ -317,14 +318,14 @@ export function RoleProfileWorkspace({ roleId }: { roleId: string }) {
             ) : null}
           </div>
 
-          {!selectedProfile && !canEditProfiles(state.user.role) ? (
+          {!selectedProfile && !canCreateProfiles(state.user.role) ? (
             <EmptyState
               description="A recruiter must create the first six-construct draft before manager review can begin."
               title="Waiting for a draft"
             />
           ) : null}
 
-          {!selectedProfile && canEditProfiles(state.user.role) ? (
+          {!selectedProfile && canCreateProfiles(state.user.role) ? (
             <ProfileEditor
               initialConstructs={blankConstructs()}
               mode="create"

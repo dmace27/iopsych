@@ -5,6 +5,7 @@ import type { RoleProfile } from "./contracts";
 import {
   blankConstructs,
   canApproveProfiles,
+  canCreateProfiles,
   canEditProfiles,
   canEditRoles,
   formatDate,
@@ -35,9 +36,12 @@ describe("role workspace presentation rules", () => {
     expect(canEditRoles("recruiter")).toBe(true);
     expect(canEditRoles("admin")).toBe(true);
     expect(canEditRoles("hiring_manager")).toBe(false);
+    expect(canCreateProfiles("recruiter")).toBe(true);
+    expect(canCreateProfiles("admin")).toBe(true);
+    expect(canCreateProfiles("hiring_manager")).toBe(false);
     expect(canEditProfiles("recruiter")).toBe(true);
     expect(canEditProfiles("admin")).toBe(true);
-    expect(canEditProfiles("hiring_manager")).toBe(false);
+    expect(canEditProfiles("hiring_manager")).toBe(true);
   });
 
   it("shows approval controls only to hiring managers", () => {

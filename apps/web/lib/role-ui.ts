@@ -11,9 +11,14 @@ export function canEditRoles(role: InternalUserRole): boolean {
   return role === "recruiter" || role === "admin";
 }
 
-/** Recruiters and explicit administrators may author profile drafts. */
-export function canEditProfiles(role: InternalUserRole): boolean {
+/** Recruiters and explicit administrators may create complete profile drafts. */
+export function canCreateProfiles(role: InternalUserRole): boolean {
   return role === "recruiter" || role === "admin";
+}
+
+/** Every internal role may revise the latest draft before manager approval. */
+export function canEditProfiles(role: InternalUserRole): boolean {
+  return role === "recruiter" || role === "hiring_manager" || role === "admin";
 }
 
 /** Hiring-manager approval is intentionally exclusive. */
