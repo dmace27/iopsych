@@ -103,6 +103,7 @@ def seed_database(session: Session) -> SeedSummary:
             organization_id=ALPHA_ORGANIZATION_ID,
             email="recruiter@alpha.example.invalid",
             name="Alpha Recruiter",
+            auth_subject="synthetic-alpha-recruiter",
             role=InternalUserRole.RECRUITER,
             created_at=SEED_TIME,
         ),
@@ -111,6 +112,7 @@ def seed_database(session: Session) -> SeedSummary:
             organization_id=BEACON_ORGANIZATION_ID,
             email="manager@beacon.example.invalid",
             name="Beacon Manager",
+            auth_subject="synthetic-beacon-manager",
             role=InternalUserRole.HIRING_MANAGER,
             created_at=SEED_TIME,
         ),
@@ -197,7 +199,10 @@ def seed_database(session: Session) -> SeedSummary:
         ),
     ]
     for event in audit_events:
-        session.merge(event)
+        # Audit events are append-only. Idempotent seeding therefore checks the
+        # deterministic identifier instead of merging into an existing row.
+        if session.get(AuditEvent, event.id) is None:
+            session.add(event)
     session.flush()
     return SEED_SUMMARY
 

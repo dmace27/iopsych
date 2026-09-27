@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 
 from app.database.base import UtcDateTime
 from app.database.config import DatabaseSettings
-from app.database.models import Organization, RoleConstructRating
+from app.database.models import AuditEvent, Organization, RoleConstructRating
 from app.database.repositories import OrganizationDataAccess
 from app.database.seed import (
     ALPHA_AUDIT_EVENT_ID,
@@ -58,6 +58,8 @@ def test_organization_scoped_reads_reject_cross_tenant_ids(seeded_session: Sessi
     assert [user.id for user in alpha.list_users()] == [ALPHA_USER_ID]
     assert [user.id for user in beacon.list_users()] == [BEACON_USER_ID]
     assert alpha.get_user(ALPHA_USER_ID) is not None
+    assert alpha.get_user_by_auth_subject("synthetic-alpha-recruiter") is not None
+    assert beacon.get_user_by_auth_subject("synthetic-alpha-recruiter") is None
     assert alpha.get_user(BEACON_USER_ID) is None
     assert beacon.get_user(ALPHA_USER_ID) is None
 
@@ -78,6 +80,24 @@ def test_organization_scoped_reads_reject_cross_tenant_ids(seeded_session: Sessi
     assert [event.id for event in alpha.list_audit_events()] == [ALPHA_AUDIT_EVENT_ID]
     assert [event.id for event in beacon.list_audit_events()] == [BEACON_AUDIT_EVENT_ID]
     verify_tenant_isolation(seeded_session)
+
+
+def test_audit_events_are_immutable(seeded_session: Session) -> None:
+    """Audit rows reject ORM updates and deletes after they are appended."""
+
+    event = seeded_session.get(AuditEvent, ALPHA_AUDIT_EVENT_ID)
+    assert event is not None
+    event.event_type = "tampered"
+    with pytest.raises(TypeError, match="immutable"):
+        seeded_session.commit()
+    seeded_session.rollback()
+
+    event = seeded_session.get(AuditEvent, ALPHA_AUDIT_EVENT_ID)
+    assert event is not None
+    seeded_session.delete(event)
+    with pytest.raises(TypeError, match="immutable"):
+        seeded_session.commit()
+    seeded_session.rollback()
 
 
 def test_database_rejects_out_of_range_construct_rating(seeded_session: Session) -> None:

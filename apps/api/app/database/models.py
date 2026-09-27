@@ -18,8 +18,10 @@ from sqlalchemy import (
     Text,
     UniqueConstraint,
     Uuid,
+    event,
 )
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.engine import Connection
+from sqlalchemy.orm import Mapped, Mapper, mapped_column
 
 from app.database.base import Base, CreatedAtMixin, UtcDateTime, UuidPrimaryKeyMixin
 from iopsych_contracts import ConfidenceLevel, ConstructKey
@@ -78,6 +80,7 @@ class User(UuidPrimaryKeyMixin, CreatedAtMixin, Base):
     __tablename__ = "users"
     __table_args__ = (
         UniqueConstraint("organization_id", "email", name="uq_users_organization_email"),
+        UniqueConstraint("auth_subject", name="uq_users_auth_subject"),
         Index("ix_users_organization_id", "organization_id"),
     )
 
@@ -88,6 +91,9 @@ class User(UuidPrimaryKeyMixin, CreatedAtMixin, Base):
     )
     email: Mapped[str] = mapped_column(String(320), nullable=False)
     name: Mapped[str] = mapped_column(String(160), nullable=False)
+    # The authentication provider's stable subject is deliberately separate
+    # from email, which can change and must never be used as an identity key.
+    auth_subject: Mapped[str] = mapped_column(String(255), nullable=False)
     role: Mapped[InternalUserRole] = mapped_column(
         enum_type(InternalUserRole, "internal_user_role", 32), nullable=False
     )
@@ -185,3 +191,18 @@ class AuditEvent(UuidPrimaryKeyMixin, CreatedAtMixin, Base):
     entity_type: Mapped[str] = mapped_column(String(120), nullable=False)
     entity_id: Mapped[UUID] = mapped_column(Uuid(as_uuid=True), nullable=False)
     metadata_json: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
+
+
+@event.listens_for(AuditEvent, "before_update")
+@event.listens_for(AuditEvent, "before_delete")
+def prevent_audit_event_mutation(
+    mapper: Mapper[AuditEvent],
+    connection: Connection,
+    target: AuditEvent,
+) -> None:
+    """Reject ORM updates and deletes so audit records remain append-only."""
+
+    # The arguments are required by SQLAlchemy's mapper-event contract. They
+    # are intentionally unused because every mutation is forbidden equally.
+    del mapper, connection, target
+    raise TypeError("audit events are immutable")

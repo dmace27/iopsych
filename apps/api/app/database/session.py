@@ -6,6 +6,7 @@ from contextlib import contextmanager
 from sqlalchemy import Engine, create_engine
 from sqlalchemy.engine import make_url
 from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy.pool import StaticPool
 
 from app.database.config import DatabaseSettings
 
@@ -19,7 +20,12 @@ def create_database_engine(settings: DatabaseSettings | None = None) -> Engine:
         "echo": resolved.database_echo,
         "pool_pre_ping": True,
     }
-    if url.get_backend_name() != "sqlite":
+    if url.get_backend_name() == "sqlite" and url.database in (None, "", ":memory:"):
+        # A single connection keeps in-memory SQLite visible to FastAPI's
+        # worker threads during integration tests.
+        options["connect_args"] = {"check_same_thread": False}
+        options["poolclass"] = StaticPool
+    elif url.get_backend_name() != "sqlite":
         options["pool_size"] = resolved.database_pool_size
     return create_engine(url, **options)
 

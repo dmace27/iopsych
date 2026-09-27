@@ -43,6 +43,15 @@ class OrganizationDataAccess:
         )
         return self._session.scalar(statement)
 
+    def get_user_by_auth_subject(self, auth_subject: str) -> User | None:
+        """Resolve a provider identity only inside the active organization."""
+
+        statement = select(User).where(
+            User.auth_subject == auth_subject,
+            User.organization_id == self.organization_id,
+        )
+        return self._session.scalar(statement)
+
     def list_roles(self) -> list[Role]:
         """Return roles in the active organization."""
 
