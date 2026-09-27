@@ -14,3 +14,16 @@ result = score_assessment(definition, response_set)
 The score result retains both the assessment-definition version and the scoring
 version. Response snapshots may be partial for save/resume; scoring requires one
 answer or explicit skip for every block.
+
+The package also exposes the pure Package 3A matcher:
+
+```python
+from iopsych_contracts import match_role_profile
+
+result = match_role_profile(role_profile, assessment_score_result)
+```
+
+The result contains six independent, evidence-linked classifications and stable
+interview-question IDs. Low-confidence evidence and unapproved role profiles
+fail closed to `insufficient_evidence`. No aggregate, ranking, recommendation,
+or hire score is produced.

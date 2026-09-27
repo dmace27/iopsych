@@ -1,0 +1,362 @@
+[
+  {
+    "construct_key": "autonomy",
+    "classification": "aligned",
+    "review_status": "approved",
+    "questions": {
+      "primary": {
+        "id": "autonomy.aligned.primary.v1",
+        "text": "Tell me about a role where the level of day-to-day ownership worked well for you."
+      },
+      "follow_up": {
+        "id": "autonomy.aligned.follow-up.v1",
+        "text": "What decisions did you make independently, and when did you seek direction?"
+      }
+    }
+  },
+  {
+    "construct_key": "autonomy",
+    "classification": "worth_discussing",
+    "review_status": "approved",
+    "questions": {
+      "primary": {
+        "id": "autonomy.worth_discussing.primary.v1",
+        "text": "Tell me about a time the amount of direction you received differed from what you preferred."
+      },
+      "follow_up": {
+        "id": "autonomy.worth_discussing.follow-up.v1",
+        "text": "How did you clarify decision boundaries and stay effective?"
+      }
+    }
+  },
+  {
+    "construct_key": "autonomy",
+    "classification": "potential_friction",
+    "review_status": "approved",
+    "questions": {
+      "primary": {
+        "id": "autonomy.potential_friction.primary.v1",
+        "text": "Describe a project where you had to work with substantially more or less autonomy than usual."
+      },
+      "follow_up": {
+        "id": "autonomy.potential_friction.follow-up.v1",
+        "text": "What support or working agreement helped you deliver effectively?"
+      }
+    }
+  },
+  {
+    "construct_key": "autonomy",
+    "classification": "insufficient_evidence",
+    "review_status": "approved",
+    "questions": {
+      "primary": {
+        "id": "autonomy.insufficient_evidence.primary.v1",
+        "text": "Tell me how you prefer decisions and ownership to be divided in your day-to-day work."
+      },
+      "follow_up": {
+        "id": "autonomy.insufficient_evidence.follow-up.v1",
+        "text": "Can you share a recent example of that arrangement working well?"
+      }
+    }
+  },
+  {
+    "construct_key": "structure",
+    "classification": "aligned",
+    "review_status": "approved",
+    "questions": {
+      "primary": {
+        "id": "structure.aligned.primary.v1",
+        "text": "Tell me about a role where the level of process and clarity supported your best work."
+      },
+      "follow_up": {
+        "id": "structure.aligned.follow-up.v1",
+        "text": "Which routines or expectations were most useful?"
+      }
+    }
+  },
+  {
+    "construct_key": "structure",
+    "classification": "worth_discussing",
+    "review_status": "approved",
+    "questions": {
+      "primary": {
+        "id": "structure.worth_discussing.primary.v1",
+        "text": "Describe a time the available process or direction differed from what you preferred."
+      },
+      "follow_up": {
+        "id": "structure.worth_discussing.follow-up.v1",
+        "text": "How did you create enough clarity to move forward?"
+      }
+    }
+  },
+  {
+    "construct_key": "structure",
+    "classification": "potential_friction",
+    "review_status": "approved",
+    "questions": {
+      "primary": {
+        "id": "structure.potential_friction.primary.v1",
+        "text": "Tell me about a time you worked with much more or less structure than you normally prefer."
+      },
+      "follow_up": {
+        "id": "structure.potential_friction.follow-up.v1",
+        "text": "What support, information, or routines helped you work effectively?"
+      }
+    }
+  },
+  {
+    "construct_key": "structure",
+    "classification": "insufficient_evidence",
+    "review_status": "approved",
+    "questions": {
+      "primary": {
+        "id": "structure.insufficient_evidence.primary.v1",
+        "text": "Tell me what kinds of goals, routines, and direction help you work effectively."
+      },
+      "follow_up": {
+        "id": "structure.insufficient_evidence.follow-up.v1",
+        "text": "How do you respond when those conditions are not available?"
+      }
+    }
+  },
+  {
+    "construct_key": "ambiguity",
+    "classification": "aligned",
+    "review_status": "approved",
+    "questions": {
+      "primary": {
+        "id": "ambiguity.aligned.primary.v1",
+        "text": "Tell me about a time you worked effectively while requirements were incomplete or changing."
+      },
+      "follow_up": {
+        "id": "ambiguity.aligned.follow-up.v1",
+        "text": "How did you decide what to clarify and what to act on?"
+      }
+    }
+  },
+  {
+    "construct_key": "ambiguity",
+    "classification": "worth_discussing",
+    "review_status": "approved",
+    "questions": {
+      "primary": {
+        "id": "ambiguity.worth_discussing.primary.v1",
+        "text": "Describe a project where uncertainty affected how you planned your work."
+      },
+      "follow_up": {
+        "id": "ambiguity.worth_discussing.follow-up.v1",
+        "text": "What information or checkpoints helped you maintain progress?"
+      }
+    }
+  },
+  {
+    "construct_key": "ambiguity",
+    "classification": "potential_friction",
+    "review_status": "approved",
+    "questions": {
+      "primary": {
+        "id": "ambiguity.potential_friction.primary.v1",
+        "text": "Tell me about a time requirements were incomplete or changed quickly. How did you decide what to do next?"
+      },
+      "follow_up": {
+        "id": "ambiguity.potential_friction.follow-up.v1",
+        "text": "What support, information, or routines helped you work effectively?"
+      }
+    }
+  },
+  {
+    "construct_key": "ambiguity",
+    "classification": "insufficient_evidence",
+    "review_status": "approved",
+    "questions": {
+      "primary": {
+        "id": "ambiguity.insufficient_evidence.primary.v1",
+        "text": "Tell me how you approach work when important details are not yet known."
+      },
+      "follow_up": {
+        "id": "ambiguity.insufficient_evidence.follow-up.v1",
+        "text": "Can you share an example and the outcome?"
+      }
+    }
+  },
+  {
+    "construct_key": "collaboration",
+    "classification": "aligned",
+    "review_status": "approved",
+    "questions": {
+      "primary": {
+        "id": "collaboration.aligned.primary.v1",
+        "text": "Tell me about a team interaction pattern that helped you do strong work."
+      },
+      "follow_up": {
+        "id": "collaboration.aligned.follow-up.v1",
+        "text": "How did you contribute while preserving time for individual work?"
+      }
+    }
+  },
+  {
+    "construct_key": "collaboration",
+    "classification": "worth_discussing",
+    "review_status": "approved",
+    "questions": {
+      "primary": {
+        "id": "collaboration.worth_discussing.primary.v1",
+        "text": "Describe a time a role required more or less coordination than you expected."
+      },
+      "follow_up": {
+        "id": "collaboration.worth_discussing.follow-up.v1",
+        "text": "How did you adapt your communication and working habits?"
+      }
+    }
+  },
+  {
+    "construct_key": "collaboration",
+    "classification": "potential_friction",
+    "review_status": "approved",
+    "questions": {
+      "primary": {
+        "id": "collaboration.potential_friction.primary.v1",
+        "text": "Tell me about a project whose collaboration demands differed greatly from your preference."
+      },
+      "follow_up": {
+        "id": "collaboration.potential_friction.follow-up.v1",
+        "text": "What agreements or boundaries helped the team and your own work?"
+      }
+    }
+  },
+  {
+    "construct_key": "collaboration",
+    "classification": "insufficient_evidence",
+    "review_status": "approved",
+    "questions": {
+      "primary": {
+        "id": "collaboration.insufficient_evidence.primary.v1",
+        "text": "Tell me how you prefer to balance independent work with coordination and discussion."
+      },
+      "follow_up": {
+        "id": "collaboration.insufficient_evidence.follow-up.v1",
+        "text": "What recent example best illustrates that preference?"
+      }
+    }
+  },
+  {
+    "construct_key": "mastery",
+    "classification": "aligned",
+    "review_status": "approved",
+    "questions": {
+      "primary": {
+        "id": "mastery.aligned.primary.v1",
+        "text": "Tell me about a technically difficult problem that kept you engaged."
+      },
+      "follow_up": {
+        "id": "mastery.aligned.follow-up.v1",
+        "text": "How did you deepen your knowledge while delivering the work?"
+      }
+    }
+  },
+  {
+    "construct_key": "mastery",
+    "classification": "worth_discussing",
+    "review_status": "approved",
+    "questions": {
+      "primary": {
+        "id": "mastery.worth_discussing.primary.v1",
+        "text": "Describe a time a role offered a different level of technical challenge than you expected."
+      },
+      "follow_up": {
+        "id": "mastery.worth_discussing.follow-up.v1",
+        "text": "How did you find or create useful learning opportunities?"
+      }
+    }
+  },
+  {
+    "construct_key": "mastery",
+    "classification": "potential_friction",
+    "review_status": "approved",
+    "questions": {
+      "primary": {
+        "id": "mastery.potential_friction.primary.v1",
+        "text": "Tell me about a period when the depth of technical learning available differed greatly from what motivated you."
+      },
+      "follow_up": {
+        "id": "mastery.potential_friction.follow-up.v1",
+        "text": "What made the work sustainable or helped you remain effective?"
+      }
+    }
+  },
+  {
+    "construct_key": "mastery",
+    "classification": "insufficient_evidence",
+    "review_status": "approved",
+    "questions": {
+      "primary": {
+        "id": "mastery.insufficient_evidence.primary.v1",
+        "text": "Tell me what kinds of learning and problem-solving opportunities are most engaging for you."
+      },
+      "follow_up": {
+        "id": "mastery.insufficient_evidence.follow-up.v1",
+        "text": "Can you share a recent example?"
+      }
+    }
+  },
+  {
+    "construct_key": "pace",
+    "classification": "aligned",
+    "review_status": "approved",
+    "questions": {
+      "primary": {
+        "id": "pace.aligned.primary.v1",
+        "text": "Tell me about a work pace and mix of priorities that helped you be effective."
+      },
+      "follow_up": {
+        "id": "pace.aligned.follow-up.v1",
+        "text": "How did you protect quality while maintaining momentum?"
+      }
+    }
+  },
+  {
+    "construct_key": "pace",
+    "classification": "worth_discussing",
+    "review_status": "approved",
+    "questions": {
+      "primary": {
+        "id": "pace.worth_discussing.primary.v1",
+        "text": "Describe a time the pace or amount of context switching differed from what you expected."
+      },
+      "follow_up": {
+        "id": "pace.worth_discussing.follow-up.v1",
+        "text": "How did you organize the work and communicate tradeoffs?"
+      }
+    }
+  },
+  {
+    "construct_key": "pace",
+    "classification": "potential_friction",
+    "review_status": "approved",
+    "questions": {
+      "primary": {
+        "id": "pace.potential_friction.primary.v1",
+        "text": "Tell me about a role with substantially more or less urgency and context switching than you preferred."
+      },
+      "follow_up": {
+        "id": "pace.potential_friction.follow-up.v1",
+        "text": "What boundaries or practices helped you remain effective?"
+      }
+    }
+  },
+  {
+    "construct_key": "pace",
+    "classification": "insufficient_evidence",
+    "review_status": "approved",
+    "questions": {
+      "primary": {
+        "id": "pace.insufficient_evidence.primary.v1",
+        "text": "Tell me what pace and balance between focus and shifting priorities supports your best work."
+      },
+      "follow_up": {
+        "id": "pace.insufficient_evidence.follow-up.v1",
+        "text": "How have you handled a different pace when the role required it?"
+      }
+    }
+  }
+]

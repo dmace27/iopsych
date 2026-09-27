@@ -6,6 +6,11 @@ import {
   AssessmentScoreResultSchema,
 } from "./assessment";
 import { CONSTRUCT_KEYS, ConstructDefinitionSchema } from "./constructs";
+import {
+  InterviewQuestionLibrarySchema,
+  MatchingResultSchema,
+  MatchingRoleProfileSchema,
+} from "./matching";
 import { ApiProblemSchema } from "./problem-details";
 import { RoleExtractionSchema } from "./role-extraction";
 import { ScoringConfigSchema } from "./scoring-config";
@@ -81,6 +86,21 @@ export const JSON_SCHEMA_DOCUMENTS = {
     ConstructDefinitionSchema,
     "construct-definition.schema.json",
     "Construct definition",
+  ),
+  "interview-question-library.schema.json": createJsonSchema(
+    InterviewQuestionLibrarySchema,
+    "interview-question-library.schema.json",
+    "Approved interview-question library",
+  ),
+  "matching-result.schema.json": createJsonSchema(
+    MatchingResultSchema,
+    "matching-result.schema.json",
+    "Matching result",
+  ),
+  "matching-role-profile.schema.json": createJsonSchema(
+    MatchingRoleProfileSchema,
+    "matching-role-profile.schema.json",
+    "Matching role profile",
   ),
   "role-extraction.schema.json": requireEveryConstructKey(
     createJsonSchema(

@@ -1,0 +1,213 @@
+{
+  "$id": "https://iopsych.local/contracts/v1/matching-result.schema.json",
+  "title": "Matching result",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "algorithm_version": { "type": "string", "const": "1.0.0" },
+    "role_profile_approved": { "type": "boolean" },
+    "assessment_definition_id": { "type": "string", "minLength": 1 },
+    "assessment_definition_version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+    "scoring_version": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$" },
+    "items": {
+      "minItems": 6,
+      "maxItems": 6,
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "construct_key": {
+            "type": "string",
+            "enum": [
+              "autonomy",
+              "structure",
+              "ambiguity",
+              "collaboration",
+              "mastery",
+              "pace"
+            ]
+          },
+          "classification": {
+            "type": "string",
+            "enum": [
+              "aligned",
+              "worth_discussing",
+              "potential_friction",
+              "insufficient_evidence"
+            ]
+          },
+          "confidence": { "type": "string", "enum": ["low", "medium", "high"] },
+          "explanation": {
+            "type": "object",
+            "properties": {
+              "role": {
+                "type": "object",
+                "properties": {
+                  "rating": { "type": "integer", "minimum": 1, "maximum": 5 },
+                  "confidence": {
+                    "type": "string",
+                    "enum": ["low", "medium", "high"]
+                  },
+                  "rationale": { "type": "string", "minLength": 1 },
+                  "evidence": {
+                    "minItems": 1,
+                    "type": "array",
+                    "items": { "type": "string", "minLength": 1 }
+                  },
+                  "comparison_target": {
+                    "type": "string",
+                    "enum": ["role_rating", "inverse_role_rating"]
+                  },
+                  "comparison_rating": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 5
+                  }
+                },
+                "required": [
+                  "rating",
+                  "confidence",
+                  "rationale",
+                  "evidence",
+                  "comparison_target",
+                  "comparison_rating"
+                ],
+                "additionalProperties": false
+              },
+              "candidate_response": {
+                "type": "object",
+                "properties": {
+                  "rating": { "type": "integer", "minimum": 1, "maximum": 5 },
+                  "confidence": {
+                    "type": "string",
+                    "enum": ["low", "medium", "high"]
+                  },
+                  "raw_score": {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  },
+                  "assigned_item_count": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "answered_item_count": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "skipped_item_count": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  }
+                },
+                "required": [
+                  "rating",
+                  "confidence",
+                  "raw_score",
+                  "assigned_item_count",
+                  "answered_item_count",
+                  "skipped_item_count"
+                ],
+                "additionalProperties": false
+              },
+              "applied_rule": {
+                "type": "object",
+                "properties": {
+                  "rule": {
+                    "type": "string",
+                    "enum": [
+                      "role_profile_not_approved",
+                      "low_confidence",
+                      "difference_at_most_one",
+                      "difference_equals_two",
+                      "difference_at_least_three"
+                    ]
+                  },
+                  "absolute_difference": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 4
+                  },
+                  "description": { "type": "string", "minLength": 1 }
+                },
+                "required": ["rule", "absolute_difference", "description"],
+                "additionalProperties": false
+              },
+              "uncertainty": {
+                "anyOf": [
+                  { "type": "string", "minLength": 1 },
+                  { "type": "null" }
+                ]
+              }
+            },
+            "required": [
+              "role",
+              "candidate_response",
+              "applied_rule",
+              "uncertainty"
+            ],
+            "additionalProperties": false
+          },
+          "interview_questions": {
+            "type": "object",
+            "properties": {
+              "primary": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 160,
+                    "pattern": "^[a-z0-9]+(?:[._-][a-z0-9]+)*$"
+                  },
+                  "text": { "type": "string", "minLength": 1 }
+                },
+                "required": ["id", "text"],
+                "additionalProperties": false
+              },
+              "follow_up": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 160,
+                    "pattern": "^[a-z0-9]+(?:[._-][a-z0-9]+)*$"
+                  },
+                  "text": { "type": "string", "minLength": 1 }
+                },
+                "required": ["id", "text"],
+                "additionalProperties": false
+              }
+            },
+            "required": ["primary", "follow_up"],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "construct_key",
+          "classification",
+          "confidence",
+          "explanation",
+          "interview_questions"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": [
+    "algorithm_version",
+    "role_profile_approved",
+    "assessment_definition_id",
+    "assessment_definition_version",
+    "scoring_version",
+    "items"
+  ],
+  "additionalProperties": false
+}

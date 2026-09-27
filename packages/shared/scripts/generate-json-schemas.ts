@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 import { format } from "prettier";
 
 import { JSON_SCHEMA_DOCUMENTS } from "../src/json-schemas";
+import { APPROVED_INTERVIEW_QUESTION_LIBRARY_V1 } from "../src/matching";
 import { PILOT_ASSESSMENT_DEFINITION_V1 } from "../src/pilot-assessment";
 
 const packageRoot = path.resolve(
@@ -27,6 +28,13 @@ await mkdir(definitionDirectory, { recursive: true });
 await writeFile(
   path.join(definitionDirectory, "pilot-assessment.json"),
   await format(JSON.stringify(PILOT_ASSESSMENT_DEFINITION_V1), {
+    parser: "json",
+  }),
+  "utf8",
+);
+await writeFile(
+  path.join(definitionDirectory, "interview-questions.json"),
+  await format(JSON.stringify(APPROVED_INTERVIEW_QUESTION_LIBRARY_V1), {
     parser: "json",
   }),
   "utf8",

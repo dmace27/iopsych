@@ -1,0 +1,76 @@
+{
+  "$id": "https://iopsych.local/contracts/v1/interview-question-library.schema.json",
+  "title": "Approved interview-question library",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "minItems": 24,
+  "maxItems": 24,
+  "type": "array",
+  "items": {
+    "type": "object",
+    "properties": {
+      "construct_key": {
+        "type": "string",
+        "enum": [
+          "autonomy",
+          "structure",
+          "ambiguity",
+          "collaboration",
+          "mastery",
+          "pace"
+        ]
+      },
+      "classification": {
+        "type": "string",
+        "enum": [
+          "aligned",
+          "worth_discussing",
+          "potential_friction",
+          "insufficient_evidence"
+        ]
+      },
+      "review_status": { "type": "string", "const": "approved" },
+      "questions": {
+        "type": "object",
+        "properties": {
+          "primary": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 160,
+                "pattern": "^[a-z0-9]+(?:[._-][a-z0-9]+)*$"
+              },
+              "text": { "type": "string", "minLength": 1 }
+            },
+            "required": ["id", "text"],
+            "additionalProperties": false
+          },
+          "follow_up": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 160,
+                "pattern": "^[a-z0-9]+(?:[._-][a-z0-9]+)*$"
+              },
+              "text": { "type": "string", "minLength": 1 }
+            },
+            "required": ["id", "text"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["primary", "follow_up"],
+        "additionalProperties": false
+      }
+    },
+    "required": [
+      "construct_key",
+      "classification",
+      "review_status",
+      "questions"
+    ],
+    "additionalProperties": false
+  }
+}

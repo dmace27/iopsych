@@ -15,6 +15,8 @@ drifting from it.
 - Versioned forced-choice scoring configuration shape
 - Versioned six-block assessment definitions and save/resume response snapshots
 - Pure deterministic per-construct scoring with explicit skip confidence
+- Pure deterministic role/candidate matching with evidence explanations
+- A versioned, approved interview-question library with stable question IDs
 - Definition and scoring version stamps on every score result
 - RFC 9457-compatible API problem details
 
@@ -26,10 +28,11 @@ Assessment definition lifecycle status does not affect pure scoring, because
 responses tied to a retired version must remain reproducible.
 
 The `structure` definition records `inverse_role_rating`, following the explicit
-formula and package 3A acceptance text in `mvp-spec.md` section 7. This makes
-the exceptional comparison rule visible to later matching code. The prose
-immediately following that formula is internally inconsistent and should receive
-domain-owner review before package 3A is implemented.
+formula and package 3A acceptance text in `mvp-spec.md` section 7. The matching
+engine therefore uses `6 - role_rating` as the structure comparison target and
+includes that target in every explanation. The prose immediately following the
+formula is internally inconsistent and should still be reconciled by the domain
+owner before pilot use.
 
 ## Usage
 
@@ -51,6 +54,26 @@ import {
 const result = scoreAssessment(PILOT_ASSESSMENT_DEFINITION_V1, responseSet);
 // Persist result.assessment_definition_version and result.scoring_version.
 ```
+
+Match only against a role snapshot whose approval state is supplied explicitly:
+
+```ts
+import { matchRoleProfile } from "@iopsych/shared";
+
+const result = matchRoleProfile(roleProfile, assessmentScoreResult);
+```
+
+`matchRoleProfile` returns six independent construct items in canonical order.
+Each item contains the role evidence, candidate response summary, comparison
+target, absolute-difference rule, combined confidence, uncertainty, and one
+approved primary/follow-up question pair. Low confidence or an unapproved role
+profile yields `insufficient_evidence`. The module performs no I/O, uses no
+randomness, mutates neither input, and exposes no aggregate or hire score.
+
+The reviewed question content is checked in at
+`definitions/v1/interview-questions.json`. Question IDs and
+`MATCHING_ALGORITHM_VERSION` must be versioned when behavior or wording changes;
+historical reports should retain the exact IDs and algorithm version they used.
 
 The repository setup installs the Python package in editable mode:
 

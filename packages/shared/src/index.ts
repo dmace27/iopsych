@@ -3,6 +3,7 @@
 export * from "./constructs";
 export * from "./assessment";
 export * from "./json-schemas";
+export * from "./matching";
 export * from "./problem-details";
 export * from "./pilot-assessment";
 export * from "./role-extraction";
