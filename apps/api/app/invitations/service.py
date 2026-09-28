@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
+from pathlib import Path
 from uuid import UUID
 
 from sqlalchemy import select
@@ -14,10 +15,12 @@ from app.auth.errors import (
     organization_resource_not_found,
     resource_conflict,
     resource_unavailable,
+    resource_validation_failed,
     service_unavailable,
     upstream_delivery_failed,
 )
 from app.database.models import (
+    Assessment,
     AssessmentInvite,
     AssessmentInviteStatus,
     AuditEvent,
@@ -43,6 +46,16 @@ from app.invitations.schemas import (
     InvitationCreateRequest,
 )
 from app.invitations.tokens import InvalidInviteTokenError, InviteTokenCodec
+from iopsych_contracts.assessment import (
+    AssessmentDefinition,
+    AssessmentResponseSet,
+    AssessmentScoringError,
+    score_assessment,
+)
+
+PILOT_DEFINITION_PATH = (
+    Path(__file__).resolve().parents[4] / "packages/shared/definitions/v1/pilot-assessment.json"
+)
 
 
 @dataclass(frozen=True)
@@ -251,6 +264,58 @@ class CandidateInvitationService:
         self._require_available(candidate_invite)
         return candidate_invite
 
+    def submit(self, raw_token: str, responses: AssessmentResponseSet) -> UUID:
+        """Validate and score a complete response set once, after explicit consent."""
+
+        candidate = self._resolve(raw_token, lock=True)
+        invite = require_consented_invite(self._session, candidate.invite.id)
+        existing = self._session.scalar(select(Assessment).where(Assessment.invite_id == invite.id))
+        if existing is not None:
+            if existing.responses_json == responses.model_dump(mode="json"):
+                return existing.id
+            raise resource_conflict(
+                code="assessment_already_submitted",
+                detail="This assessment has already been submitted.",
+            )
+        consent = self._session.scalar(
+            select(CandidateConsent).where(
+                CandidateConsent.invite_id == invite.id,
+                CandidateConsent.decision == ConsentDecision.CONSENT,
+            )
+        )
+        assert consent is not None
+        definition = AssessmentDefinition.model_validate_json(
+            PILOT_DEFINITION_PATH.read_text(encoding="utf-8")
+        )
+        try:
+            scores = score_assessment(definition, responses)
+        except AssessmentScoringError as exc:
+            raise resource_validation_failed(
+                code="invalid_assessment_responses", detail=str(exc)
+            ) from exc
+        assessment = Assessment(
+            invite_id=invite.id,
+            consent_id=consent.id,
+            submitted_at=datetime.now(UTC),
+            definition_json=definition.model_dump(mode="json"),
+            responses_json=responses.model_dump(mode="json"),
+            scores_json=scores.model_dump(mode="json"),
+        )
+        self._session.add(assessment)
+        self._session.flush()
+        self._session.add(
+            AuditEvent(
+                organization_id=candidate.organization_id,
+                actor_id=None,
+                event_type="assessment.submitted",
+                entity_type="assessment",
+                entity_id=assessment.id,
+                metadata_json={"scoring_version": scores.scoring_version},
+            )
+        )
+        self._session.commit()
+        return assessment.id
+
     def _require_available(self, candidate_invite: _CandidateInvite) -> None:
         """Expire stale links and reject revoked or undelivered credentials."""
 
@@ -291,6 +356,12 @@ class CandidateInvitationService:
                 )
             )
         decision = consent.decision if consent is not None else None
+        assessment = self._session.scalar(
+            select(Assessment).where(
+                Assessment.invite_id == candidate_invite.invite.id,
+                Assessment.submitted_at.is_not(None),
+            )
+        )
         return CandidateInviteResponse(
             invitation_id=candidate_invite.invite.id,
             organization_name=candidate_invite.organization_name,
@@ -308,6 +379,7 @@ class CandidateInvitationService:
             decision=decision,
             decision_recorded_at=consent.created_at if consent is not None else None,
             can_start_assessment=decision is ConsentDecision.CONSENT,
+            assessment_id=assessment.id if assessment is not None else None,
         )
 
     def _append_audit(

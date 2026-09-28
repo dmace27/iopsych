@@ -17,6 +17,14 @@ export function isTrustedMutationRequest(request: Request): boolean {
   if (["GET", "HEAD", "OPTIONS"].includes(request.method)) return true;
 
   const origin = request.headers.get("origin");
-  if (origin !== null) return origin === new URL(request.url).origin;
+  if (origin !== null) {
+    // Next can normalize the URL hostname to localhost even when the browser
+    // reached 127.0.0.1. Compare against the actual HTTP authority; do not trust
+    // client-supplied X-Forwarded-Host values for this security decision.
+    const expected = new URL(request.url);
+    const host = request.headers.get("host");
+    if (host !== null) expected.host = host;
+    return origin === expected.origin;
+  }
   return request.headers.get("sec-fetch-site") === "same-origin";
 }

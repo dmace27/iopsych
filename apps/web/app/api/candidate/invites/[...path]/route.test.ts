@@ -107,4 +107,39 @@ describe("candidate API proxy", () => {
       status: 502,
     });
   });
+
+  it("forwards a same-origin submission without internal credentials and rejects cross-site submissions", async () => {
+    vi.mocked(fetch).mockResolvedValue(
+      Response.json({ assessment_id: "receipt" }),
+    );
+    const payload = JSON.stringify({ responses: [] });
+    const response = await POST(
+      new Request("http://web.test/api/candidate/invites/token/submit", {
+        method: "POST",
+        headers: {
+          Origin: "http://web.test",
+          "Content-Type": "application/json",
+        },
+        body: payload,
+      }),
+      context("token", "submit"),
+    );
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
+    const [url, init] = vi.mocked(fetch).mock.calls[0]!;
+    expect(String(url)).toBe(
+      "http://localhost:8000/v1/candidate/invites/token/submit",
+    );
+    expect(new Headers(init?.headers).has("Authorization")).toBe(false);
+    expect(new TextDecoder().decode(init?.body as ArrayBuffer)).toBe(payload);
+    vi.mocked(fetch).mockClear();
+    const denied = await POST(
+      new Request("http://web.test/api/candidate/invites/token/submit", {
+        method: "POST",
+        headers: { Origin: "https://attacker.example" },
+      }),
+      context("token", "submit"),
+    );
+    expect(denied.status).toBe(403);
+    expect(fetch).not.toHaveBeenCalled();
+  });
 });

@@ -1,6 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { getCandidateInvite, recordCandidateConsent } from "./candidate-api";
+import {
+  getCandidateInvite,
+  recordCandidateConsent,
+  submitCandidateAssessment,
+} from "./candidate-api";
 
 const response = {
   can_start_assessment: false,
@@ -98,5 +102,30 @@ describe("candidate API client", () => {
       code: "unexpected_response",
       message: "This invitation could not be opened.",
     });
+  });
+
+  it("validates server submission receipts and rejects missing acknowledgement IDs", async () => {
+    const responses = {
+      assessment_definition_id: "pilot",
+      assessment_definition_version: "1.0.0",
+      responses: [],
+    };
+    const receipt = { assessment_id: response.invitation_id };
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(Response.json(receipt))
+      .mockResolvedValueOnce(Response.json({ assessment_id: "bad-id" }));
+    await expect(
+      submitCandidateAssessment("signed/token", responses),
+    ).resolves.toEqual(receipt);
+    expect(fetch).toHaveBeenCalledWith(
+      "/api/candidate/invites/signed%2Ftoken/submit",
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify(responses),
+      }),
+    );
+    await expect(
+      submitCandidateAssessment("token", responses),
+    ).rejects.toMatchObject({ code: "invalid_api_response" });
   });
 });

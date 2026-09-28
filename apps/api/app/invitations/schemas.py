@@ -78,6 +78,7 @@ class CandidateInviteResponse(BaseModel):
     decision: ConsentDecision | None
     decision_recorded_at: datetime | None
     can_start_assessment: bool
+    assessment_id: UUID | None = None
 
 
 class ConsentRequest(BaseModel):

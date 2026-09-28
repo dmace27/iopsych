@@ -10,10 +10,13 @@ interface RouteContext {
   params: Promise<{ path: string[] }>;
 }
 
-/** Limit the credential-bearing proxy to package 1A/1B internal endpoints. */
-function isAllowedInternalPath(path: string[]): boolean {
+/** Limit the credential-bearing proxy to implemented internal endpoints. */
+function isAllowedInternalPath(path: string[], method: string): boolean {
   return (
     path[0] === "roles" ||
+    (path[0] === "reports" &&
+      ((method === "POST" && path.length === 1) ||
+        (method === "GET" && path.length === 2))) ||
     (path.length === 2 && path[0] === "auth" && path[1] === "me")
   );
 }
@@ -27,7 +30,13 @@ function problem(
 ): Response {
   return Response.json(
     { type: "about:blank", title, status, detail, code },
-    { status, headers: { "Content-Type": "application/problem+json" } },
+    {
+      status,
+      headers: {
+        "Content-Type": "application/problem+json",
+        "Cache-Control": "no-store",
+      },
+    },
   );
 }
 
@@ -42,7 +51,7 @@ async function proxyInternalApi(
   context: RouteContext,
 ): Promise<Response> {
   const { path } = await context.params;
-  if (!isAllowedInternalPath(path)) {
+  if (!isAllowedInternalPath(path, request.method)) {
     return problem(
       404,
       "route_not_found",
@@ -73,6 +82,7 @@ async function proxyInternalApi(
   const upstreamUrl = internalApiUrl(
     `/v1/${path.map((segment) => encodeURIComponent(segment)).join("/")}`,
   );
+  upstreamUrl.search = new URL(request.url).search;
   const body = await request.arrayBuffer();
   const headers = new Headers({
     Accept: "application/json",
@@ -96,6 +106,7 @@ async function proxyInternalApi(
     return new Response(await upstream.arrayBuffer(), {
       status: upstream.status,
       headers: {
+        "Cache-Control": "no-store",
         "Content-Type":
           upstream.headers.get("content-type") ?? "application/json",
       },

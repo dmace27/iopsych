@@ -36,6 +36,7 @@ export const CandidateInviteSchema = z.strictObject({
   decision: ConsentDecisionSchema.nullable(),
   decision_recorded_at: z.string().min(1).nullable(),
   can_start_assessment: z.boolean(),
+  assessment_id: z.uuid().nullish(),
 });
 export type CandidateInvite = z.infer<typeof CandidateInviteSchema>;
 
@@ -48,9 +49,15 @@ export type CandidateDraft = z.infer<typeof CandidateDraftSchema>;
 
 /** Submitted response snapshot and receipt; scores/classifications are excluded. */
 export const CandidateCompletionSchema = z.strictObject({
+  assessment_id: z.uuid().optional(),
   submitted_at: z.string().datetime(),
   answered_block_count: z.number().int().nonnegative(),
   skipped_block_count: z.number().int().nonnegative(),
   response_set: AssessmentResponseSetSchema,
 });
 export type CandidateCompletion = z.infer<typeof CandidateCompletionSchema>;
+
+export const SubmissionReceiptSchema = z.strictObject({
+  assessment_id: z.uuid(),
+});
+export type SubmissionReceipt = z.infer<typeof SubmissionReceiptSchema>;

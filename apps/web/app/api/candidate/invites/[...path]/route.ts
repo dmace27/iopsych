@@ -7,11 +7,13 @@ interface RouteContext {
   params: Promise<{ path: string[] }>;
 }
 
-/** Expose only the two anonymous endpoints defined by package 2B. */
+/** Expose only implemented anonymous invitation and submission endpoints. */
 function isAllowedCandidatePath(path: string[], method: string): boolean {
   return (
     (method === "GET" && path.length === 1) ||
-    (method === "POST" && path.length === 2 && path[1] === "consent")
+    (method === "POST" &&
+      path.length === 2 &&
+      (path[1] === "consent" || path[1] === "submit"))
   );
 }
 
@@ -23,7 +25,13 @@ function problem(
 ): Response {
   return Response.json(
     { code, detail, status, title, type: "about:blank" },
-    { headers: { "Content-Type": "application/problem+json" }, status },
+    {
+      headers: {
+        "Content-Type": "application/problem+json",
+        "Cache-Control": "no-store",
+      },
+      status,
+    },
   );
 }
 
@@ -46,7 +54,7 @@ async function proxyCandidateApi(
       403,
       "cross_site_request_denied",
       "Cross-site request denied",
-      "Consent choices must originate from this application.",
+      "Candidate requests must originate from this application.",
     );
   }
 
@@ -69,6 +77,7 @@ async function proxyCandidateApi(
     });
     return new Response(await upstream.arrayBuffer(), {
       headers: {
+        "Cache-Control": "no-store",
         "Content-Type":
           upstream.headers.get("content-type") ?? "application/json",
       },

@@ -29,6 +29,8 @@ from app.invitations.logging import install_invite_token_log_filter
 from app.invitations.rate_limit import InMemoryRateLimiter
 from app.invitations.router import router as invitations_router
 from app.invitations.tokens import InviteTokenCodec
+from app.reports.router import router as reports_router
+from app.reports.router import submission_router
 from app.roles.router import router as roles_router
 
 
@@ -94,6 +96,8 @@ def create_app(
     application.add_middleware(AuditMiddleware, session_factory=resolved_session_factory)
     application.include_router(roles_router)
     application.include_router(invitations_router)
+    application.include_router(reports_router)
+    application.include_router(submission_router)
 
     @application.get("/health", response_model=HealthResponse, tags=["operations"])
     async def health() -> HealthResponse:

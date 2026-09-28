@@ -22,9 +22,9 @@ export function loadCandidateDraft(
   storage: Storage,
   invitationId: string,
 ): CandidateDraft | null {
-  const raw = storage.getItem(draftKey(invitationId));
-  if (raw === null) return null;
   try {
+    const raw = storage.getItem(draftKey(invitationId));
+    if (raw === null) return null;
     const parsed = CandidateDraftSchema.safeParse(JSON.parse(raw));
     return parsed.success ? parsed.data : null;
   } catch {
@@ -51,11 +51,13 @@ export function completeCandidateAssessment(
   storage: Storage,
   invitationId: string,
   responseSet: AssessmentResponseSet,
+  assessmentId: string,
 ): CandidateCompletion {
   const skippedBlockCount = responseSet.responses.filter(
     ({ skipped }) => skipped,
   ).length;
   const completion = CandidateCompletionSchema.parse({
+    assessment_id: assessmentId,
     answered_block_count: responseSet.responses.length - skippedBlockCount,
     response_set: responseSet,
     skipped_block_count: skippedBlockCount,
@@ -71,9 +73,9 @@ export function loadCandidateCompletion(
   storage: Storage,
   invitationId: string,
 ): CandidateCompletion | null {
-  const raw = storage.getItem(completionKey(invitationId));
-  if (raw === null) return null;
   try {
+    const raw = storage.getItem(completionKey(invitationId));
+    if (raw === null) return null;
     const parsed = CandidateCompletionSchema.safeParse(JSON.parse(raw));
     return parsed.success ? parsed.data : null;
   } catch {

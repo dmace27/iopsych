@@ -213,4 +213,79 @@ describe("internal API proxy", () => {
       type: "about:blank",
     });
   });
+
+  it("forwards report reads and same-origin generation through the session cookie", async () => {
+    headerMocks.cookieGet.mockReturnValue({ value: "cookie-token" });
+    vi.mocked(fetch).mockImplementation(async () =>
+      Response.json({ id: "report" }),
+    );
+    await GET(
+      new Request("http://web.test/api/internal/reports/report-id"),
+      context("reports", "report-id"),
+    );
+    expect(fetch).toHaveBeenLastCalledWith(
+      new URL("http://localhost:8000/v1/reports/report-id"),
+      expect.objectContaining({ method: "GET" }),
+    );
+    const response = await POST(
+      new Request("http://web.test/api/internal/reports", {
+        method: "POST",
+        headers: {
+          Origin: "http://web.test",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          assessment_id: "assessment",
+          role_profile_id: "profile",
+        }),
+      }),
+      context("reports"),
+    );
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
+    expect(fetch).toHaveBeenLastCalledWith(
+      new URL("http://localhost:8000/v1/reports"),
+      expect.objectContaining({ method: "POST" }),
+    );
+    const [, init] = vi.mocked(fetch).mock.calls.at(-1)!;
+    expect(new Headers(init?.headers).get("Authorization")).toBe(
+      "Bearer cookie-token",
+    );
+  });
+
+  it("rejects report mutation and cross-site generation without forwarding credentials", async () => {
+    headerMocks.cookieGet.mockReturnValue({ value: "cookie-token" });
+    for (const handler of [PATCH, DELETE]) {
+      const response = await handler(
+        new Request("http://web.test/api/internal/reports/report-id", {
+          method: handler === PATCH ? "PATCH" : "DELETE",
+          headers: { Origin: "http://web.test" },
+        }),
+        context("reports", "report-id"),
+      );
+      expect(response.status).toBe(404);
+    }
+    const response = await POST(
+      new Request("http://web.test/api/internal/reports", {
+        method: "POST",
+        headers: { Origin: "https://attacker.example" },
+      }),
+      context("reports"),
+    );
+    expect(response.status).toBe(403);
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it("preserves assessment discovery pagination", async () => {
+    headerMocks.cookieGet.mockReturnValue({ value: "cookie-token" });
+    vi.mocked(fetch).mockResolvedValue(Response.json([]));
+    await GET(
+      new Request(
+        "http://web.test/api/internal/roles/role-id/assessments?offset=50&limit=10",
+      ),
+      context("roles", "role-id", "assessments"),
+    );
+    expect(String(vi.mocked(fetch).mock.calls[0]![0])).toBe(
+      "http://localhost:8000/v1/roles/role-id/assessments?offset=50&limit=10",
+    );
+  });
 });

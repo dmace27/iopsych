@@ -3,11 +3,13 @@
 import "@testing-library/jest-dom/vitest";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { PILOT_ASSESSMENT_DEFINITION_V1 } from "@iopsych/shared";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const apiMocks = vi.hoisted(() => ({
   getCandidateInvite: vi.fn(),
   recordCandidateConsent: vi.fn(),
+  submitCandidateAssessment: vi.fn(),
 }));
 
 vi.mock("../../../../lib/candidate-api", () => apiMocks);
@@ -47,10 +49,17 @@ describe("CandidateAssessment", () => {
   beforeEach(() => {
     apiMocks.getCandidateInvite.mockReset();
     apiMocks.recordCandidateConsent.mockReset();
+    apiMocks.submitCandidateAssessment.mockReset();
+    apiMocks.submitCandidateAssessment.mockResolvedValue({
+      assessment_id: INVITATION_ID,
+    });
     window.localStorage.clear();
   });
 
-  afterEach(cleanup);
+  afterEach(() => {
+    cleanup();
+    vi.restoreAllMocks();
+  });
 
   it("does not expose any assessment question before affirmative consent", async () => {
     apiMocks.getCandidateInvite.mockResolvedValue(candidateInvite());
@@ -154,6 +163,11 @@ describe("CandidateAssessment", () => {
     expect(completion).toContain('"answered_block_count":6');
     expect(completion).toContain('"assessment_definition_version":"1.0.0"');
     expect(completion).toContain('"responses"');
+    expect(completion).toContain('"assessment_id"');
+    expect(apiMocks.submitCandidateAssessment).toHaveBeenCalledWith(
+      "signed-token",
+      expect.objectContaining({ responses: expect.any(Array) }),
+    );
     expect(
       window.localStorage.getItem(
         "iopsych.candidate.v1." + INVITATION_ID + ".draft",
@@ -251,5 +265,139 @@ describe("CandidateAssessment", () => {
       /choose one statement in each column/i,
     );
     await waitFor(() => expect(screen.getAllByRole("radio")[0]).toHaveFocus());
+  });
+
+  it("requires server acknowledgement, preserves legacy responses, and permits retries", async () => {
+    apiMocks.getCandidateInvite.mockResolvedValue(
+      candidateInvite({
+        can_start_assessment: true,
+        decision: "consent",
+        status: "consented",
+      }),
+    );
+    // Older completions were stored on this device without reaching the server.
+    const definition = PILOT_ASSESSMENT_DEFINITION_V1;
+    const legacy = {
+      submitted_at: "2026-09-27T12:00:00Z",
+      answered_block_count: 0,
+      skipped_block_count: 6,
+      response_set: {
+        assessment_definition_id: definition.id,
+        assessment_definition_version: definition.version,
+        responses: definition.blocks.map((block) => ({
+          block_id: block.id,
+          skipped: true,
+          most_like_item_id: null,
+          least_like_item_id: null,
+        })),
+      },
+    };
+    window.localStorage.setItem(
+      `iopsych.candidate.v1.${INVITATION_ID}.completion`,
+      JSON.stringify(legacy),
+    );
+    apiMocks.submitCandidateAssessment.mockRejectedValueOnce(
+      new Error("Network unavailable. Try again."),
+    );
+    const user = userEvent.setup();
+    render(<CandidateAssessment token="signed-token" />);
+    expect(
+      await screen.findByRole("heading", { name: "Review your responses" }),
+    ).toBeInTheDocument();
+    await user.click(
+      screen.getByRole("button", { name: "Submit my responses" }),
+    );
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Network unavailable",
+    );
+    expect(
+      screen.queryByRole("heading", { name: "Your responses are complete" }),
+    ).not.toBeInTheDocument();
+    expect(
+      window.localStorage.getItem(
+        `iopsych.candidate.v1.${INVITATION_ID}.completion`,
+      ),
+    ).toBe(JSON.stringify(legacy));
+    await user.click(
+      screen.getByRole("button", { name: "Submit my responses" }),
+    );
+    expect(
+      await screen.findByRole("heading", {
+        name: "Your responses are complete",
+      }),
+    ).toBeInTheDocument();
+    expect(apiMocks.submitCandidateAssessment).toHaveBeenCalledTimes(2);
+  });
+
+  it("uses the server receipt to recognize submissions from another device", async () => {
+    apiMocks.getCandidateInvite.mockResolvedValue(
+      candidateInvite({
+        can_start_assessment: true,
+        decision: "consent",
+        status: "consented",
+        assessment_id: INVITATION_ID,
+      }),
+    );
+    render(<CandidateAssessment token="signed-token" />);
+    expect(
+      await screen.findByRole("heading", {
+        name: "Your responses are complete",
+      }),
+    ).toBeInTheDocument();
+    expect(apiMocks.submitCandidateAssessment).not.toHaveBeenCalled();
+    expect(screen.queryAllByRole("radio")).toHaveLength(0);
+  });
+
+  it("blocks edits during submission and completes even when device receipt storage fails", async () => {
+    apiMocks.getCandidateInvite.mockResolvedValue(
+      candidateInvite({
+        can_start_assessment: true,
+        decision: "consent",
+        status: "consented",
+      }),
+    );
+    const user = userEvent.setup();
+    render(<CandidateAssessment token="signed-token" />);
+    for (let index = 0; index < 6; index++) {
+      await user.click(
+        await screen.findByRole("checkbox", {
+          name: "Prefer not to answer this block",
+        }),
+      );
+      await user.click(
+        screen.getByRole("button", {
+          name: index === 5 ? "Review answers" : "Save and continue",
+        }),
+      );
+    }
+    let acknowledge = () => {};
+    apiMocks.submitCandidateAssessment.mockReturnValueOnce(
+      new Promise((resolve) => {
+        acknowledge = () => resolve({ assessment_id: INVITATION_ID });
+      }),
+    );
+    await user.click(
+      screen.getByRole("button", { name: "Submit my responses" }),
+    );
+    expect(screen.getByRole("button", { name: "Submitting…" })).toBeDisabled();
+    expect(
+      screen.getByRole("button", { name: "Back to assessment" }),
+    ).toBeDisabled();
+    expect(
+      screen.getByRole("button", { name: "Change block 1" }),
+    ).toBeDisabled();
+    expect(
+      screen.queryByRole("heading", { name: "Your responses are complete" }),
+    ).not.toBeInTheDocument();
+    vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+      throw new Error("Storage unavailable");
+    });
+    acknowledge();
+    expect(
+      await screen.findByRole("heading", {
+        name: "Your responses are complete",
+      }),
+    ).toBeInTheDocument();
+    expect(apiMocks.submitCandidateAssessment).toHaveBeenCalledTimes(1);
   });
 });

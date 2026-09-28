@@ -29,4 +29,27 @@ describe("internal session server helpers", () => {
       ),
     ).toBe(false);
   });
+
+  it("recognizes the actual HTTP host when Next normalizes a loopback URL", () => {
+    expect(
+      isTrustedMutationRequest(
+        new Request("http://localhost:3000/api/session", {
+          method: "POST",
+          headers: { Host: "127.0.0.1:3000", Origin: "http://127.0.0.1:3000" },
+        }),
+      ),
+    ).toBe(true);
+    expect(
+      isTrustedMutationRequest(
+        new Request("http://localhost:3000/api/session", {
+          method: "POST",
+          headers: {
+            Host: "localhost:3000",
+            Origin: "https://attacker.example",
+            "X-Forwarded-Host": "attacker.example",
+          },
+        }),
+      ),
+    ).toBe(false);
+  });
 });

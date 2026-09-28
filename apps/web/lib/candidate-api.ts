@@ -1,18 +1,22 @@
-import { ApiProblemSchema } from "@iopsych/shared";
+import { ApiProblemSchema, type AssessmentResponseSet } from "@iopsych/shared";
+import type { z } from "zod";
 
 import { ApiClientError } from "./api-client";
 import {
   CandidateInviteSchema,
+  SubmissionReceiptSchema,
   type CandidateInvite,
   type ConsentDecision,
+  type SubmissionReceipt,
 } from "./candidate-contracts";
 
 /** Call the same-origin candidate boundary without leaking tokens to third parties. */
-async function candidateRequest(
+async function candidateRequest<T>(
   token: string,
+  schema: z.ZodType<T>,
   suffix = "",
   init?: RequestInit,
-): Promise<CandidateInvite> {
+): Promise<T> {
   let response: Response;
   try {
     response = await fetch(
@@ -49,7 +53,7 @@ async function candidateRequest(
     );
   }
 
-  const parsed = CandidateInviteSchema.safeParse(payload);
+  const parsed = schema.safeParse(payload);
   if (!parsed.success) {
     throw new ApiClientError("The invitation response was not recognized.", {
       code: "invalid_api_response",
@@ -61,7 +65,7 @@ async function candidateRequest(
 
 /** Load public role and consent-notice context for a bearer invitation. */
 export function getCandidateInvite(token: string): Promise<CandidateInvite> {
-  return candidateRequest(token);
+  return candidateRequest(token, CandidateInviteSchema);
 }
 
 /** Record the candidate's terminal, explicit consent decision. */
@@ -69,8 +73,19 @@ export function recordCandidateConsent(
   token: string,
   decision: ConsentDecision,
 ): Promise<CandidateInvite> {
-  return candidateRequest(token, "/consent", {
+  return candidateRequest(token, CandidateInviteSchema, "/consent", {
     body: JSON.stringify({ decision }),
     method: "POST",
+  });
+}
+
+/** Persist consented responses and receive a score-free server acknowledgement. */
+export function submitCandidateAssessment(
+  token: string,
+  responses: AssessmentResponseSet,
+): Promise<SubmissionReceipt> {
+  return candidateRequest(token, SubmissionReceiptSchema, "/submit", {
+    method: "POST",
+    body: JSON.stringify(responses),
   });
 }

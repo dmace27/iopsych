@@ -13,6 +13,12 @@ import {
   type RoleProfile,
   type RoleProfileInput,
 } from "./contracts";
+import {
+  ReportSchema,
+  SubmittedAssessmentListSchema,
+  type Report,
+  type SubmittedAssessment,
+} from "./report-contracts";
 
 /** A safe client-facing representation of an API problem response. */
 export class ApiClientError extends Error {
@@ -147,4 +153,32 @@ export function approveRoleProfile(
     RoleProfileSchema,
     { method: "POST" },
   );
+}
+
+/** Discover report sources in chronological order, preserving server pagination. */
+export function getSubmittedAssessments(
+  roleId: string,
+  offset = 0,
+): Promise<SubmittedAssessment[]> {
+  return requestJson(
+    `/roles/${encodeURIComponent(roleId)}/assessments?limit=50&offset=${offset}`,
+    SubmittedAssessmentListSchema,
+  );
+}
+
+export function getReport(reportId: string): Promise<Report> {
+  return requestJson(`/reports/${encodeURIComponent(reportId)}`, ReportSchema);
+}
+
+/** Submit identifiers only; scoring and approval remain authoritative on the server. */
+export function generateReport(
+  assessment: SubmittedAssessment,
+): Promise<Report> {
+  return requestJson("/reports", ReportSchema, {
+    method: "POST",
+    body: JSON.stringify({
+      assessment_id: assessment.assessment_id,
+      role_profile_id: assessment.role_profile_id,
+    }),
+  });
 }

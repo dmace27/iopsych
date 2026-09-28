@@ -241,6 +241,12 @@ export function RoleProfileWorkspace({ roleId }: { roleId: string }) {
             </span>
           </div>
         </div>
+        <Link
+          href={`/roles/${roleId}/reports`}
+          className="mt-6 inline-block rounded-lg border border-teal-700 px-4 py-3 text-sm font-bold text-teal-900 focus-visible:ring-2 focus-visible:ring-teal-700"
+        >
+          View recruiter reports
+        </Link>
         <details className="mt-6 rounded-xl border border-slate-200 bg-slate-50 p-4">
           <summary className="cursor-pointer font-bold text-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-700">
             Source job description

@@ -237,6 +237,63 @@ class CandidateConsent(UuidPrimaryKeyMixin, CreatedAtMixin, Base):
     notice_version: Mapped[str] = mapped_column(String(80), nullable=False)
 
 
+class Assessment(UuidPrimaryKeyMixin, CreatedAtMixin, Base):
+    """Server-scored, one-time submission tied to an invitation and consent."""
+
+    __tablename__ = "assessments"
+    invite_id: Mapped[UUID] = mapped_column(
+        Uuid(as_uuid=True),
+        ForeignKey("assessment_invites.id", ondelete="RESTRICT"),
+        nullable=False,
+        unique=True,
+    )
+    consent_id: Mapped[UUID] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("candidate_consents.id", ondelete="RESTRICT"), nullable=False
+    )
+    submitted_at: Mapped[datetime | None] = mapped_column(UtcDateTime(), nullable=True)
+    definition_json: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
+    responses_json: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
+    scores_json: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
+
+
+class AlignmentReport(UuidPrimaryKeyMixin, CreatedAtMixin, Base):
+    """Persisted matching snapshot with authoritative input references."""
+
+    __tablename__ = "alignment_reports"
+    __table_args__ = (
+        UniqueConstraint(
+            "assessment_id",
+            "role_profile_id",
+            "algorithm_version",
+            name="uq_alignment_reports_inputs",
+        ),
+    )
+    assessment_id: Mapped[UUID] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("assessments.id", ondelete="RESTRICT"), nullable=False
+    )
+    role_profile_id: Mapped[UUID] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("role_profiles.id", ondelete="RESTRICT"), nullable=False
+    )
+    algorithm_version: Mapped[str] = mapped_column(String(80), nullable=False)
+    result_json: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
+
+
+class AlignmentReportItem(Base):
+    """One traceable construct item, including question text and stable IDs."""
+
+    __tablename__ = "alignment_items"
+    report_id: Mapped[UUID] = mapped_column(
+        Uuid(as_uuid=True),
+        ForeignKey("alignment_reports.id", ondelete="RESTRICT"),
+        primary_key=True,
+    )
+    construct_key: Mapped[str] = mapped_column(String(32), primary_key=True)
+    classification: Mapped[str] = mapped_column(String(32), nullable=False)
+    confidence: Mapped[str] = mapped_column(String(16), nullable=False)
+    explanation_json: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
+    questions_json: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
+
+
 class AuditEvent(UuidPrimaryKeyMixin, CreatedAtMixin, Base):
     """An organization-scoped record of a sensitive action."""
 

@@ -11,6 +11,9 @@ from app.database import seed, verify
 
 API_ROOT = Path(__file__).resolve().parents[1]
 EXPECTED_TABLES = {
+    "assessments",
+    "alignment_reports",
+    "alignment_items",
     "alembic_version",
     "assessment_invites",
     "audit_events",
@@ -27,7 +30,7 @@ def alembic_config(database_url: str) -> Config:
     """Build an Alembic config whose environment reads the requested URL."""
 
     config = Config(API_ROOT / "alembic.ini")
-    config.set_main_option("sqlalchemy.url", database_url)
+    config.set_main_option("sqlalchemy.url", database_url.replace("%", "%%"))
     return config
 
 
@@ -78,6 +81,20 @@ def test_documented_seed_and_verify_commands(
     output = capsys.readouterr().out
     assert "Seed complete: 2 organizations" in output
     assert "Database verification passed" in output
+
+
+def test_migration_accepts_percent_characters_in_database_url(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Encoded credentials/options and literal percent filenames survive INI interpolation."""
+
+    database_url = f"sqlite+pysqlite:///{tmp_path / 'percent%database.db'}"
+    monkeypatch.setenv("DATABASE_URL", database_url)
+    command.upgrade(alembic_config(database_url), "head")
+    engine = create_engine(database_url)
+    assert set(inspect(engine).get_table_names()) == EXPECTED_TABLES
+    engine.dispose()
 
 
 def test_auth_migration_backfills_existing_user_subject(

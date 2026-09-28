@@ -64,3 +64,97 @@ Assessment code must call the shared `require_consented_invite` gate before
 creating or updating candidate work. Configure the signing key, candidate URL,
 expiry policy, rate limits, notice version, and privacy/accommodation contacts
 using the `INVITE_*` settings shown in `.env.example`.
+
+## Package 3B: persisted reports
+
+Apply migration `20260927_0005` before using the new endpoints.
+
+- `POST /v1/candidate/invites/{token}/submit` accepts the shared
+  `AssessmentResponseSet` contract. The server checks the token and affirmative
+  consent, scores all six answered/skipped blocks, and stores the definition,
+  responses, scores, consent reference, and submission time. Identical retries
+  return the same `assessment_id`; attempts to change a submission return 409.
+  The candidate response contains only that score-free receipt. The invitation
+  landing response also includes a nullable `assessment_id` so another device
+  can recognize an existing server submission.
+- `POST /v1/reports` accepts `assessment_id` and `role_profile_id`. The
+  assessment must belong to the authenticated organization, be submitted and
+  consented, and reference the invitation's human-approved profile version.
+  Scores and approval cannot be supplied by the caller. Identical requests
+  return the existing snapshot, protected by a unique input/algorithm
+  constraint.
+- `GET /v1/reports/{report_id}` returns the stored report to internal
+  recruiters, hiring managers, and admins in the owning organization.
+  Cross-tenant IDs return the same 404 as unknown IDs.
+- `GET /v1/roles/{role_id}/assessments?limit=50&offset=0` lists submitted
+  assessment IDs, invite IDs, candidate email, profile ID/version, submission
+  time, and existing report ID within one organization. Ordering is
+  chronological; scores and classifications are excluded. `limit` is bounded to
+  1–100.
+
+Reports preserve profile version, assessment/scoring versions, algorithm
+version, six independent classifications, role evidence, candidate response
+summaries, rule explanations, confidence/uncertainty, and stable
+interview-question IDs and text. No composite score or ranking is produced.
+Report creation and its audit record commit together; generation requests and
+report reads use audit middleware. Invitation expiry after submission does not
+invalidate a historical report. A superseded profile remains eligible if its
+human-approval timestamp and actor are present; superseded unapproved drafts
+remain ineligible. Report and discovery responses use `Cache-Control: no-store`.
+
+The existing candidate screen now submits through the same-origin API boundary
+and shows completion only after server acknowledgement. Drafts stay on the
+device; network failures preserve responses and allow retry. Older browser-only
+completions are reopened for review and server submission. The internal proxy
+permits report generation and reads, preserving its session-cookie and CSRF
+protections.
+
+### 3C recruiter report UI
+
+Open a role profile and select **View recruiter reports** to reach
+`/roles/{role_id}/reports`. Submitted sources appear in chronological order,
+with pagination and the exact invited profile version. Generate a report from an
+eligible submission or read its saved snapshot; `/reports/{report_id}` is the
+authenticated permalink.
+
+The UI validates the complete report envelope and shared matching schema before
+rendering six independent construct cards. Each card shows role demand,
+candidate response, classification, confidence, uncertainty, and an evidence
+drawer with quoted role evidence, rationale, response counts, and comparison
+rule. Structure's inverse comparison is explained explicitly. The guide shows
+the approved primary and follow-up questions and stable reference IDs. Source
+and algorithm versions remain inspectable, and the responsible-use warning stays
+above the comparisons. No composite score, ranking, or disposition control is
+present.
+
+Native modal dialogs provide keyboard focus containment, Escape dismissal, and
+focus return. Loading, empty, expired-session, inaccessible-report, and retry
+states are covered by component tests, including stale requests after a role
+change and pagination failures.
+
+### 3C API handoff
+
+1. Load `/api/internal/roles/{role_id}/assessments` to discover submitted
+   sources.
+2. If `report_id` exists, read `/api/internal/reports/{report_id}`. Otherwise
+   post `{ "assessment_id": "...", "role_profile_id": "..." }` to
+   `/api/internal/reports`, using the profile ID from the submission record.
+3. Display the response's six `result.items` plus `usage_warning`. Each item has
+   `construct_key`, `classification`, `confidence`, `explanation.role`,
+   `explanation.candidate_response`, `explanation.applied_rule`,
+   `explanation.uncertainty`, and `interview_questions.primary/follow_up` with
+   stable `id` and `text`. Use the existing shared `MatchingResultSchema` for
+   the `result` payload. The envelope also includes IDs, `role_profile_version`,
+   and `generated_at`.
+
+Errors use the existing problem-detail contract: 401 unauthenticated, 403 role
+denied, 404 unknown/cross-organization resource, 409 lifecycle/input-pair
+conflict, and 422 invalid request. Generation is idempotent and returns 201 for
+both a new report and an identical retry. GET reads always return the stored
+explanation.
+
+`npm run check` runs browser, API, contract, migration, and negative-path tests.
+The PostgreSQL concurrency regression runs automatically with PostgreSQL
+`DATABASE_URL` in CI, or locally with `TEST_POSTGRES_URL` set. It creates and
+removes an isolated random schema, tests four simultaneous submissions and four
+simultaneous report requests, and verifies one snapshot plus its creation audit.

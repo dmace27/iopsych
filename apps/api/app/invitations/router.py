@@ -6,6 +6,7 @@ from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Request, status
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.audit import audited, set_audit_entity
@@ -22,6 +23,7 @@ from app.invitations.schemas import (
 )
 from app.invitations.service import CandidateInvitationService, InternalInvitationService
 from app.invitations.tokens import opaque_rate_limit_key
+from iopsych_contracts.assessment import AssessmentResponseSet
 
 router = APIRouter(tags=["candidate invitations"])
 
@@ -144,6 +146,26 @@ async def record_candidate_consent(
 
     _candidate_rate_limit(request, token, action="consent")
     return _candidate_service(request, session).record_consent(token, payload)
+
+
+class SubmissionResponse(BaseModel):
+    """Candidate-safe acknowledgement without scores or report labels."""
+
+    assessment_id: UUID
+
+
+@router.post(
+    "/v1/candidate/invites/{token}/submit", response_model=SubmissionResponse, status_code=201
+)
+def submit_candidate_assessment(
+    token: str, payload: AssessmentResponseSet, request: Request, session: DatabaseSession
+) -> SubmissionResponse:
+    """Persist a consented assessment with scores calculated on the server."""
+
+    _candidate_rate_limit(request, token, action="submit")
+    return SubmissionResponse(
+        assessment_id=_candidate_service(request, session).submit(token, payload)
+    )
 
 
 def _candidate_rate_limit(request: Request, token: str, *, action: str) -> None:

@@ -13,6 +13,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import {
   getCandidateInvite,
   recordCandidateConsent,
+  submitCandidateAssessment,
 } from "../../../../lib/candidate-api";
 import type {
   CandidateCompletion,
@@ -133,6 +134,8 @@ export function CandidateAssessment({ token }: CandidateAssessmentProps) {
   const [choices, setChoices] = useState<Choices>({});
   const [currentBlockIndex, setCurrentBlockIndex] = useState(0);
   const [submittingConsent, setSubmittingConsent] = useState(false);
+  const [submittingAssessment, setSubmittingAssessment] = useState(false);
+  const submissionPending = useRef(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [validationError, setValidationError] = useState<string | null>(null);
   const [resumedDraft, setResumedDraft] = useState(false);
@@ -156,14 +159,22 @@ export function CandidateAssessment({ token }: CandidateAssessmentProps) {
           return;
         }
         if (invite.can_start_assessment) {
+          if (invite.assessment_id) {
+            setState({
+              completion: null,
+              invite,
+              status: "ready",
+              view: "complete",
+            });
+            return;
+          }
           const completion = loadCandidateCompletion(
             window.localStorage,
             invite.invitation_id,
           );
-          const draft = loadCandidateDraft(
-            window.localStorage,
-            invite.invitation_id,
-          );
+          const draft =
+            loadCandidateDraft(window.localStorage, invite.invitation_id) ??
+            completion;
           if (
             draft?.response_set.assessment_definition_id === assessment.id &&
             draft.response_set.assessment_definition_version ===
@@ -187,7 +198,7 @@ export function CandidateAssessment({ token }: CandidateAssessmentProps) {
             completion,
             invite,
             status: "ready",
-            view: completion ? "complete" : "assessment",
+            view: completion ? "review" : "assessment",
           });
           return;
         }
@@ -219,7 +230,15 @@ export function CandidateAssessment({ token }: CandidateAssessmentProps) {
     if (persistedInvitationId === null || responseSet.responses.length === 0) {
       return;
     }
-    saveCandidateDraft(window.localStorage, persistedInvitationId, responseSet);
+    try {
+      saveCandidateDraft(
+        window.localStorage,
+        persistedInvitationId,
+        responseSet,
+      );
+    } catch {
+      // Device storage may be disabled; responses can still be submitted to the server.
+    }
   }, [persistedInvitationId, responseSet]);
 
   const currentView = state.status === "ready" ? state.view : null;
@@ -306,20 +325,41 @@ export function CandidateAssessment({ token }: CandidateAssessmentProps) {
     setCurrentBlockIndex((index) => index + 1);
   }
 
-  function submitAssessment() {
-    if (state.status !== "ready") return;
+  async function submitAssessment() {
+    if (state.status !== "ready" || submissionPending.current) return;
     if (responseSet.responses.length !== assessment.blocks.length) {
       setValidationError(
         "Review every block before submitting. Each block must be answered or skipped.",
       );
       return;
     }
-    const completion = completeCandidateAssessment(
-      window.localStorage,
-      state.invite.invitation_id,
-      responseSet,
-    );
-    setState({ ...state, completion, view: "complete" });
+    submissionPending.current = true;
+    setSubmittingAssessment(true);
+    setValidationError(null);
+    try {
+      const receipt = await submitCandidateAssessment(token, responseSet);
+      let completion: CandidateCompletion | null = null;
+      try {
+        completion = completeCandidateAssessment(
+          window.localStorage,
+          state.invite.invitation_id,
+          responseSet,
+          receipt.assessment_id,
+        );
+      } catch {
+        // Server persistence is authoritative even if device storage is unavailable.
+      }
+      setState({ ...state, completion, view: "complete" });
+    } catch (error: unknown) {
+      setValidationError(
+        error instanceof Error
+          ? error.message
+          : "Submission failed. Try again.",
+      );
+    } finally {
+      submissionPending.current = false;
+      setSubmittingAssessment(false);
+    }
   }
 
   if (state.status === "loading") {
@@ -565,6 +605,7 @@ export function CandidateAssessment({ token }: CandidateAssessmentProps) {
                       setCurrentBlockIndex(index);
                       setState({ ...state, view: "assessment" });
                     }}
+                    disabled={submittingAssessment}
                     type="button"
                   >
                     Change block {index + 1}
@@ -582,9 +623,10 @@ export function CandidateAssessment({ token }: CandidateAssessmentProps) {
             <button
               className="min-h-12 rounded-xl bg-teal-800 px-6 py-3 font-bold text-white hover:bg-teal-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-700 focus-visible:ring-offset-2"
               onClick={submitAssessment}
+              disabled={submittingAssessment}
               type="button"
             >
-              Submit my responses
+              {submittingAssessment ? "Submitting…" : "Submit my responses"}
             </button>
             <button
               className="min-h-12 rounded-xl border border-slate-300 bg-white px-6 py-3 font-bold text-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-700"
@@ -592,6 +634,7 @@ export function CandidateAssessment({ token }: CandidateAssessmentProps) {
                 setCurrentBlockIndex(assessment.blocks.length - 1);
                 setState({ ...state, view: "assessment" });
               }}
+              disabled={submittingAssessment}
               type="button"
             >
               Back to assessment
