@@ -12,6 +12,7 @@ import {
   ApiClientError,
   approveRoleProfile,
   createRoleProfile,
+  extractRoleProfile,
   getCurrentUser,
   getRole,
   getRoleProfiles,
@@ -67,6 +68,8 @@ export function RoleProfileWorkspace({ roleId }: { roleId: string }) {
   const [announcement, setAnnouncement] = useState("");
   const [approving, setApproving] = useState(false);
   const [approvalError, setApprovalError] = useState<string | null>(null);
+  const [extracting, setExtracting] = useState(false);
+  const [extractionError, setExtractionError] = useState<string | null>(null);
   const [startingReplacement, setStartingReplacement] = useState(false);
 
   /** Reload after an explicit retry and expose progress immediately. */
@@ -153,6 +156,25 @@ export function RoleProfileWorkspace({ roleId }: { roleId: string }) {
       setAnnouncement(`Approval failed. ${message}`);
     } finally {
       setApproving(false);
+    }
+  }
+
+  async function handleExtraction() {
+    setExtracting(true);
+    setExtractionError(null);
+    setAnnouncement("Extracting a structured role profile.");
+    try {
+      const profile = await extractRoleProfile(roleId);
+      handleSaved(profile);
+      setAnnouncement(
+        `Draft version ${profile.version} was extracted and is ready for human review.`,
+      );
+    } catch (error) {
+      const message = errorMessage(error);
+      setExtractionError(message);
+      setAnnouncement(`Extraction failed. ${message}`);
+    } finally {
+      setExtracting(false);
     }
   }
 
@@ -332,12 +354,74 @@ export function RoleProfileWorkspace({ roleId }: { roleId: string }) {
           ) : null}
 
           {!selectedProfile && canCreateProfiles(state.user.role) ? (
-            <ProfileEditor
-              initialConstructs={blankConstructs()}
-              mode="create"
-              onSaved={handleSaved}
-              role={state.role}
-            />
+            <div className="space-y-6">
+              <section
+                aria-labelledby="extraction-title"
+                className="rounded-2xl border border-teal-200 bg-teal-50 p-6"
+              >
+                <h3
+                  className="text-lg font-bold text-teal-950"
+                  id="extraction-title"
+                >
+                  Generate a structured draft
+                </h3>
+                <p className="mt-2 text-sm leading-6 text-teal-900">
+                  Extract all six construct ratings from the stored job
+                  description. The result remains a draft until a hiring manager
+                  reviews and approves it.
+                </p>
+                <button
+                  className="mt-4 min-h-11 rounded-xl bg-teal-800 px-5 py-2.5 text-sm font-bold text-white hover:bg-teal-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-700 focus-visible:ring-offset-2 disabled:cursor-wait disabled:opacity-70"
+                  disabled={extracting}
+                  onClick={() => void handleExtraction()}
+                  type="button"
+                >
+                  {extracting
+                    ? "Extracting structured draft…"
+                    : "Extract profile from job description"}
+                </button>
+                {extractionError ? (
+                  <p
+                    className="mt-3 text-sm font-semibold text-rose-900"
+                    role="alert"
+                  >
+                    {extractionError}
+                  </p>
+                ) : null}
+              </section>
+
+              <details className="rounded-2xl border border-slate-200 bg-white p-5">
+                <summary className="cursor-pointer font-bold text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-700">
+                  Create a manual draft instead
+                </summary>
+                <div className="mt-5">
+                  <ProfileEditor
+                    initialConstructs={blankConstructs()}
+                    mode="create"
+                    onSaved={handleSaved}
+                    role={state.role}
+                  />
+                </div>
+              </details>
+            </div>
+          ) : null}
+
+          {selectedProfile && selectedProfile.assumptions.length > 0 ? (
+            <section
+              aria-labelledby="assumptions-title"
+              className="mb-5 rounded-2xl border border-amber-200 bg-amber-50 p-5"
+            >
+              <h3 className="font-bold text-amber-950" id="assumptions-title">
+                Extraction assumptions to verify
+              </h3>
+              <ul className="mt-2 list-disc space-y-1 pl-5 text-sm leading-6 text-amber-900">
+                {selectedProfile.assumptions.map((assumption, index) => (
+                  <li key={`${selectedProfile.id}-assumption-${index}`}>
+                    {assumption}
+                  </li>
+                ))}
+              </ul>
+            </section>
           ) : null}
 
           {selectedProfile && editable ? (

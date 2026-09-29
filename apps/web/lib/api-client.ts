@@ -118,6 +118,15 @@ export function getRoleProfiles(roleId: string): Promise<RoleProfile[]> {
   );
 }
 
+/** Generate a validated draft from the stored role description. */
+export function extractRoleProfile(roleId: string): Promise<RoleProfile> {
+  return requestJson(
+    `/roles/${encodeURIComponent(roleId)}/extract-profile`,
+    RoleProfileSchema,
+    { method: "POST" },
+  );
+}
+
 /** Create a complete initial or replacement draft profile. */
 export function createRoleProfile(
   roleId: string,

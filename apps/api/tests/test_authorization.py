@@ -27,7 +27,7 @@ from app.database.seed import (
     BEACON_ROLE_ID,
     seed_database,
 )
-from app.database.session import create_session_factory
+from app.database.session import REQUEST_SESSION_STATE_ATTRIBUTE, create_session_factory
 from app.main import create_app
 from tests.test_auth_tokens import AUDIENCE, ISSUER, SECRET, make_token
 
@@ -471,3 +471,72 @@ async def test_audit_failure_returns_problem_instead_of_sensitive_response() -> 
     assert response.json()["code"] == "audit_persistence_failed"
     assert raised_response.status_code == 500
     assert raised_response.json()["code"] == "audit_persistence_failed"
+
+
+@pytest.mark.anyio
+async def test_audited_endpoint_without_domain_session_uses_isolated_writer(
+    api_session_factory: sessionmaker[Session],
+) -> None:
+    """Read-only audited handlers can persist without opening a domain session."""
+
+    application = FastAPI()
+    application.add_middleware(AuditMiddleware, session_factory=api_session_factory)
+
+    @application.get("/isolated-audit")
+    @audited("test.isolated", "user")
+    async def isolated_audit(request: Request) -> dict[str, bool]:
+        """Attach a verified actor without requesting a database dependency."""
+
+        request.state.authorization_context = AuthorizationContext(
+            user_id=ALPHA_USER_ID,
+            organization=OrganizationScope(ALPHA_ORGANIZATION_ID),
+            email="recruiter@alpha.example.invalid",
+            name="Alpha Recruiter",
+            role=InternalUserRole.RECRUITER,
+        )
+        return {"audited": True}
+
+    async with AsyncClient(
+        transport=ASGITransport(app=application), base_url="http://test"
+    ) as audit_client:
+        response = await audit_client.get("/isolated-audit")
+
+    assert response.status_code == 200
+    with api_session_factory() as session:
+        assert (
+            session.scalar(select(AuditEvent).where(AuditEvent.event_type == "test.isolated"))
+            is not None
+        )
+
+
+@pytest.mark.anyio
+async def test_unaudited_request_commit_failure_is_not_mislabeled(
+    api_session_factory: sessionmaker[Session],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A non-audit database failure propagates instead of returning an audit problem."""
+
+    application = FastAPI()
+    application.add_middleware(AuditMiddleware, session_factory=api_session_factory)
+
+    @application.post("/ordinary-write")
+    async def ordinary_write(request: Request) -> dict[str, bool]:
+        """Attach a request session to exercise middleware commit propagation."""
+
+        setattr(
+            request.state,
+            REQUEST_SESSION_STATE_ATTRIBUTE,
+            api_session_factory(),
+        )
+        return {"written": True}
+
+    def fail_commit(session: Session) -> None:
+        del session
+        raise OperationalError("commit", {}, Exception("offline"))
+
+    monkeypatch.setattr(Session, "commit", fail_commit)
+    async with AsyncClient(
+        transport=ASGITransport(app=application), base_url="http://test"
+    ) as audit_client:
+        with pytest.raises(OperationalError, match="offline"):
+            await audit_client.post("/ordinary-write")

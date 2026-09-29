@@ -2,7 +2,14 @@
 
 from typing import Annotated, Literal, Self
 
-from pydantic import BaseModel, ConfigDict, Field, StringConstraints, model_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    StringConstraints,
+    field_validator,
+    model_validator,
+)
 
 from .constructs import CONSTRUCT_KEYS, ConfidenceLevel, ConstructKey, Rating
 
@@ -32,6 +39,15 @@ class RoleExtraction(BaseModel):
     ]
     assumptions: list[NonEmptyString]
     needs_human_review: Literal[True]
+
+    @field_validator("needs_human_review", mode="before")
+    @classmethod
+    def require_strict_boolean_review_flag(cls, value: object) -> object:
+        """Reject JSON-number coercion for the mandatory boolean gate."""
+
+        if not isinstance(value, bool):
+            raise ValueError("needs_human_review must be a boolean")
+        return value
 
     @model_validator(mode="after")
     def require_all_constructs_and_review(self) -> Self:

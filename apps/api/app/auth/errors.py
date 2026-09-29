@@ -121,6 +121,17 @@ def upstream_delivery_failed() -> AccessProblemError:
     )
 
 
+def upstream_extraction_failed() -> AccessProblemError:
+    """Hide provider output and error details when structured extraction fails."""
+
+    return AccessProblemError(
+        status=502,
+        code="role_extraction_failed",
+        title="Role extraction failed",
+        detail="A valid role profile could not be extracted. No draft was created.",
+    )
+
+
 def rate_limit_exceeded(*, retry_after_seconds: int) -> AccessProblemError:
     """Return a standard throttling response with a bounded retry hint."""
 

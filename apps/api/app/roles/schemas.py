@@ -116,4 +116,5 @@ class RoleProfileResponse(BaseModel):
     approved_by: UUID | None
     approved_at: datetime | None
     created_at: datetime
+    assumptions: list[str]
     constructs: list[RoleConstructRating]

@@ -6,6 +6,7 @@ import {
   approveRoleProfile,
   createRole,
   createRoleProfile,
+  extractRoleProfile,
   getCurrentUser,
   getRole,
   getRoleProfiles,
@@ -48,6 +49,7 @@ function profile(): RoleProfile {
   return {
     approved_at: null,
     approved_by: null,
+    assumptions: [],
     constructs: constructs(),
     created_at: "2026-09-26T12:00:00Z",
     created_by: IDS.user,
@@ -97,9 +99,10 @@ describe("role API client", () => {
     ]);
   });
 
-  it("sends create, revise, and approve operations to existing API paths", async () => {
+  it("sends extraction, create, revise, and approval to their exact API paths", async () => {
     vi.mocked(fetch)
       .mockResolvedValueOnce(Response.json(role, { status: 201 }))
+      .mockResolvedValueOnce(Response.json(profile(), { status: 201 }))
       .mockResolvedValueOnce(Response.json(profile(), { status: 201 }))
       .mockResolvedValueOnce(Response.json(profile()))
       .mockResolvedValueOnce(
@@ -117,6 +120,7 @@ describe("role API client", () => {
       location: role.location,
       title: role.title,
     });
+    await extractRoleProfile(IDS.role);
     await createRoleProfile(IDS.role, { constructs: constructs() });
     await reviseRoleProfile(IDS.role, IDS.profile, {
       constructs: constructs(),
@@ -126,11 +130,13 @@ describe("role API client", () => {
     const calls = vi.mocked(fetch).mock.calls;
     expect(calls.map(([path]) => path)).toEqual([
       "/api/internal/roles",
+      `/api/internal/roles/${IDS.role}/extract-profile`,
       `/api/internal/roles/${IDS.role}/profiles`,
       `/api/internal/roles/${IDS.role}/profiles/${IDS.profile}`,
       `/api/internal/roles/${IDS.role}/profiles/${IDS.profile}/approve`,
     ]);
     expect(calls.map(([, init]) => init?.method)).toEqual([
+      "POST",
       "POST",
       "POST",
       "PATCH",
@@ -139,7 +145,8 @@ describe("role API client", () => {
     expect(new Headers(calls[0]![1]?.headers).get("Content-Type")).toBe(
       "application/json",
     );
-    expect(calls[3]![1]?.body).toBeUndefined();
+    expect(calls[1]![1]?.body).toBeUndefined();
+    expect(calls[4]![1]?.body).toBeUndefined();
   });
 
   it("preserves problem details and field errors", async () => {

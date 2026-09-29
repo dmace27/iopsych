@@ -9,6 +9,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const apiMocks = vi.hoisted(() => ({
   approveRoleProfile: vi.fn(),
   createRoleProfile: vi.fn(),
+  extractRoleProfile: vi.fn(),
   getCurrentUser: vi.fn(),
   getRole: vi.fn(),
   getRoleProfiles: vi.fn(),
@@ -53,6 +54,7 @@ function profile(
   return {
     approved_at: status === "approved" ? "2026-09-26T13:00:00Z" : null,
     approved_by: status === "approved" ? IDS.manager : null,
+    assumptions: [],
     constructs: CONSTRUCT_KEYS.map((key) => ({
       confidence: "high" as const,
       evidence: ["Own service reliability and incident response."],
@@ -120,6 +122,38 @@ describe("RoleProfileWorkspace", () => {
     expect(await screen.findByText("Profile version 2")).toBeInTheDocument();
     expect(screen.getByText("Version 1")).toBeInTheDocument();
     expect(screen.getByText("Version 2")).toBeInTheDocument();
+  });
+
+  it("lets a recruiter extract a draft while keeping manager approval separate", async () => {
+    const extracted = {
+      ...profile(),
+      assumptions: ["The description may not cover every team routine."],
+    };
+    apiMocks.getCurrentUser.mockResolvedValue({
+      ...manager(),
+      role: "recruiter",
+    });
+    apiMocks.getRole.mockResolvedValue(role());
+    apiMocks.getRoleProfiles.mockResolvedValue([]);
+    apiMocks.extractRoleProfile.mockResolvedValue(extracted);
+    const user = userEvent.setup();
+    render(<RoleProfileWorkspace roleId={IDS.role} />);
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: "Extract profile from job description",
+      }),
+    );
+
+    await waitFor(() => {
+      expect(apiMocks.extractRoleProfile).toHaveBeenCalledWith(IDS.role);
+    });
+    expect(
+      await screen.findByText("Extraction assumptions to verify"),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /approve version/i }),
+    ).not.toBeInTheDocument();
   });
 
   it("exposes approval only to the manager and refreshes the frozen version", async () => {

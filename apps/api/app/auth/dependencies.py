@@ -12,16 +12,24 @@ from app.auth.errors import authentication_required, authentication_unavailable,
 from app.auth.tokens import TokenValidationError, TokenVerifier
 from app.database.models import InternalUserRole
 from app.database.repositories import OrganizationDataAccess
+from app.database.session import (
+    REQUEST_SESSION_STATE_ATTRIBUTE,
+    REQUEST_TRANSACTION_INFO_KEY,
+)
 
 bearer_scheme = HTTPBearer(auto_error=False)
 
 
 def get_database_session(request: Request) -> Generator[Session]:
-    """Yield a request-scoped database session from the application factory."""
+    """Yield the middleware-owned session used for one atomic API request."""
 
-    factory = request.app.state.session_factory
-    with factory() as session:
-        yield session
+    session = getattr(request.state, REQUEST_SESSION_STATE_ATTRIBUTE, None)
+    if not isinstance(session, Session):
+        factory = request.app.state.session_factory
+        session = factory()
+        session.info[REQUEST_TRANSACTION_INFO_KEY] = True
+        setattr(request.state, REQUEST_SESSION_STATE_ATTRIBUTE, session)
+    yield session
 
 
 def authenticate_internal_user(

@@ -162,6 +162,7 @@ class RoleProfile(UuidPrimaryKeyMixin, CreatedAtMixin, Base):
         Uuid(as_uuid=True), ForeignKey("users.id", ondelete="RESTRICT"), nullable=True
     )
     approved_at: Mapped[datetime | None] = mapped_column(UtcDateTime(), nullable=True)
+    assumptions_json: Mapped[list[str]] = mapped_column(JSON, nullable=False, default=list)
 
 
 class RoleConstructRating(Base):

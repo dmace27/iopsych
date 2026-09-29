@@ -59,6 +59,7 @@ export const RoleProfileSchema = z
     approved_by: z.uuid().nullable(),
     approved_at: z.string().min(1).nullable(),
     created_at: z.string().min(1),
+    assumptions: z.array(z.string().trim().min(1)),
     constructs: z
       .array(RoleConstructRatingSchema)
       .length(CONSTRUCT_KEYS.length),

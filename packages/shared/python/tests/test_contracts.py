@@ -127,6 +127,11 @@ def test_role_extraction_rejects_duplicate_construct_and_review_bypass() -> None
     with pytest.raises(ValidationError, match="Input should be True"):
         RoleExtraction.model_validate(payload)
 
+    payload = deepcopy(fixture["payload"])
+    payload["needs_human_review"] = 1
+    with pytest.raises(ValidationError, match="must be a boolean"):
+        RoleExtraction.model_validate(payload)
+
 
 def test_role_extraction_requires_non_empty_source_context() -> None:
     """Evidence validation cannot run without the submitted job description."""

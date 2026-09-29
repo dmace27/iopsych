@@ -10,6 +10,7 @@ from app.audit import audited, set_audit_entity
 from app.auth.context import AuthorizationContext
 from app.auth.dependencies import get_database_session, require_roles
 from app.database.models import InternalUserRole, Role
+from app.extraction.service import StructuredRoleExtractionService
 from app.roles.schemas import (
     RoleCreateRequest,
     RoleProfileCreateRequest,
@@ -57,6 +58,19 @@ def _service(session: Session, context: AuthorizationContext) -> RoleProfileServ
     """Construct the transaction service from request-scoped dependencies."""
 
     return RoleProfileService(session, context)
+
+
+def _extraction_service(
+    request: Request, session: Session, context: AuthorizationContext
+) -> StructuredRoleExtractionService:
+    """Construct extraction from application-owned provider configuration."""
+
+    return StructuredRoleExtractionService(
+        session=session,
+        context=context,
+        provider=request.app.state.role_extraction_provider,
+        settings=request.app.state.role_extraction_settings,
+    )
 
 
 @router.get("", response_model=list[RoleResponse])
@@ -114,6 +128,29 @@ async def archive_role(
 
     _service(session, context).archive_role(role_id)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.post(
+    "/{role_id}/extract-profile",
+    response_model=RoleProfileResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+@audited(
+    "role_profile.extraction_requested",
+    "role_profile",
+    entity_id_path_parameter="role_id",
+)
+def extract_profile(
+    role_id: UUID,
+    request: Request,
+    context: EditContext,
+    session: DatabaseSession,
+) -> RoleProfileResponse:
+    """Generate a schema-valid profile draft that cannot bypass manager approval."""
+
+    profile = _extraction_service(request, session, context).extract(role_id)
+    set_audit_entity(request, profile.id)
+    return profile
 
 
 @router.post(

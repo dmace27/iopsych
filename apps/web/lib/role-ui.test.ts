@@ -17,6 +17,7 @@ function profile(version: number): RoleProfile {
   return {
     approved_at: null,
     approved_by: null,
+    assumptions: [],
     constructs: blankConstructs().map((construct) => ({
       ...construct,
       evidence: ["Exact evidence"],

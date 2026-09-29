@@ -20,6 +20,7 @@ from app.database.models import (
     RoleStatus,
 )
 from app.database.repositories import OrganizationDataAccess
+from app.database.session import commit_or_flush
 from app.roles.schemas import (
     RoleCreateRequest,
     RoleProfileCreateRequest,
@@ -70,7 +71,7 @@ class RoleProfileService:
             status=RoleStatus.DRAFT,
         )
         self._session.add(role)
-        self._session.commit()
+        commit_or_flush(self._session)
         return role
 
     def update_role(self, role_id: UUID, request: RoleUpdateRequest) -> Role:
@@ -86,7 +87,7 @@ class RoleProfileService:
             )
         for field_name, value in changes.items():
             setattr(role, field_name, value)
-        self._session.commit()
+        commit_or_flush(self._session)
         return role
 
     def archive_role(self, role_id: UUID) -> Role:
@@ -94,13 +95,15 @@ class RoleProfileService:
 
         role = self._get_locked_role(role_id)
         role.status = RoleStatus.ARCHIVED
-        self._session.commit()
+        commit_or_flush(self._session)
         return role
 
     def create_profile(
         self,
         role_id: UUID,
         request: RoleProfileCreateRequest,
+        *,
+        assumptions: list[str] | None = None,
     ) -> RoleProfileResponse:
         """Create the next complete draft and supersede any open draft."""
 
@@ -111,8 +114,13 @@ class RoleProfileService:
         self._validate_evidence(role, ordered_ratings)
         next_version = self._next_profile_version(role_id)
         self._supersede_open_drafts(role_id)
-        profile = self._insert_profile(role_id, next_version, ratings)
-        self._session.commit()
+        profile = self._insert_profile(
+            role_id,
+            next_version,
+            ratings,
+            assumptions=assumptions or [],
+        )
+        commit_or_flush(self._session)
         return self._profile_response(profile, ordered_ratings)
 
     def list_profiles(self, role_id: UUID) -> list[RoleProfileResponse]:
@@ -161,8 +169,13 @@ class RoleProfileService:
         ordered_ratings = [ratings[key] for key in CONSTRUCT_KEYS]
         self._validate_evidence(role, ordered_ratings)
         source.status = RoleProfileStatus.SUPERSEDED
-        revised = self._insert_profile(role_id, source.version + 1, ratings)
-        self._session.commit()
+        revised = self._insert_profile(
+            role_id,
+            source.version + 1,
+            ratings,
+            assumptions=source.assumptions_json,
+        )
+        commit_or_flush(self._session)
         return self._profile_response(revised, ordered_ratings)
 
     def approve_profile(self, role_id: UUID, profile_id: UUID) -> RoleProfileResponse:
@@ -190,7 +203,7 @@ class RoleProfileService:
         profile.approved_at = datetime.now(UTC)
         role.status = RoleStatus.ACTIVE
         ratings = self._rating_contracts(profile.id)
-        self._session.commit()
+        commit_or_flush(self._session)
         return self._profile_response(profile, ratings)
 
     def _get_locked_role(self, role_id: UUID) -> Role:
@@ -263,6 +276,8 @@ class RoleProfileService:
         role_id: UUID,
         version: int,
         ratings: dict[ConstructKey, RatingContract],
+        *,
+        assumptions: list[str],
     ) -> RoleProfile:
         """Insert one draft snapshot and all of its immutable construct rows."""
 
@@ -271,6 +286,7 @@ class RoleProfileService:
             version=version,
             status=RoleProfileStatus.DRAFT,
             created_by=self._context.user_id,
+            assumptions_json=list(assumptions),
         )
         self._session.add(profile)
         self._session.flush()
@@ -337,5 +353,6 @@ class RoleProfileService:
             approved_by=profile.approved_by,
             approved_at=profile.approved_at,
             created_at=profile.created_at,
+            assumptions=profile.assumptions_json,
             constructs=ratings,
         )

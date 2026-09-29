@@ -15,6 +15,7 @@ from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoin
 
 from app.auth.context import AuthorizationContext
 from app.database.models import AuditEvent
+from app.database.session import REQUEST_SESSION_STATE_ATTRIBUTE
 from iopsych_contracts import ApiProblem
 
 P = ParamSpec("P")
@@ -67,30 +68,49 @@ class AuditMiddleware(BaseHTTPMiddleware):
         self._session_factory = session_factory
 
     async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
-        """Run the endpoint and append every authenticated outcome, including exceptions."""
+        """Commit request work and its audit event as one transaction."""
 
         try:
             response = await call_next(request)
         except Exception:
-            # Starlette's outer error middleware will render the final 500. The
-            # audit entry must be committed before the exception leaves this
-            # middleware or the failed sensitive action would disappear.
-            audit_failure = self._append_event(request, status_code=500)
+            session = self._request_session(request)
+            if session is not None:
+                session.rollback()
+            audit_failure = self._commit_audit_only(request, status_code=500, session=session)
+            self._close_request_session(request)
             if audit_failure is not None:
                 return audit_failure
             raise
 
-        audit_failure = self._append_event(request, status_code=response.status_code)
-        return audit_failure or response
+        session = self._request_session(request)
+        if session is None:
+            audit_failure = self._commit_audit_only(
+                request,
+                status_code=response.status_code,
+                session=None,
+            )
+            return audit_failure or response
 
-    def _append_event(self, request: Request, *, status_code: int) -> JSONResponse | None:
-        """Persist one event when the resolved endpoint and actor are auditable."""
+        self._stage_event(request, session=session, status_code=response.status_code)
+        try:
+            session.commit()
+        except SQLAlchemyError:
+            session.rollback()
+            if self._is_auditable(request):
+                return _audit_failure_response(request)
+            raise
+        finally:
+            self._close_request_session(request)
+        return response
+
+    def _stage_event(self, request: Request, *, session: Session, status_code: int) -> bool:
+        """Add one event to an existing transaction when the request is auditable."""
 
         endpoint = request.scope.get("endpoint")
         policy = getattr(endpoint, AUDIT_POLICY_ATTRIBUTE, None)
         context = getattr(request.state, "authorization_context", None)
         if not isinstance(policy, AuditPolicy) or not isinstance(context, AuthorizationContext):
-            return None
+            return False
 
         explicit_entity_id = getattr(request.state, AUDIT_ENTITY_STATE_ATTRIBUTE, None)
         if isinstance(explicit_entity_id, UUID):
@@ -104,23 +124,74 @@ class AuditMiddleware(BaseHTTPMiddleware):
         }
         if not target_is_valid:
             metadata["target_path_parameter_valid"] = False
-        event = AuditEvent(
-            organization_id=context.organization.organization_id,
-            actor_id=context.user_id,
-            event_type=policy.event_type,
-            entity_type=policy.entity_type,
-            entity_id=entity_id,
-            metadata_json=metadata,
+        session.add(
+            AuditEvent(
+                organization_id=context.organization.organization_id,
+                actor_id=context.user_id,
+                event_type=policy.event_type,
+                entity_type=policy.entity_type,
+                entity_id=entity_id,
+                metadata_json=metadata,
+            )
         )
+        return True
+
+    def _commit_audit_only(
+        self,
+        request: Request,
+        *,
+        status_code: int,
+        session: Session | None,
+    ) -> JSONResponse | None:
+        """Persist a failure/read audit when no domain write remains to commit."""
+
+        if not self._is_auditable(request):
+            return None
         try:
-            with self._session_factory() as session:
-                session.add(event)
+            if session is not None:
+                self._stage_event(request, session=session, status_code=status_code)
                 session.commit()
+            else:
+                with self._session_factory() as isolated_session:
+                    self._stage_event(
+                        request,
+                        session=isolated_session,
+                        status_code=status_code,
+                    )
+                    isolated_session.commit()
         except SQLAlchemyError:
             # Sensitive operations fail closed when their required audit trail
             # cannot be written. No database exception detail reaches clients.
             return _audit_failure_response(request)
         return None
+
+    @staticmethod
+    def _is_auditable(request: Request) -> bool:
+        """Return whether the route and authenticated actor require an audit."""
+
+        endpoint = request.scope.get("endpoint")
+        return isinstance(
+            getattr(endpoint, AUDIT_POLICY_ATTRIBUTE, None), AuditPolicy
+        ) and isinstance(
+            getattr(request.state, "authorization_context", None),
+            AuthorizationContext,
+        )
+
+    @staticmethod
+    def _request_session(request: Request) -> Session | None:
+        """Read the lazily-created request session without opening a database connection."""
+
+        session = getattr(request.state, REQUEST_SESSION_STATE_ATTRIBUTE, None)
+        return session if isinstance(session, Session) else None
+
+    @staticmethod
+    def _close_request_session(request: Request) -> None:
+        """Release a request session exactly once after commit or rollback."""
+
+        session = getattr(request.state, REQUEST_SESSION_STATE_ATTRIBUTE, None)
+        if isinstance(session, Session):
+            session.close()
+            delattr(request.state, REQUEST_SESSION_STATE_ATTRIBUTE)
 
     @staticmethod
     def _resolve_entity_id(

@@ -20,6 +20,7 @@ from app.database.models import (
     RoleProfile,
     RoleProfileStatus,
 )
+from app.database.session import commit_or_flush
 from app.reports.schemas import ReportCreateRequest, ReportResponse, SubmittedAssessmentResponse
 from iopsych_contracts import RoleConstructRating as RatingContract
 from iopsych_contracts.assessment import AssessmentScoreResult
@@ -149,7 +150,7 @@ class ReportService:
                     metadata_json={"algorithm_version": result.algorithm_version},
                 )
             )
-        self.session.commit()
+        commit_or_flush(self.session)
         return self._response(report, profile)
 
     def read(self, report_id: UUID) -> ReportResponse:

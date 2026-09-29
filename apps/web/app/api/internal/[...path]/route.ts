@@ -10,15 +10,26 @@ interface RouteContext {
   params: Promise<{ path: string[] }>;
 }
 
+const ALLOWED_INTERNAL_ROUTES = [
+  /^GET \/auth\/me$/,
+  /^(?:GET|POST) \/roles$/,
+  /^(?:GET|PATCH|DELETE) \/roles\/[^/]+$/,
+  /^(?:GET|POST) \/roles\/[^/]+\/profiles$/,
+  /^POST \/roles\/[^/]+\/extract-profile$/,
+  /^GET \/roles\/[^/]+\/assessments$/,
+  /^(?:GET|PATCH) \/roles\/[^/]+\/profiles\/[^/]+$/,
+  /^POST \/roles\/[^/]+\/profiles\/[^/]+\/approve$/,
+  /^POST \/reports$/,
+  /^GET \/reports\/[^/]+$/,
+];
+
 /** Limit the credential-bearing proxy to implemented internal endpoints. */
 function isAllowedInternalPath(path: string[], method: string): boolean {
-  return (
-    path[0] === "roles" ||
-    (path[0] === "reports" &&
-      ((method === "POST" && path.length === 1) ||
-        (method === "GET" && path.length === 2))) ||
-    (path.length === 2 && path[0] === "auth" && path[1] === "me")
-  );
+  const encodedPath = path
+    .map((segment) => encodeURIComponent(segment))
+    .join("/");
+  const route = `${method} /${encodedPath}`;
+  return ALLOWED_INTERNAL_ROUTES.some((pattern) => pattern.test(route));
 }
 
 /** Build a problem response without exposing upstream or credential details. */

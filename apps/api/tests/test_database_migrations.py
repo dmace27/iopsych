@@ -48,6 +48,9 @@ def test_migration_upgrades_and_downgrades_empty_database(
     inspector = inspect(engine)
     assert set(inspector.get_table_names()) == EXPECTED_TABLES
     assert "auth_subject" in {column["name"] for column in inspector.get_columns("users")}
+    assert "assumptions_json" in {
+        column["name"] for column in inspector.get_columns("role_profiles")
+    }
     with engine.connect() as connection:
         trigger_names = set(
             connection.scalars(text("SELECT name FROM sqlite_master WHERE type = 'trigger'"))

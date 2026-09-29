@@ -20,6 +20,11 @@ from app.auth.errors import (
 from app.auth.tokens import HmacJwtVerifier, TokenVerifier
 from app.database.models import InternalUserRole
 from app.database.session import create_database_engine, create_session_factory
+from app.extraction.config import RoleExtractionSettings
+from app.extraction.provider import (
+    RoleExtractionProvider,
+    build_role_extraction_provider,
+)
 from app.invitations.config import InvitationSettings
 from app.invitations.delivery import (
     InvitationDeliveryAdapter,
@@ -58,6 +63,8 @@ def create_app(
     invitation_settings: InvitationSettings | None = None,
     invitation_delivery: InvitationDeliveryAdapter | None = None,
     invitation_rate_limiter: InMemoryRateLimiter | None = None,
+    role_extraction_settings: RoleExtractionSettings | None = None,
+    role_extraction_provider: RoleExtractionProvider | None = None,
     session_factory: sessionmaker[Session] | None = None,
     token_verifier: TokenVerifier | None = None,
 ) -> FastAPI:
@@ -65,6 +72,7 @@ def create_app(
 
     settings = authentication_settings or AuthenticationSettings()
     invite_settings = invitation_settings or InvitationSettings()
+    extraction_settings = role_extraction_settings or RoleExtractionSettings()
     install_invite_token_log_filter()
     resolved_session_factory = session_factory or create_session_factory(create_database_engine())
     resolved_verifier = token_verifier
@@ -86,6 +94,10 @@ def create_app(
     application.state.invitation_settings = invite_settings
     application.state.invitation_delivery = invitation_delivery or UnconfiguredInvitationDelivery()
     application.state.invitation_rate_limiter = invitation_rate_limiter or InMemoryRateLimiter()
+    application.state.role_extraction_settings = extraction_settings
+    application.state.role_extraction_provider = (
+        role_extraction_provider or build_role_extraction_provider(extraction_settings)
+    )
     application.state.invite_token_codec = (
         InviteTokenCodec(invite_settings.token_signing_secret.get_secret_value())
         if invite_settings.token_signing_secret is not None

@@ -274,6 +274,11 @@ async def test_submission_requires_valid_consented_complete_one_time_input(
     retry = await report_client.post(path, json=responses())
     assert retry.status_code == 201
     assert retry.json() == first.json()
+    reordered = responses()
+    reordered["responses"].reverse()
+    reordered_retry = await report_client.post(path, json=reordered)
+    assert reordered_retry.status_code == 201
+    assert reordered_retry.json() == first.json()
     assert (await report_client.post(path, json=responses(skipped=True))).status_code == 409
     read = await report_client.get(f"/v1/candidate/invites/{token}")
     assert read.json()["assessment_id"] == first.json()["assessment_id"]

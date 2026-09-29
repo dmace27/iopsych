@@ -79,6 +79,29 @@ describe("internal API proxy", () => {
     expect(fetch).not.toHaveBeenCalled();
   });
 
+  it("rejects unknown role subpaths and unsupported methods", async () => {
+    headerMocks.cookieGet.mockReturnValue({ value: "cookie-token" });
+
+    const unknown = await GET(
+      new Request("http://web.test/api/internal/roles/role-id/secrets"),
+      context("roles", "role-id", "secrets"),
+    );
+    const wrongMethod = await DELETE(
+      new Request(
+        "http://web.test/api/internal/roles/role-id/profiles/profile-id",
+        {
+          headers: { Origin: "http://web.test" },
+          method: "DELETE",
+        },
+      ),
+      context("roles", "role-id", "profiles", "profile-id"),
+    );
+
+    expect(unknown.status).toBe(404);
+    expect(wrongMethod.status).toBe(404);
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
   it("forwards the exact current-user endpoint", async () => {
     headerMocks.cookieGet.mockReturnValue({ value: "cookie-token" });
     vi.mocked(fetch).mockResolvedValue(
@@ -158,6 +181,31 @@ describe("internal API proxy", () => {
     );
     expect(response.status).toBe(201);
     expect(response.headers.get("Content-Type")).toBe("application/json");
+  });
+
+  it("forwards extraction and approval only through their POST routes", async () => {
+    headerMocks.cookieGet.mockReturnValue({ value: "cookie-token" });
+    vi.mocked(fetch).mockResolvedValue(Response.json({ status: "draft" }));
+
+    await POST(
+      new Request(
+        "http://web.test/api/internal/roles/role-id/extract-profile",
+        { headers: { Origin: "http://web.test" }, method: "POST" },
+      ),
+      context("roles", "role-id", "extract-profile"),
+    );
+    await POST(
+      new Request(
+        "http://web.test/api/internal/roles/role-id/profiles/profile-id/approve",
+        { headers: { Origin: "http://web.test" }, method: "POST" },
+      ),
+      context("roles", "role-id", "profiles", "profile-id", "approve"),
+    );
+
+    expect(vi.mocked(fetch).mock.calls.map(([url]) => String(url))).toEqual([
+      "http://localhost:8000/v1/roles/role-id/extract-profile",
+      "http://localhost:8000/v1/roles/role-id/profiles/profile-id/approve",
+    ]);
   });
 
   it("omits a content type when a PATCH body has no declared media type", async () => {

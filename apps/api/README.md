@@ -39,6 +39,18 @@ Evidence excerpts must occur verbatim in the role's job description, and the
 description is locked once profile versioning begins so historical evidence
 remains traceable.
 
+`POST /v1/roles/{role_id}/extract-profile` sends only the role title,
+department, location, and job description through the configured structured
+extraction provider. The provider is constrained by the shared JSON Schema and
+the server independently validates every returned field, all six unique
+constructs, the mandatory `needs_human_review=true` flag, and every verbatim
+evidence excerpt. Invalid or unavailable provider responses are retried within
+the configured bound and never create a partial profile. Validated assumptions
+are stored with the immutable profile version for review. Successful extraction
+creates a normal `draft`; only the existing hiring-manager-only approval route
+can activate it. Configure the adapter and retry policy with the
+`ROLE_EXTRACTION_*` settings in `.env.example`.
+
 ## Candidate invitations and consent
 
 Package 2B adds recruiter invitation creation at

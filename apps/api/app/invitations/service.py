@@ -33,6 +33,7 @@ from app.database.models import (
     RoleStatus,
 )
 from app.database.repositories import OrganizationDataAccess
+from app.database.session import commit_or_flush
 from app.invitations.config import InvitationSettings
 from app.invitations.delivery import (
     InvitationDeliveryAdapter,
@@ -147,7 +148,7 @@ class InternalInvitationService:
 
         invite.status = AssessmentInviteStatus.ACTIVE
         invite.sent_at = now
-        self._session.commit()
+        commit_or_flush(self._session)
         return invite
 
     def revoke(self, role_id: UUID, invite_id: UUID) -> AssessmentInvite:
@@ -161,7 +162,7 @@ class InternalInvitationService:
         invite.status = AssessmentInviteStatus.REVOKED
         invite.revoked_at = datetime.now(UTC)
         invite.revoked_by = self._context.user_id
-        self._session.commit()
+        commit_or_flush(self._session)
         return invite
 
     def _require_codec(self) -> InviteTokenCodec:
@@ -193,7 +194,7 @@ class CandidateInvitationService:
 
         candidate_invite = self._resolve(raw_token, lock=False)
         self._append_audit(candidate_invite, "candidate_invite.accessed")
-        self._session.commit()
+        commit_or_flush(self._session)
         return self._response(candidate_invite)
 
     def record_consent(self, raw_token: str, request: ConsentRequest) -> CandidateInviteResponse:
@@ -227,7 +228,7 @@ class CandidateInvitationService:
             "candidate_consent.recorded",
             metadata={"decision": request.decision.value},
         )
-        self._session.commit()
+        commit_or_flush(self._session)
         return self._response(candidate_invite, consent=existing)
 
     def _resolve(self, raw_token: str, *, lock: bool) -> _CandidateInvite:
@@ -269,9 +270,11 @@ class CandidateInvitationService:
 
         candidate = self._resolve(raw_token, lock=True)
         invite = require_consented_invite(self._session, candidate.invite.id)
+        canonical_responses = _canonical_response_payload(responses)
         existing = self._session.scalar(select(Assessment).where(Assessment.invite_id == invite.id))
         if existing is not None:
-            if existing.responses_json == responses.model_dump(mode="json"):
+            stored_responses = AssessmentResponseSet.model_validate(existing.responses_json)
+            if _canonical_response_payload(stored_responses) == canonical_responses:
                 return existing.id
             raise resource_conflict(
                 code="assessment_already_submitted",
@@ -298,7 +301,7 @@ class CandidateInvitationService:
             consent_id=consent.id,
             submitted_at=datetime.now(UTC),
             definition_json=definition.model_dump(mode="json"),
-            responses_json=responses.model_dump(mode="json"),
+            responses_json=canonical_responses,
             scores_json=scores.model_dump(mode="json"),
         )
         self._session.add(assessment)
@@ -313,7 +316,7 @@ class CandidateInvitationService:
                 metadata_json={"scoring_version": scores.scoring_version},
             )
         )
-        self._session.commit()
+        commit_or_flush(self._session)
         return assessment.id
 
     def _require_available(self, candidate_invite: _CandidateInvite) -> None:
@@ -335,7 +338,7 @@ class CandidateInvitationService:
         if invite.expires_at <= datetime.now(UTC):
             invite.status = AssessmentInviteStatus.EXPIRED
             self._append_audit(candidate_invite, "candidate_invite.expired")
-            self._session.commit()
+            commit_or_flush(self._session)
             raise resource_unavailable(
                 code="invitation_expired",
                 detail="This invitation has expired.",
@@ -422,3 +425,10 @@ def require_consented_invite(session: Session, invite_id: UUID) -> AssessmentInv
             detail="Assessment access requires a valid affirmative consent record.",
         )
     return invite
+
+
+def _canonical_response_payload(responses: AssessmentResponseSet) -> dict[str, object]:
+    """Serialize responses in block-ID order for stable storage and retries."""
+
+    ordered = tuple(sorted(responses.responses, key=lambda response: response.block_id))
+    return responses.model_copy(update={"responses": ordered}).model_dump(mode="json")

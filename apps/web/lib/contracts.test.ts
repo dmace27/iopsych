@@ -55,6 +55,7 @@ describe("internal role UI contracts", () => {
     const profile = RoleProfileSchema.parse({
       approved_at: null,
       approved_by: null,
+      assumptions: ["Team practices are not fully described."],
       constructs: constructs(),
       created_at: "2026-09-26T12:00:00Z",
       created_by: IDS.user,
@@ -74,6 +75,7 @@ describe("internal role UI contracts", () => {
     const result = RoleProfileSchema.safeParse({
       approved_at: null,
       approved_by: null,
+      assumptions: [],
       constructs: duplicated,
       created_at: "2026-09-26T12:00:00Z",
       created_by: IDS.user,

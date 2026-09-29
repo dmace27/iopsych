@@ -10,6 +10,9 @@ from sqlalchemy.pool import StaticPool
 
 from app.database.config import DatabaseSettings
 
+REQUEST_SESSION_STATE_ATTRIBUTE = "database_session"
+REQUEST_TRANSACTION_INFO_KEY = "request_managed_transaction"
+
 
 def create_database_engine(settings: DatabaseSettings | None = None) -> Engine:
     """Create an engine without opening a connection eagerly."""
@@ -34,6 +37,20 @@ def create_session_factory(engine: Engine) -> sessionmaker[Session]:
     """Create sessions that retain loaded state after commits."""
 
     return sessionmaker(bind=engine, expire_on_commit=False)
+
+
+def commit_or_flush(session: Session) -> None:
+    """Finish a service write without breaking request-level atomicity.
+
+    API requests are committed once by the audit middleware so the domain
+    mutation and its required audit event succeed or roll back together.
+    Direct service callers retain the historical commit-on-success behavior.
+    """
+
+    if session.info.get(REQUEST_TRANSACTION_INFO_KEY):
+        session.flush()
+    else:
+        session.commit()
 
 
 @contextmanager
