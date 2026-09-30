@@ -139,7 +139,7 @@ def rate_limit_exceeded(*, retry_after_seconds: int) -> AccessProblemError:
         status=429,
         code="rate_limit_exceeded",
         title="Too many requests",
-        detail="Too many invitation requests were made. Try again later.",
+        detail="Too many requests were made. Try again later.",
         headers={"Retry-After": str(retry_after_seconds)},
     )
 

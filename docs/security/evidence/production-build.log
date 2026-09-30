@@ -1,0 +1,43 @@
+npm notice run iopsych@0.1.0 build
+npm notice run run-s build:shared build:web
+npm notice run iopsych@0.1.0 build:shared
+npm notice run npm run build --workspace @iopsych/shared
+npm notice run @iopsych/shared@0.1.0 build
+npm notice run tsc --project tsconfig.build.json
+npm notice run iopsych@0.1.0 build:web
+npm notice run npm run build --workspace @iopsych/web
+npm notice run @iopsych/web@0.1.0 build
+npm notice run next build --webpack
+▲ Next.js 16.3.6 (webpack)
+✓ Running next.config.ts took 10ms
+
+  Creating an optimized production build ...
+✓ Compiled successfully in 737ms
+  Running TypeScript ...
+  Finished TypeScript in 623ms ...
+  Collecting page data using 14 workers ...
+  Generating static pages using 14 workers (0/3) ...
+✓ Generating static pages using 14 workers (3/3) in 76ms
+  Finalizing page optimization ...
+  Collecting build traces ...
+
+Route (app)
+┌ ƒ /
+├ ƒ /_not-found
+├ ƒ /api/candidate/invites/[...path]
+├ ƒ /api/health
+├ ƒ /api/internal/[...path]
+├ ƒ /api/session
+├ ƒ /candidate/invites/[token]
+├ ƒ /privacy
+├ ƒ /reports/[reportId]
+├ ƒ /roles
+├ ƒ /roles/[roleId]
+├ ƒ /roles/[roleId]/reports
+└ ƒ /sign-in
+
+
+ƒ Proxy (Middleware)
+
+ƒ  (Dynamic)  server-rendered on demand
+

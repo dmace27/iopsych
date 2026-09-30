@@ -40,6 +40,7 @@ from app.privacy.router import privacy_router
 from app.reports.router import router as reports_router
 from app.reports.router import submission_router
 from app.roles.router import router as roles_router
+from app.security import SecurityMiddleware, unexpected_problem_handler
 
 
 class HealthResponse(BaseModel):
@@ -109,9 +110,11 @@ def create_app(
         if invite_settings.token_signing_secret is not None
         else None
     )
+    application.add_exception_handler(Exception, unexpected_problem_handler)
     application.add_exception_handler(AccessProblemError, access_problem_handler)
     application.add_exception_handler(RequestValidationError, request_validation_problem_handler)
     application.add_middleware(AuditMiddleware, session_factory=resolved_session_factory)
+    application.add_middleware(SecurityMiddleware)
     application.include_router(roles_router)
     application.include_router(invitations_router)
     application.include_router(reports_router)

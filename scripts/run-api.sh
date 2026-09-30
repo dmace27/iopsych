@@ -12,6 +12,7 @@ fi
 
 exec .venv/bin/python -m uvicorn app.main:app \
   --reload \
+  --no-proxy-headers \
   --app-dir apps/api \
   --host "${API_HOST:-0.0.0.0}" \
   --port "${API_PORT:-8000}" \

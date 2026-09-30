@@ -106,3 +106,7 @@ packages/
   shared/    Versioned TypeScript, JSON Schema, Pydantic, and fixture contracts
 scripts/     Reproducible local setup scripts
 ```
+
+Security hardening, deployment limits, and package 4C verification are
+documented in [the threat model](docs/security/threat-model.md) and
+[CI evidence](docs/security/ci-evidence.md).

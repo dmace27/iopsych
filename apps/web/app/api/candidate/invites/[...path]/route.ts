@@ -41,7 +41,10 @@ async function proxyCandidateApi(
   context: RouteContext,
 ): Promise<Response> {
   const { path } = await context.params;
-  if (!isAllowedCandidatePath(path, request.method)) {
+  if (
+    path.some((segment) => segment === "." || segment === "..") ||
+    !isAllowedCandidatePath(path, request.method)
+  ) {
     return problem(
       404,
       "route_not_found",
@@ -78,6 +81,9 @@ async function proxyCandidateApi(
     return new Response(await upstream.arrayBuffer(), {
       headers: {
         "Cache-Control": "no-store",
+        ...(upstream.headers.has("Retry-After")
+          ? { "Retry-After": upstream.headers.get("Retry-After")! }
+          : {}),
         "Content-Type":
           upstream.headers.get("content-type") ?? "application/json",
       },

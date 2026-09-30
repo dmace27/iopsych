@@ -66,7 +66,10 @@ async function proxyInternalApi(
   context: RouteContext,
 ): Promise<Response> {
   const { path } = await context.params;
-  if (!isAllowedInternalPath(path, request.method)) {
+  if (
+    path.some((segment) => segment === "." || segment === "..") ||
+    !isAllowedInternalPath(path, request.method)
+  ) {
     return problem(
       404,
       "route_not_found",
@@ -122,6 +125,9 @@ async function proxyInternalApi(
       status: upstream.status,
       headers: {
         "Cache-Control": "no-store",
+        ...(upstream.headers.has("Retry-After")
+          ? { "Retry-After": upstream.headers.get("Retry-After")! }
+          : {}),
         "Content-Type":
           upstream.headers.get("content-type") ?? "application/json",
       },

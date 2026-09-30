@@ -1,0 +1,58 @@
+
+> iopsych@0.1.0 build
+> run-s build:shared build:web
+
+
+> iopsych@0.1.0 build:shared
+> npm run build --workspace @iopsych/shared
+
+
+> @iopsych/shared@0.1.0 build
+> tsc --project tsconfig.build.json
+
+
+> iopsych@0.1.0 build:web
+> npm run build --workspace @iopsych/web
+
+
+> @iopsych/web@0.1.0 build
+> next build --webpack
+
+▲ Next.js 16.3.6 (webpack)
+✓ Running next.config.ts took 9ms
+Attention: Next.js now collects completely anonymous telemetry regarding usage.
+This information is used to shape Next.js' roadmap and prioritize features.
+You can learn more, including how to opt-out if you'd not like to participate in this anonymous program, by visiting the following URL:
+https://nextjs.org/telemetry
+
+
+  Creating an optimized production build ...
+✓ Compiled successfully in 2.5s
+  Running TypeScript ...
+  Finished TypeScript in 1610ms ...
+  Collecting page data using 14 workers ...
+  Generating static pages using 14 workers (0/3) ...
+✓ Generating static pages using 14 workers (3/3) in 95ms
+  Finalizing page optimization ...
+  Collecting build traces ...
+
+Route (app)
+┌ ƒ /
+├ ƒ /_not-found
+├ ƒ /api/candidate/invites/[...path]
+├ ƒ /api/health
+├ ƒ /api/internal/[...path]
+├ ƒ /api/session
+├ ƒ /candidate/invites/[token]
+├ ƒ /privacy
+├ ƒ /reports/[reportId]
+├ ƒ /roles
+├ ƒ /roles/[roleId]
+├ ƒ /roles/[roleId]/reports
+└ ƒ /sign-in
+
+
+ƒ Proxy (Middleware)
+
+ƒ  (Dynamic)  server-rendered on demand
+

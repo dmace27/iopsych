@@ -14,10 +14,18 @@ function problem(
   code: string,
   title: string,
   detail: string,
+  headers: Record<string, string> = {},
 ): Response {
   return Response.json(
     { type: "about:blank", title, status, detail, code },
-    { status, headers: { "Content-Type": "application/problem+json" } },
+    {
+      status,
+      headers: {
+        "Content-Type": "application/problem+json",
+        "Cache-Control": "no-store",
+        ...headers,
+      },
+    },
   );
 }
 
@@ -67,6 +75,16 @@ export async function POST(request: Request): Promise<Response> {
     );
   }
 
+  if (upstream.status === 429) {
+    return problem(
+      429,
+      "rate_limit_exceeded",
+      "Too many requests",
+      "Too many sign-in requests were made. Try again later.",
+      { "Retry-After": upstream.headers.get("Retry-After") ?? "60" },
+    );
+  }
+
   if (!upstream.ok) {
     return upstream.status >= 500
       ? problem(
@@ -86,12 +104,14 @@ export async function POST(request: Request): Promise<Response> {
   const cookieStore = await cookies();
   cookieStore.set(INTERNAL_SESSION_COOKIE, token, {
     httpOnly: true,
+    maxAge: 8 * 60 * 60,
     path: "/",
     sameSite: "strict",
     secure: process.env.NODE_ENV === "production",
   });
   return new Response(await upstream.arrayBuffer(), {
     headers: {
+      "Cache-Control": "no-store",
       "Content-Type":
         upstream.headers.get("content-type") ?? "application/json",
     },
@@ -111,5 +131,8 @@ export async function DELETE(request: Request): Promise<Response> {
   }
 
   (await cookies()).delete(INTERNAL_SESSION_COOKIE);
-  return new Response(null, { status: 204 });
+  return new Response(null, {
+    status: 204,
+    headers: { "Cache-Control": "no-store" },
+  });
 }

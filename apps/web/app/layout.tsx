@@ -28,3 +28,6 @@ export default function RootLayout({
     </html>
   );
 }
+
+/** Request-specific CSP nonces must never be cached in static HTML. */
+export const dynamic = "force-dynamic";

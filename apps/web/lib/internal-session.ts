@@ -1,5 +1,10 @@
 /** Shared server-only settings for the internal-user browser session. */
-export const INTERNAL_SESSION_COOKIE = "iopsych_internal_token";
+// The production prefix makes browsers reject Domain cookies and non-root
+// paths, preventing a sibling subdomain from shadowing the internal session.
+export const INTERNAL_SESSION_COOKIE =
+  process.env.NODE_ENV === "production"
+    ? "__Host-iopsych_internal_token"
+    : "iopsych_internal_token";
 
 /** Build an upstream API URL from the server-only configured origin. */
 export function internalApiUrl(path: string): URL {

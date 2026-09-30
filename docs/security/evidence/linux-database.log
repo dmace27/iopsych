@@ -1,0 +1,23 @@
+
+> iopsych@0.1.0 db:migrate
+> cd apps/api && ../../.venv/bin/alembic upgrade head
+
+INFO  [alembic.runtime.migration] Context impl PostgresqlImpl.
+INFO  [alembic.runtime.migration] Will assume transactional DDL.
+INFO  [alembic.runtime.migration] Running upgrade  -> 20260925_0001, Create the package 0C data foundation.
+INFO  [alembic.runtime.migration] Running upgrade 20260925_0001 -> 20260926_0002, Add stable authentication-provider subjects to internal users.
+INFO  [alembic.runtime.migration] Running upgrade 20260926_0002 -> 20260927_0003, Enforce audit-event immutability inside the database.
+INFO  [alembic.runtime.migration] Running upgrade 20260927_0003 -> 20260927_0004, Add secure candidate invitations and terminal consent records.
+INFO  [alembic.runtime.migration] Running upgrade 20260927_0004 -> 20260927_0005, Persist submitted assessments and versioned report snapshots.
+INFO  [alembic.runtime.migration] Running upgrade 20260927_0005 -> 20260928_0006, Preserve structured-extraction assumptions with profile versions.
+INFO  [alembic.runtime.migration] Running upgrade 20260928_0006 -> 20260929_0007, Track candidate retention deadlines and anonymization.
+
+> iopsych@0.1.0 db:seed
+> cd apps/api && ../../.venv/bin/python -m app.database.seed
+
+Seed complete: 2 organizations, 2 roles, 12 construct ratings.
+
+> iopsych@0.1.0 db:verify
+> cd apps/api && ../../.venv/bin/python -m app.database.verify
+
+Database verification passed for two isolated organizations.

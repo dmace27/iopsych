@@ -393,3 +393,33 @@ describe("internal API proxy", () => {
     expect(fetch).toHaveBeenCalledTimes(5);
   });
 });
+
+it("preserves Retry-After and rejects URL normalization segments", async () => {
+  vi.stubGlobal(
+    "fetch",
+    vi
+      .fn()
+      .mockResolvedValue(
+        new Response("{}", { status: 429, headers: { "Retry-After": "12" } }),
+      ),
+  );
+  try {
+    headerMocks.cookies.mockResolvedValue({
+      get: () => ({ value: "provider-token" }),
+    });
+    const path = ["roles"];
+    const response = await GET(new Request("http://web.test/api/test"), {
+      params: Promise.resolve({ path }),
+    });
+    expect(response.status).toBe(429);
+    expect(response.headers.get("Retry-After")).toBe("12");
+    for (const segment of [".", ".."]) {
+      const result = await GET(new Request("http://web.test/api/test"), {
+        params: Promise.resolve({ path: [segment] }),
+      });
+      expect(result.status).toBe(404);
+    }
+  } finally {
+    vi.unstubAllGlobals();
+  }
+});

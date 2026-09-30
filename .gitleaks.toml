@@ -1,0 +1,8 @@
+# Keep all built-in detectors; accept only this documented synthetic fixture.
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Public privacy-test signing key; never a deployment credential"
+regexTarget = "secret"
+regexes = ['''^privacy-invite-test-secret-with-at-least-32-bytes$''']

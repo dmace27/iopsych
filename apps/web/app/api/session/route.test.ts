@@ -102,6 +102,7 @@ describe("internal browser session", () => {
       "provider-token",
       expect.objectContaining({
         httpOnly: true,
+        maxAge: 8 * 60 * 60,
         path: "/",
         sameSite: "strict",
       }),
@@ -155,4 +156,29 @@ describe("internal browser session", () => {
     expect(cookieMocks.delete).toHaveBeenCalledWith("iopsych_internal_token");
     expect(response.status).toBe(204);
   });
+});
+
+it("preserves API throttling and never creates a session on a rate-limit failure", async () => {
+  cookieMocks.set.mockClear();
+  vi.stubGlobal(
+    "fetch",
+    vi
+      .fn()
+      .mockResolvedValue(
+        new Response(null, { status: 429, headers: { "Retry-After": "27" } }),
+      ),
+  );
+  try {
+    const response = await POST(signInRequest("provider-token"));
+    expect(response.status).toBe(429);
+    expect(response.headers.get("Retry-After")).toBe("27");
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
+    expect(cookieMocks.set).not.toHaveBeenCalled();
+    vi.mocked(fetch).mockResolvedValueOnce(new Response(null, { status: 429 }));
+    expect(
+      (await POST(signInRequest("token"))).headers.get("Retry-After"),
+    ).toBe("60");
+  } finally {
+    vi.unstubAllGlobals();
+  }
 });

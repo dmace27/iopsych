@@ -1,0 +1,289 @@
+
+> iopsych@0.1.0 check
+> run-s format:check lint typecheck test
+
+
+> iopsych@0.1.0 format:check
+> run-s format:check:js format:check:api
+
+
+> iopsych@0.1.0 format:check:js
+> prettier --check README.md compose.yaml package.json prettier.config.mjs tsconfig.base.json '.github/**/*.{yml,yaml}' 'apps/**/*.{css,js,json,md,mjs,ts,tsx}' 'packages/**/*.{css,js,json,md,mjs,ts,tsx}'
+
+Checking formatting...
+All matched files use Prettier code style!
+
+> iopsych@0.1.0 format:check:api
+> .venv/bin/python -m ruff format --check --config apps/api/pyproject.toml apps/api packages/shared/python scripts/security_smoke.py
+
+81 files already formatted
+
+> iopsych@0.1.0 lint
+> run-s lint:js lint:api
+
+
+> iopsych@0.1.0 lint:js
+> npm run lint --workspaces --if-present
+
+
+> @iopsych/web@0.1.0 lint
+> eslint . --max-warnings=0
+
+
+> @iopsych/shared@0.1.0 lint
+> eslint src scripts vitest.config.ts --max-warnings=0
+
+
+> iopsych@0.1.0 lint:api
+> .venv/bin/python -m ruff check --config apps/api/pyproject.toml apps/api packages/shared/python scripts/security_smoke.py
+
+All checks passed!
+
+> iopsych@0.1.0 typecheck
+> run-s typecheck:js typecheck:api
+
+
+> iopsych@0.1.0 typecheck:js
+> npm run typecheck --workspaces --if-present
+
+
+> @iopsych/web@0.1.0 typecheck
+> next typegen && tsc --noEmit
+
+Generating route types...
+✓ Types generated successfully
+
+> @iopsych/shared@0.1.0 typecheck
+> tsc --noEmit
+
+
+> iopsych@0.1.0 typecheck:api
+> .venv/bin/python -m mypy --config-file apps/api/pyproject.toml apps/api/app apps/api/tests packages/shared/python/iopsych_contracts packages/shared/python/tests scripts/security_smoke.py
+
+Success: no issues found in 71 source files
+
+> iopsych@0.1.0 test
+> run-s test:js test:contracts:python test:api
+
+
+> iopsych@0.1.0 test:js
+> npm run test --workspaces --if-present
+
+
+> @iopsych/web@0.1.0 test
+> vitest run --coverage
+
+
+[1m[30m[46m RUN [49m[39m[22m [36mv5.0.2 [39m[90m/workspace/apps/web[39m
+      [2mCoverage enabled with [22m[33mv8[39m
+
+ [32m✓[39m app/api/internal/[...path]/route.test.ts [2m([22m[2m16 tests[22m[2m)[22m[32m 24[2mms[22m[39m
+ [32m✓[39m app/api/candidate/invites/[...path]/route.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 26[2mms[22m[39m
+ [32m✓[39m app/api/session/route.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 33[2mms[22m[39m
+ [32m✓[39m lib/role-ui.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 9[2mms[22m[39m
+ [32m✓[39m lib/contracts.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+ [32m✓[39m lib/privacy-contracts.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+ [32m✓[39m lib/candidate-api.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 19[2mms[22m[39m
+ [32m✓[39m proxy.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+ [32m✓[39m lib/api-client.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 29[2mms[22m[39m
+ [32m✓[39m lib/report-api.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 18[2mms[22m[39m
+ [32m✓[39m lib/internal-session.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 13[2mms[22m[39m
+ [32m✓[39m app/ui/workspace-states.test.tsx [2m([22m[2m4 tests[22m[2m)[22m[32m 16[2mms[22m[39m
+ [32m✓[39m app/api/health/route.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 4[2mms[22m[39m
+ [32m✓[39m app/contracts.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 2[2mms[22m[39m
+ [32m✓[39m app/sign-in/sign-in-form.test.tsx [2m([22m[2m2 tests[22m[2m)[22m[32m 191[2mms[22m[39m
+ [32m✓[39m app/ui/site-header.test.tsx [2m([22m[2m2 tests[22m[2m)[22m[32m 86[2mms[22m[39m
+ [32m✓[39m app/reports/report-detail.test.tsx [2m([22m[2m2 tests[22m[2m)[22m[32m 289[2mms[22m[39m
+ [32m✓[39m app/roles/[roleId]/role-profile-workspace.test.tsx [2m([22m[2m3 tests[22m[2m)[22m[32m 297[2mms[22m[39m
+ [32m✓[39m app/roles/roles-workspace.test.tsx [2m([22m[2m3 tests[22m[2m)[22m[33m 388[2mms[22m[39m
+   [32m✓[39m RolesWorkspace [2m(3)[22m
+     [33m[2m✓[22m[39m supports keyboard-accessible recruiter role creation[33m 343[2mms[22m[39m
+ [32m✓[39m app/reports/report-workspace.test.tsx [2m([22m[2m7 tests[22m[2m)[22m[33m 511[2mms[22m[39m
+ [32m✓[39m app/privacy/privacy-workspace.test.tsx [2m([22m[2m5 tests[22m[2m)[22m[33m 728[2mms[22m[39m
+ [32m✓[39m app/candidate/invites/[token]/candidate-assessment.test.tsx [2m([22m[2m8 tests[22m[2m)[22m[33m 899[2mms[22m[39m
+   [32m✓[39m CandidateAssessment [2m(8)[22m
+     [33m[2m✓[22m[39m records a keyboard consent choice and completes all blocks by keyboard[33m 486[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m22 passed[39m[22m[90m (22)[39m
+[2m      Tests [22m [1m[32m99 passed[39m[22m[90m (99)[39m
+[2m   Start at [22m 04:54:10
+[2m   Duration [22m 1.61s[2m (tests 38%, environment 27%, import 18%, transform 15%, worker 3%)[22m
+
+[34m % [39m[2mCoverage report from [22m[33mv8[39m
+-------------------|---------|----------|---------|---------|-------------------
+File               | % Stmts | % Branch | % Funcs | % Lines | Uncovered Line #s 
+-------------------|---------|----------|---------|---------|-------------------
+All files          |   90.27 |    84.71 |   90.79 |   91.57 |                   
+ web               |     100 |      100 |     100 |     100 |                   
+  proxy.ts         |     100 |      100 |     100 |     100 |                   
+ ...ites/[...path] |     100 |      100 |     100 |     100 |                   
+  route.ts         |     100 |      100 |     100 |     100 |                   
+ ...app/api/health |     100 |      100 |     100 |     100 |                   
+  route.ts         |     100 |      100 |     100 |     100 |                   
+ ...rnal/[...path] |     100 |      100 |     100 |     100 |                   
+  route.ts         |     100 |      100 |     100 |     100 |                   
+ ...pp/api/session |     100 |      100 |     100 |     100 |                   
+  route.ts         |     100 |      100 |     100 |     100 |                   
+ ...nvites/[token] |   88.12 |    84.95 |      90 |   90.06 |                   
+  ...ssessment.tsx |   88.12 |    84.95 |      90 |   90.06 | ...34,384,616-646 
+ web/app/privacy   |   88.57 |    82.25 |   95.83 |   90.09 |                   
+  page.tsx         |       0 |      100 |       0 |       0 | 5-11              
+  ...workspace.tsx |   90.29 |    82.25 |     100 |   91.91 | ...47,162-163,188 
+ web/app/reports   |   96.77 |    87.17 |   97.56 |     100 |                   
+  ...rt-detail.tsx |     100 |      100 |     100 |     100 |                   
+  ...workspace.tsx |      96 |    85.29 |   96.77 |     100 | ...61-167,176-192 
+ web/app/roles     |   88.88 |    80.76 |   92.85 |    87.8 |                   
+  ...workspace.tsx |   88.88 |    80.76 |   92.85 |    87.8 | 26,50,89-90,215   
+ ...roles/[roleId] |   69.74 |    72.64 |      65 |   71.68 |                   
+  ...workspace.tsx |   69.74 |    72.64 |      65 |   71.68 | ...69-570,617-677 
+ web/app/sign-in   |   95.23 |    81.25 |   66.66 |     100 |                   
+  sign-in-form.tsx |   95.23 |    81.25 |   66.66 |     100 | 17,28-40          
+ web/app/ui        |     100 |      100 |     100 |     100 |                   
+  site-header.tsx  |     100 |      100 |     100 |     100 |                   
+  status-badge.tsx |     100 |      100 |     100 |     100 |                   
+  ...ce-states.tsx |     100 |      100 |     100 |     100 |                   
+ web/lib           |   98.52 |     89.7 |     100 |   98.38 |                   
+  api-client.ts    |     100 |    88.46 |     100 |     100 | 82,219,223        
+  candidate-api.ts |     100 |    93.33 |     100 |     100 | 46                
+  ...-contracts.ts |     100 |      100 |     100 |     100 |                   
+  ...te-storage.ts |    92.3 |       75 |     100 |   91.66 | 31,82             
+  contracts.ts     |     100 |      100 |     100 |     100 |                   
+  ...al-session.ts |     100 |       90 |     100 |     100 | 4                 
+  ...-contracts.ts |     100 |      100 |     100 |     100 |                   
+  ...-contracts.ts |     100 |      100 |     100 |     100 |                   
+  role-ui.ts       |     100 |      100 |     100 |     100 |                   
+-------------------|---------|----------|---------|---------|-------------------
+
+> @iopsych/shared@0.1.0 test
+> vitest run
+
+
+[1m[30m[46m RUN [49m[39m[22m [36mv5.0.2 [39m[90m/workspace/packages/shared[39m
+
+ [32m✓[39m src/contracts.test.ts [2m([22m[2m25 tests[22m[2m)[22m[32m 11[2mms[22m[39m
+ [32m✓[39m src/matching.test.ts [2m([22m[2m44 tests[22m[2m)[22m[32m 10[2mms[22m[39m
+ [32m✓[39m src/assessment.test.ts [2m([22m[2m30 tests[22m[2m)[22m[32m 14[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m3 passed[39m[22m[90m (3)[39m
+[2m      Tests [22m [1m[32m99 passed[39m[22m[90m (99)[39m
+[2m   Start at [22m 04:54:12
+[2m   Duration [22m 143ms[2m (transform 53%, import 34%, tests 12%, worker 1%)[22m
+
+
+> iopsych@0.1.0 test:contracts:python
+> .venv/bin/python -m pytest -c packages/shared/python/pyproject.toml packages/shared/python/tests
+
+============================= test session starts ==============================
+platform linux -- Python 3.12.14, pytest-9.1.1, pluggy-1.6.0
+rootdir: /workspace/packages/shared/python
+configfile: pyproject.toml
+plugins: cov-7.1.0, anyio-4.15.1
+collected 93 items
+
+packages/shared/python/tests/test_assessment.py ........................ [ 25%]
+........                                                                 [ 34%]
+packages/shared/python/tests/test_contracts.py ...............           [ 50%]
+packages/shared/python/tests/test_matching.py .......................... [ 78%]
+....................                                                     [100%]
+
+================================ tests coverage ================================
+_______________ coverage: platform linux, python 3.12.14-final-0 _______________
+
+Name                                                          Stmts   Miss  Cover   Missing
+-------------------------------------------------------------------------------------------
+packages/shared/python/iopsych_contracts/__init__.py              7      0   100%
+packages/shared/python/iopsych_contracts/assessment.py          172      0   100%
+packages/shared/python/iopsych_contracts/constructs.py           39      0   100%
+packages/shared/python/iopsych_contracts/matching.py            156      0   100%
+packages/shared/python/iopsych_contracts/problem_details.py      17      0   100%
+packages/shared/python/iopsych_contracts/role_extraction.py      38      0   100%
+packages/shared/python/iopsych_contracts/scoring_config.py       54      0   100%
+-------------------------------------------------------------------------------------------
+TOTAL                                                           483      0   100%
+Required test coverage of 100% reached. Total coverage: 100.00%
+============================== 93 passed in 0.21s ==============================
+
+> iopsych@0.1.0 test:api
+> .venv/bin/python -m pytest apps/api
+
+============================= test session starts ==============================
+platform linux -- Python 3.12.14, pytest-9.1.1, pluggy-1.6.0
+rootdir: /workspace/apps/api
+configfile: pyproject.toml
+plugins: cov-7.1.0, anyio-4.15.1
+collected 129 items
+
+apps/api/tests/test_auth_tokens.py ............................          [ 21%]
+apps/api/tests/test_authorization.py ............                        [ 31%]
+apps/api/tests/test_database.py .......                                  [ 36%]
+apps/api/tests/test_database_migrations.py ....                          [ 39%]
+apps/api/tests/test_health.py .                                          [ 40%]
+apps/api/tests/test_invitations.py ............                          [ 49%]
+apps/api/tests/test_privacy.py ....                                      [ 52%]
+apps/api/tests/test_reports.py ..............                            [ 63%]
+apps/api/tests/test_reports_postgres.py ..                               [ 65%]
+apps/api/tests/test_role_extraction.py ................................  [ 89%]
+apps/api/tests/test_roles_api.py .....                                   [ 93%]
+apps/api/tests/test_security.py .......                                  [ 99%]
+apps/api/tests/test_shared_contracts.py .                                [100%]
+
+=============================== warnings summary ===============================
+.venv/lib/python3.12/site-packages/fastapi/testclient.py:1
+  /workspace/.venv/lib/python3.12/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient as TestClient  # noqa
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+================================ tests coverage ================================
+_______________ coverage: platform linux, python 3.12.14-final-0 _______________
+
+Name                                     Stmts   Miss  Cover   Missing
+----------------------------------------------------------------------
+apps/api/app/__init__.py                     0      0   100%
+apps/api/app/audit.py                      126      0   100%
+apps/api/app/auth/__init__.py                5      0   100%
+apps/api/app/auth/config.py                 23      0   100%
+apps/api/app/auth/context.py                17      0   100%
+apps/api/app/auth/dependencies.py           49      0   100%
+apps/api/app/auth/errors.py                 48      0   100%
+apps/api/app/auth/tokens.py                101      0   100%
+apps/api/app/database/__init__.py            4      0   100%
+apps/api/app/database/base.py               31      0   100%
+apps/api/app/database/config.py              9      0   100%
+apps/api/app/database/models.py            135      0   100%
+apps/api/app/database/repositories.py       45      0   100%
+apps/api/app/database/seed.py               66      0   100%
+apps/api/app/database/session.py            35      0   100%
+apps/api/app/database/verify.py             31      0   100%
+apps/api/app/extraction/__init__.py          3      0   100%
+apps/api/app/extraction/config.py           46      0   100%
+apps/api/app/extraction/provider.py         84      0   100%
+apps/api/app/extraction/service.py          41      0   100%
+apps/api/app/invitations/__init__.py         0      0   100%
+apps/api/app/invitations/config.py          61      0   100%
+apps/api/app/invitations/delivery.py        24      0   100%
+apps/api/app/invitations/logging.py         42      0   100%
+apps/api/app/invitations/rate_limit.py      44      0   100%
+apps/api/app/invitations/router.py          62      0   100%
+apps/api/app/invitations/schemas.py         55      0   100%
+apps/api/app/invitations/service.py        176      0   100%
+apps/api/app/invitations/tokens.py          54      0   100%
+apps/api/app/main.py                        79      0   100%
+apps/api/app/privacy/__init__.py             3      0   100%
+apps/api/app/privacy/config.py               8      0   100%
+apps/api/app/privacy/retention.py            9      0   100%
+apps/api/app/privacy/router.py              38      0   100%
+apps/api/app/privacy/schemas.py             74      0   100%
+apps/api/app/privacy/service.py            118      0   100%
+apps/api/app/reports/__init__.py             0      0   100%
+apps/api/app/reports/router.py              31      0   100%
+apps/api/app/reports/schemas.py             24      0   100%
+apps/api/app/reports/service.py             60      0   100%
+apps/api/app/roles/__init__.py               0      0   100%
+apps/api/app/roles/router.py                74      0   100%
+apps/api/app/roles/schemas.py               68      0   100%
+apps/api/app/roles/service.py              145      0   100%
+apps/api/app/security.py                    30      0   100%
+----------------------------------------------------------------------
+TOTAL                                     2178      0   100%
+Required test coverage of 100% reached. Total coverage: 100.00%
+======================== 129 passed, 1 warning in 4.38s ========================

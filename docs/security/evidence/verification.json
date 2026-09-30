@@ -1,0 +1,120 @@
+{
+  "date": "2026-09-30",
+  "timezone": "America/Toronto",
+  "base_commit": "038d275b5dedf7f2de987aed39180c00d6f3b362",
+  "hosted_github_run": false,
+  "linux_runtime": {
+    "node": "22.23.3",
+    "python": "3.12.14",
+    "postgresql_major": 16
+  },
+  "results": {
+    "tests_passed": 420,
+    "tests_skipped": 0,
+    "api_coverage_percent": 100,
+    "build": "passed",
+    "production_smoke_and_logs": "passed",
+    "npm_advisories": 0,
+    "python_advisories": 0,
+    "secret_scan_findings": 0,
+    "workflow_actionlint": "passed"
+  },
+  "application_files": [
+    {
+      "path": "apps/api/app/security.py",
+      "sha256": "2d17ecc886faa0e60a67285d46ad610db512648cd3358d9c6c091fa8853247da"
+    },
+    {
+      "path": "apps/api/app/main.py",
+      "sha256": "5beebdcd449a6c769bed15c91ef37f3faa2543a3706ecccb8210837608d9de32"
+    },
+    {
+      "path": "apps/api/app/auth/errors.py",
+      "sha256": "50272df3becb85ee284545c95b39a56f8d7033bfc2a5b61fadfa14a7ba32b6d5"
+    },
+    {
+      "path": "apps/api/app/invitations/logging.py",
+      "sha256": "400961d95338339ad4b86e19bec15360e31c323832d4ded742bf3a15aaa18202"
+    },
+    {
+      "path": "apps/api/app/invitations/rate_limit.py",
+      "sha256": "33e3e93de468c45c7c5989a1cb6770dae3452421ac234a103b39638b5538b470"
+    },
+    {
+      "path": "apps/api/tests/test_security.py",
+      "sha256": "9381c1c7f5b5d3aeae09c624be4d805cde864d0784bdb4e661a539ab2959c437"
+    },
+    {
+      "path": "apps/web/proxy.ts",
+      "sha256": "677fe4d7eb3ac28e11d7617dda65b5a56b3346b0428c07297f47e592b4d25104"
+    },
+    {
+      "path": "apps/web/proxy.test.ts",
+      "sha256": "08c3b3d1cbad667dce73017dc81c0166fe30048d897cf27bb7c5b13d7418417f"
+    },
+    {
+      "path": "apps/web/next.config.ts",
+      "sha256": "495b34bc5ff71c7f7a0d59169d0fe62d1824289ab051db8b5e65399cf044e965"
+    },
+    {
+      "path": "apps/web/app/layout.tsx",
+      "sha256": "bacb8b9846ead3d3adc1a290467f2ae7174843d526e596edd752ca5cb98f37af"
+    },
+    {
+      "path": "apps/web/lib/internal-session.ts",
+      "sha256": "2e5687e034b28939c724a27d1ba42c706eb9a916be14b837424af70b3fe2a43f"
+    },
+    {
+      "path": "apps/web/app/api/session/route.ts",
+      "sha256": "fe610bc75e7b814a8069b2ddc50bf7ce18c518830d000609029d9ce459244f86"
+    },
+    {
+      "path": "apps/web/app/api/session/route.test.ts",
+      "sha256": "36d4b9abd206eb69e00e7a96dc5657f9dbbdcdfca927dbeb09ce33ff1c435069"
+    },
+    {
+      "path": "apps/web/app/api/internal/[...path]/route.ts",
+      "sha256": "6722a7deac80a9c9e4b235d5afd9eb94583039d6e9bcbaa5aae96eb75f08416b"
+    },
+    {
+      "path": "apps/web/app/api/internal/[...path]/route.test.ts",
+      "sha256": "d134de37a08789d5e8d0374f8b15ed729ba560c2624b320abbc8fc0ae011e70b"
+    },
+    {
+      "path": "apps/web/app/api/candidate/invites/[...path]/route.ts",
+      "sha256": "c640c3308279c8c0cd4a64f5a55640e30c6a8d893e4836b0a55891f636a6c962"
+    },
+    {
+      "path": "apps/web/app/api/candidate/invites/[...path]/route.test.ts",
+      "sha256": "145e93cfefeeb648950920dd87e3a726fc1e13b57f71c371e3d0828939f38d3a"
+    },
+    {
+      "path": "apps/web/vitest.config.ts",
+      "sha256": "0b44ff53833e0063a7be25d8abc8843b5e17c3d3272149aaf5bc9edba407ae1a"
+    },
+    {
+      "path": "scripts/security_smoke.py",
+      "sha256": "89ea90fe36c19fcbfca128c071a260f3cf89478e3ac37722b29393d6b6784082"
+    },
+    {
+      "path": "scripts/run-api.sh",
+      "sha256": "51bfc456b120efcda6180bb2aae9b586d8eec61f8f7ed609c326d0aac31de0d4"
+    },
+    {
+      "path": "package.json",
+      "sha256": "285ef75841a6b2465395ec153561749a00e2ad28c9bff00a545e7a8a45e18d24"
+    },
+    {
+      "path": ".github/workflows/ci.yml",
+      "sha256": "a951fda360c3198ddac17d1fa202cd7855fd98578e96f99436cef370cd1606bb"
+    },
+    {
+      "path": ".github/workflows/security.yml",
+      "sha256": "f08424d9420438a9d07662f2a0405ccd446c9c1cce6f9fd78735d27400c578a6"
+    },
+    {
+      "path": ".gitleaks.toml",
+      "sha256": "d61ae8cafd90164296fd015f151e38e2ca9fa4bab6253ed36e54772510abe43e"
+    }
+  ]
+}

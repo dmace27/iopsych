@@ -1,0 +1,62 @@
+name: Security
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  dependencies:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+      - uses: actions/setup-python@v5
+        with:
+          python-version-file: .python-version
+      - run: npm ci
+      - name: Audit JavaScript dependencies
+        run: |
+          mkdir -p security-reports
+          npm audit --audit-level=high --json > security-reports/npm-audit.json
+      - run: npm run api:install
+      - name: Audit installed Python dependency graph
+        run: |
+          python -m venv /tmp/audit-tools
+          /tmp/audit-tools/bin/pip install pip-audit==2.10.0
+          .venv/bin/pip freeze --exclude-editable > /tmp/api-dependencies.txt
+          /tmp/audit-tools/bin/pip-audit -r /tmp/api-dependencies.txt --strict --format json > security-reports/python-audit.json
+      - name: Preserve dependency scan evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dependency-scans
+          path: security-reports/
+          retention-days: 14
+  secrets:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-go@v5
+        with:
+          go-version: stable
+      - name: Install pinned open-source secret scanner
+        run: go install github.com/zricethezav/gitleaks/v8@v8.24.3
+      - name: Scan full Git history without printing secrets
+        run: |
+          mkdir -p security-reports
+          gitleaks git --redact --exit-code 1 --report-format json --report-path security-reports/gitleaks.json
+      - name: Preserve redacted secret scan evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: secret-scan
+          path: security-reports/
+          retention-days: 14

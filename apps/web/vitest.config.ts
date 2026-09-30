@@ -13,6 +13,7 @@ export default defineConfig({
       // own, so focused components and shared presentation logic are included.
       include: [
         "app/api/**/*.ts",
+        "proxy.ts",
         "app/candidate/**/*assessment.tsx",
         "app/roles/**/*workspace.tsx",
         "app/reports/*.tsx",
@@ -30,6 +31,12 @@ export default defineConfig({
         statements: 80,
         // Preserve the original perfect gate around authentication, CSRF, and
         // proxy behavior while broadening global coverage to browser screens.
+        "proxy.ts": {
+          branches: 100,
+          functions: 100,
+          lines: 100,
+          statements: 100,
+        },
         "app/api/**/*.ts": {
           branches: 100,
           functions: 100,

@@ -60,7 +60,25 @@ jobs:
           npm run db:verify
 
       - name: Run all checks
-        run: npm run check
+        run: |
+          mkdir -p security-reports
+          set -o pipefail
+          npm run check 2>&1 | tee security-reports/checks.log
 
       - name: Build workspace packages
-        run: npm run build
+        run: |
+          set -o pipefail
+          npm run build 2>&1 | tee security-reports/build.log
+
+      - name: Verify production web/API security integration
+        run: |
+          set -o pipefail
+          npm run security:smoke 2>&1 | tee security-reports/production-smoke.log
+
+      - name: Preserve check and production integration evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: application-checks
+          path: security-reports/
+          retention-days: 14
