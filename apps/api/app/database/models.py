@@ -252,6 +252,10 @@ class Assessment(UuidPrimaryKeyMixin, CreatedAtMixin, Base):
         Uuid(as_uuid=True), ForeignKey("candidate_consents.id", ondelete="RESTRICT"), nullable=False
     )
     submitted_at: Mapped[datetime | None] = mapped_column(UtcDateTime(), nullable=True)
+    retention_expires_at: Mapped[datetime | None] = mapped_column(
+        UtcDateTime(), nullable=True, index=True
+    )
+    anonymized_at: Mapped[datetime | None] = mapped_column(UtcDateTime(), nullable=True, index=True)
     definition_json: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
     responses_json: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
     scores_json: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)

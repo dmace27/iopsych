@@ -51,6 +51,8 @@ def test_migration_upgrades_and_downgrades_empty_database(
     assert "assumptions_json" in {
         column["name"] for column in inspector.get_columns("role_profiles")
     }
+    assessment_columns = {column["name"] for column in inspector.get_columns("assessments")}
+    assert {"retention_expires_at", "anonymized_at"} <= assessment_columns
     with engine.connect() as connection:
         trigger_names = set(
             connection.scalars(text("SELECT name FROM sqlite_master WHERE type = 'trigger'"))

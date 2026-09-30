@@ -6,7 +6,11 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.auth.context import AuthorizationContext
-from app.auth.errors import organization_resource_not_found, resource_conflict
+from app.auth.errors import (
+    organization_resource_not_found,
+    resource_conflict,
+    resource_unavailable,
+)
 from app.database.models import (
     AlignmentReport,
     AlignmentReportItem,
@@ -64,6 +68,11 @@ class ReportService:
         )
         if assessment is None or profile is None:
             raise organization_resource_not_found()
+        if assessment.anonymized_at is not None:
+            raise resource_unavailable(
+                code="candidate_data_anonymized",
+                detail="Candidate data has been anonymized and is no longer reportable.",
+            )
         invite = self.session.get(AssessmentInvite, assessment.invite_id)
         consent = self.session.get(CandidateConsent, assessment.consent_id)
         if invite is None or invite.role_profile_id != profile.id:
@@ -157,9 +166,10 @@ class ReportService:
         """Hide report existence from every other organization."""
 
         row = self.session.execute(
-            select(AlignmentReport, RoleProfile)
+            select(AlignmentReport, RoleProfile, Assessment)
             .join(RoleProfile, RoleProfile.id == AlignmentReport.role_profile_id)
             .join(Role, Role.id == RoleProfile.role_id)
+            .join(Assessment, Assessment.id == AlignmentReport.assessment_id)
             .where(
                 AlignmentReport.id == report_id,
                 Role.organization_id == self.context.organization.organization_id,
@@ -167,6 +177,11 @@ class ReportService:
         ).one_or_none()
         if row is None:
             raise organization_resource_not_found()
+        if row[2].anonymized_at is not None:
+            raise resource_unavailable(
+                code="candidate_data_anonymized",
+                detail="Candidate data has been anonymized and is no longer reportable.",
+            )
         return self._response(row[0], row[1])
 
     @staticmethod
@@ -205,7 +220,11 @@ class ReportService:
                     & (AlignmentReport.algorithm_version == MATCHING_ALGORITHM_VERSION)
                 ),
             )
-            .where(RoleProfile.role_id == role_id, Assessment.submitted_at.is_not(None))
+            .where(
+                RoleProfile.role_id == role_id,
+                Assessment.submitted_at.is_not(None),
+                Assessment.anonymized_at.is_(None),
+            )
             .order_by(Assessment.submitted_at, Assessment.id)
             .limit(limit)
             .offset(offset)

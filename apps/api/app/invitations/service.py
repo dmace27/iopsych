@@ -47,6 +47,7 @@ from app.invitations.schemas import (
     InvitationCreateRequest,
 )
 from app.invitations.tokens import InvalidInviteTokenError, InviteTokenCodec
+from app.privacy.config import PrivacySettings
 from iopsych_contracts.assessment import (
     AssessmentDefinition,
     AssessmentResponseSet,
@@ -184,10 +185,12 @@ class CandidateInvitationService:
         session: Session,
         settings: InvitationSettings,
         token_codec: InviteTokenCodec | None,
+        privacy_settings: PrivacySettings,
     ) -> None:
         self._session = session
         self._settings = settings
         self._token_codec = token_codec
+        self._privacy_settings = privacy_settings
 
     def read(self, raw_token: str) -> CandidateInviteResponse:
         """Return consent content and public context, never assessment questions."""
@@ -296,10 +299,13 @@ class CandidateInvitationService:
             raise resource_validation_failed(
                 code="invalid_assessment_responses", detail=str(exc)
             ) from exc
+        submitted_at = datetime.now(UTC)
         assessment = Assessment(
             invite_id=invite.id,
             consent_id=consent.id,
-            submitted_at=datetime.now(UTC),
+            submitted_at=submitted_at,
+            retention_expires_at=submitted_at
+            + timedelta(days=self._privacy_settings.retention_days),
             definition_json=definition.model_dump(mode="json"),
             responses_json=canonical_responses,
             scores_json=scores.model_dump(mode="json"),
@@ -375,7 +381,9 @@ class CandidateInvitationService:
                 version=self._settings.consent_notice_version,
                 purpose=self._settings.purpose_statement,
                 data_use=self._settings.data_use_statement,
-                retention=self._settings.retention_statement,
+                retention=self._settings.retention_statement.format(
+                    retention_days=self._privacy_settings.retention_days
+                ),
                 accommodation_contact_email=self._settings.accommodation_contact_email,
                 privacy_contact_email=self._settings.privacy_contact_email,
             ),

@@ -21,6 +21,10 @@ const ALLOWED_INTERNAL_ROUTES = [
   /^POST \/roles\/[^/]+\/profiles\/[^/]+\/approve$/,
   /^POST \/reports$/,
   /^GET \/reports\/[^/]+$/,
+  /^POST \/candidates\/[^/]+\/export$/,
+  /^DELETE \/candidates\/[^/]+$/,
+  /^GET \/privacy\/(?:status|audit-events)$/,
+  /^POST \/privacy\/retention\/run$/,
 ];
 
 /** Limit the credential-bearing proxy to implemented internal endpoints. */

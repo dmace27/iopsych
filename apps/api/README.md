@@ -165,6 +165,40 @@ conflict, and 422 invalid request. Generation is idempotent and returns 201 for
 both a new report and an identical retry. GET reads always return the stored
 explanation.
 
+## Package 4B: data rights and retention
+
+Apply migration `20260929_0007` before using the privacy controls. Candidate
+submissions freeze a `retention_expires_at` deadline using
+`PRIVACY_RETENTION_DAYS` (90 days by default). Pre-migration submissions without
+a stored deadline use their submission time plus the current configured period.
+Candidate-facing disclosure copy comes from `INVITE_RETENTION_STATEMENT`, which
+must contain the `{retention_days}` placeholder so the notice always reflects
+the enforced duration.
+
+Organization administrators can use the authenticated privacy workspace at
+`/privacy` or call these tenant-scoped routes:
+
+- `POST /v1/candidates/{assessment_id}/export` creates a no-store JSON export
+  containing the retained invitation, consent, response/score snapshots, derived
+  reports, and candidate-scoped activity.
+- `DELETE /v1/candidates/{assessment_id}` irreversibly anonymizes the invitation
+  email and token, revokes candidate access, erases assessment payloads, and
+  deletes derived reports. The non-identifying consent/timing tombstone and
+  immutable audit history remain. Repeated requests are safe and idempotent.
+- `GET /v1/privacy/status` summarizes active, due, and anonymized records.
+- `GET /v1/privacy/audit-events` reads bounded, newest-first tenant audit
+  history, with optional exact `entity_id` and `event_type` filters. Pass the
+  last returned event ID as `before` for stable cursor pagination.
+- `POST /v1/privacy/retention/run` processes one tenant-scoped batch due for
+  anonymization.
+
+Run `npm run privacy:retention` from the repository root on a deployment
+scheduler. The scheduler processes at most `PRIVACY_RETENTION_BATCH_SIZE`
+records across organizations per invocation and prints only a non-identifying
+count. Export, deletion, status, audit lookup, and manual retention requests all
+append immutable audit events. An anonymized assessment is excluded from report
+discovery and cannot be exported or used to generate a new report.
+
 `npm run check` runs browser, API, contract, migration, and negative-path tests.
 The PostgreSQL concurrency regression runs automatically with PostgreSQL
 `DATABASE_URL` in CI, or locally with `TEST_POSTGRES_URL` set. It creates and

@@ -34,6 +34,9 @@ from app.invitations.logging import install_invite_token_log_filter
 from app.invitations.rate_limit import InMemoryRateLimiter
 from app.invitations.router import router as invitations_router
 from app.invitations.tokens import InviteTokenCodec
+from app.privacy.config import PrivacySettings
+from app.privacy.router import candidate_router as candidate_privacy_router
+from app.privacy.router import privacy_router
 from app.reports.router import router as reports_router
 from app.reports.router import submission_router
 from app.roles.router import router as roles_router
@@ -65,6 +68,7 @@ def create_app(
     invitation_rate_limiter: InMemoryRateLimiter | None = None,
     role_extraction_settings: RoleExtractionSettings | None = None,
     role_extraction_provider: RoleExtractionProvider | None = None,
+    privacy_settings: PrivacySettings | None = None,
     session_factory: sessionmaker[Session] | None = None,
     token_verifier: TokenVerifier | None = None,
 ) -> FastAPI:
@@ -73,6 +77,7 @@ def create_app(
     settings = authentication_settings or AuthenticationSettings()
     invite_settings = invitation_settings or InvitationSettings()
     extraction_settings = role_extraction_settings or RoleExtractionSettings()
+    resolved_privacy_settings = privacy_settings or PrivacySettings()
     install_invite_token_log_filter()
     resolved_session_factory = session_factory or create_session_factory(create_database_engine())
     resolved_verifier = token_verifier
@@ -98,6 +103,7 @@ def create_app(
     application.state.role_extraction_provider = (
         role_extraction_provider or build_role_extraction_provider(extraction_settings)
     )
+    application.state.privacy_settings = resolved_privacy_settings
     application.state.invite_token_codec = (
         InviteTokenCodec(invite_settings.token_signing_secret.get_secret_value())
         if invite_settings.token_signing_secret is not None
@@ -110,6 +116,8 @@ def create_app(
     application.include_router(invitations_router)
     application.include_router(reports_router)
     application.include_router(submission_router)
+    application.include_router(candidate_privacy_router)
+    application.include_router(privacy_router)
 
     @application.get("/health", response_model=HealthResponse, tags=["operations"])
     async def health() -> HealthResponse:

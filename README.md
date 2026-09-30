@@ -1,10 +1,11 @@
 # IOPsych MVP
 
 Implementation of the consented, human-reviewed IOPsych pilot described in
-[`mvp-spec.md`](./mvp-spec.md). The current phase includes the internal role and
-versioned-profile workflow, its authorization boundary, shared domain contracts,
-PostgreSQL data models, and the developer quality gates. Candidate functionality
-is intentionally not present yet.
+[`mvp-spec.md`](./mvp-spec.md). The current phase includes role-profile
+authoring and human approval, candidate invitation/consent/assessment,
+deterministic reports, structured draft extraction, and administrator
+data-rights and retention controls. Shared contracts, tenant authorization,
+PostgreSQL models, and automated quality gates cover the end-to-end workflow.
 
 ## Prerequisites
 
@@ -67,6 +68,7 @@ npm run db:up       # Start PostgreSQL 16 and wait until it is healthy.
 npm run db:migrate  # Apply all Alembic migrations to DATABASE_URL.
 npm run db:seed     # Upsert two deterministic synthetic organizations.
 npm run db:verify   # Verify seed completeness and cross-tenant read denial.
+npm run privacy:retention # Run one bounded cross-tenant retention batch.
 npm run db:down     # Stop local containers without deleting database data.
 ```
 

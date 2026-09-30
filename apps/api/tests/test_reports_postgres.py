@@ -7,7 +7,8 @@ Each test owns a random isolated schema; existing application data is never touc
 import asyncio
 import os
 from collections.abc import Generator
-from uuid import uuid4
+from datetime import UTC, datetime, timedelta
+from uuid import UUID, uuid4
 
 import pytest
 from alembic import command
@@ -23,6 +24,8 @@ from app.database.seed import ALPHA_PROFILE_ID, seed_database
 from app.database.session import create_session_factory
 from app.invitations.config import InvitationSettings
 from app.main import create_app
+from app.privacy.config import PrivacySettings
+from app.privacy.service import PrivacyService
 from tests.test_auth_tokens import AUDIENCE, ISSUER, SECRET
 from tests.test_database_migrations import alembic_config
 from tests.test_reports import headers, invitation, responses
@@ -128,3 +131,89 @@ async def test_concurrent_submissions_and_reports_are_single_snapshots(
                 )
                 == 1
             )
+
+
+@pytest.mark.anyio
+async def test_postgres_retention_skips_locked_rows_then_anonymizes_atomically(
+    postgres_report_factory: sessionmaker[Session],
+) -> None:
+    """Exercise PostgreSQL row locks and the complete privacy cleanup transaction."""
+
+    factory = postgres_report_factory
+    application = create_app(
+        session_factory=factory,
+        authentication_settings=AuthenticationSettings(
+            jwt_secret=SECRET,
+            jwt_issuer=ISSUER,
+            jwt_audience=AUDIENCE,
+        ),
+        invitation_settings=InvitationSettings(token_signing_secret=SECRET),
+    )
+    token, _ = invitation(factory)
+    async with AsyncClient(
+        transport=ASGITransport(app=application), base_url="http://test"
+    ) as client:
+        submission = await client.post(
+            f"/v1/candidate/invites/{token}/submit",
+            json=responses(),
+        )
+        assessment_id = submission.json()["assessment_id"]
+        assessment_uuid = UUID(assessment_id)
+        report = await client.post(
+            "/v1/reports",
+            headers=headers(factory),
+            json={
+                "assessment_id": assessment_id,
+                "role_profile_id": str(ALPHA_PROFILE_ID),
+            },
+        )
+        assert report.status_code == 201
+
+    now = datetime.now(UTC)
+    with factory() as session:
+        assessment = session.get(Assessment, assessment_uuid)
+        assert assessment is not None
+        assessment.retention_expires_at = now - timedelta(seconds=1)
+        session.commit()
+
+    locked_session = factory()
+    try:
+        locked = locked_session.scalar(
+            select(Assessment)
+            .where(Assessment.id == assessment_uuid)
+            .with_for_update(of=Assessment)
+        )
+        assert locked is not None
+        with factory() as worker:
+            skipped = PrivacyService(
+                worker,
+                PrivacySettings(retention_days=90, retention_batch_size=10),
+            ).run_retention(now=now)
+        assert skipped.anonymized_assessment_ids == []
+    finally:
+        locked_session.rollback()
+        locked_session.close()
+
+    with factory() as worker:
+        completed = PrivacyService(
+            worker,
+            PrivacySettings(retention_days=90, retention_batch_size=10),
+        ).run_retention(now=now)
+    assert [str(value) for value in completed.anonymized_assessment_ids] == [assessment_id]
+
+    with factory() as session:
+        assessment = session.get(Assessment, assessment_uuid)
+        assert assessment is not None and assessment.anonymized_at == now
+        assert session.scalar(select(func.count()).select_from(AlignmentReport)) == 0
+        assert session.scalar(select(func.count()).select_from(AlignmentReportItem)) == 0
+        assert (
+            session.scalar(
+                select(func.count())
+                .select_from(AuditEvent)
+                .where(
+                    AuditEvent.entity_id == assessment.id,
+                    AuditEvent.event_type == "candidate_data.anonymized",
+                )
+            )
+            == 1
+        )

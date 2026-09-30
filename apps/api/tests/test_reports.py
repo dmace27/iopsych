@@ -191,6 +191,34 @@ async def test_report_persists_matching_snapshot_and_audits(
 
 
 @pytest.mark.anyio
+async def test_report_read_fails_closed_for_anonymized_source(
+    report_client: AsyncClient,
+    report_factory: sessionmaker[Session],
+) -> None:
+    """A surviving derived row cannot bypass the anonymization state gate."""
+
+    assessment_id = await submitted(report_client, report_factory)
+    auth = headers(report_factory)
+    created = await report_client.post(
+        "/v1/reports",
+        headers=auth,
+        json={
+            "assessment_id": assessment_id,
+            "role_profile_id": str(ALPHA_PROFILE_ID),
+        },
+    )
+    with report_factory() as session:
+        assessment = session.get(Assessment, UUID(assessment_id))
+        assert assessment is not None
+        assessment.anonymized_at = datetime.now(UTC)
+        session.commit()
+
+    denied = await report_client.get(f"/v1/reports/{created.json()['id']}", headers=auth)
+    assert denied.status_code == 410
+    assert denied.json()["code"] == "candidate_data_anonymized"
+
+
+@pytest.mark.anyio
 @pytest.mark.parametrize(
     "gate,code",
     [

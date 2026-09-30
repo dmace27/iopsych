@@ -6,16 +6,25 @@ import {
   approveRoleProfile,
   createRole,
   createRoleProfile,
+  deleteCandidateData,
+  exportCandidateData,
   extractRoleProfile,
   getCurrentUser,
+  getPrivacyAuditEvents,
+  getPrivacyStatus,
   getRole,
   getRoleProfiles,
   getRoles,
   reviseRoleProfile,
+  runPrivacyRetention,
 } from "./api-client";
 import type { RoleConstructRating, RoleProfile } from "./contracts";
 
 const IDS = {
+  assessment: "55555555-5555-4555-8555-555555555555",
+  audit: "66666666-6666-4666-8666-666666666666",
+  consent: "77777777-7777-4777-8777-777777777777",
+  invitation: "88888888-8888-4888-8888-888888888888",
   organization: "11111111-1111-4111-8111-111111111111",
   profile: "22222222-2222-4222-8222-222222222222",
   role: "33333333-3333-4333-8333-333333333333",
@@ -204,5 +213,118 @@ describe("role API client", () => {
       message: "The API could not be reached. Try again.",
       status: 0,
     });
+  });
+
+  it("uses exact privacy paths and validates every returned field", async () => {
+    const privacyStatus = {
+      active_assessments: 2,
+      anonymized_assessments: 1,
+      due_assessments: 1,
+      next_retention_at: "2026-10-01T12:00:00Z",
+      retention_days: 30,
+      total_assessments: 3,
+    };
+    const auditEvent = {
+      actor_id: IDS.user,
+      details: { outcome: "succeeded" },
+      entity_id: IDS.assessment,
+      entity_type: "assessment",
+      event_type: "candidate_data.exported",
+      id: IDS.audit,
+      occurred_at: "2026-09-29T12:00:00Z",
+    };
+    const candidateExport = {
+      activity: [
+        {
+          details: {},
+          entity_id: IDS.assessment,
+          entity_type: "assessment",
+          event_type: "assessment.submitted",
+          occurred_at: "2026-09-01T12:00:00Z",
+        },
+      ],
+      assessment: {
+        created_at: "2026-09-01T11:59:00Z",
+        definition: { version: "1.0" },
+        id: IDS.assessment,
+        responses: { responses: [] },
+        retention_expires_at: "2026-10-01T12:00:00Z",
+        scores: { scores: [] },
+        submitted_at: "2026-09-01T12:00:00Z",
+      },
+      consent: {
+        decision: "consent",
+        id: IDS.consent,
+        notice_version: "pilot-v1",
+        recorded_at: "2026-09-01T11:00:00Z",
+      },
+      generated_at: "2026-09-29T12:00:00Z",
+      invitation: {
+        created_at: "2026-08-31T12:00:00Z",
+        email: "candidate@example.test",
+        expires_at: "2026-10-01T12:00:00Z",
+        id: IDS.invitation,
+        revoked_at: null,
+        sent_at: "2026-08-31T12:01:00Z",
+        status: "consented",
+      },
+      organization: {
+        name: "Alpha Labs",
+        role_profile_version: 1,
+        role_title: "Engineer",
+      },
+      reports: [],
+      schema_version: "1.0",
+    };
+    const deletion = {
+      already_anonymized: false,
+      anonymized_at: "2026-09-29T12:01:00Z",
+      assessment_id: IDS.assessment,
+      reports_deleted: 1,
+    };
+    const retention = {
+      anonymized_assessment_ids: [IDS.assessment],
+      completed_at: "2026-09-29T12:02:00Z",
+    };
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(Response.json(privacyStatus))
+      .mockResolvedValueOnce(Response.json([auditEvent]))
+      .mockResolvedValueOnce(Response.json([auditEvent]))
+      .mockResolvedValueOnce(Response.json(candidateExport))
+      .mockResolvedValueOnce(Response.json(deletion))
+      .mockResolvedValueOnce(Response.json(retention));
+
+    await expect(getPrivacyStatus()).resolves.toEqual(privacyStatus);
+    await expect(getPrivacyAuditEvents(IDS.assessment)).resolves.toEqual([
+      auditEvent,
+    ]);
+    await expect(
+      getPrivacyAuditEvents(IDS.assessment, IDS.audit, 25),
+    ).resolves.toEqual([auditEvent]);
+    await expect(exportCandidateData(IDS.assessment)).resolves.toEqual(
+      candidateExport,
+    );
+    await expect(deleteCandidateData(IDS.assessment)).resolves.toEqual(
+      deletion,
+    );
+    await expect(runPrivacyRetention()).resolves.toEqual(retention);
+
+    const calls = vi.mocked(fetch).mock.calls;
+    expect(calls.map(([path]) => path)).toEqual([
+      "/api/internal/privacy/status",
+      `/api/internal/privacy/audit-events?entity_id=${IDS.assessment}`,
+      `/api/internal/privacy/audit-events?entity_id=${IDS.assessment}&before=${IDS.audit}&limit=25`,
+      `/api/internal/candidates/${IDS.assessment}/export`,
+      `/api/internal/candidates/${IDS.assessment}`,
+      "/api/internal/privacy/retention/run",
+    ]);
+    expect(calls.map(([, init]) => init?.method)).toEqual([
+      undefined,
+      undefined,
+      undefined,
+      "POST",
+      "DELETE",
+      "POST",
+    ]);
   });
 });

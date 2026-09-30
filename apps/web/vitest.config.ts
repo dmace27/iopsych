@@ -16,6 +16,7 @@ export default defineConfig({
         "app/candidate/**/*assessment.tsx",
         "app/roles/**/*workspace.tsx",
         "app/reports/*.tsx",
+        "app/privacy/*.tsx",
         "app/sign-in/sign-in-form.tsx",
         "app/ui/**/*.tsx",
         "lib/**/*.ts",

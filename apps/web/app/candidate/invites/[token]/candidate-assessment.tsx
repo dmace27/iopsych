@@ -349,7 +349,12 @@ export function CandidateAssessment({ token }: CandidateAssessmentProps) {
       } catch {
         // Server persistence is authoritative even if device storage is unavailable.
       }
-      setState({ ...state, completion, view: "complete" });
+      setState({
+        ...state,
+        completion,
+        invite: { ...state.invite, assessment_id: receipt.assessment_id },
+        view: "complete",
+      });
     } catch (error: unknown) {
       setValidationError(
         error instanceof Error
@@ -398,7 +403,13 @@ export function CandidateAssessment({ token }: CandidateAssessmentProps) {
     "mailto:" +
     invite.consent_notice.privacy_contact_email +
     "?subject=" +
-    encodeURIComponent("Candidate data rights request");
+    encodeURIComponent("Candidate data rights request") +
+    (invite.assessment_id
+      ? "&body=" +
+        encodeURIComponent(
+          `Assessment reference: ${invite.assessment_id}\n\nPlease describe whether you are requesting a copy, correction, or deletion.`,
+        )
+      : "");
   const accommodationHref =
     "mailto:" +
     invite.consent_notice.accommodation_contact_email +

@@ -19,6 +19,18 @@ import {
   type Report,
   type SubmittedAssessment,
 } from "./report-contracts";
+import {
+  CandidateDataExportSchema,
+  CandidateDeletionSchema,
+  PrivacyAuditEventListSchema,
+  PrivacyStatusSchema,
+  RetentionRunSchema,
+  type CandidateDataExport,
+  type CandidateDeletion,
+  type PrivacyAuditEvent,
+  type PrivacyStatus,
+  type RetentionRun,
+} from "./privacy-contracts";
 
 /** A safe client-facing representation of an API problem response. */
 export class ApiClientError extends Error {
@@ -189,5 +201,57 @@ export function generateReport(
       assessment_id: assessment.assessment_id,
       role_profile_id: assessment.role_profile_id,
     }),
+  });
+}
+
+/** Load tenant retention counts for the administrator privacy workspace. */
+export function getPrivacyStatus(): Promise<PrivacyStatus> {
+  return requestJson("/privacy/status", PrivacyStatusSchema);
+}
+
+/** Read newest-first immutable audit history, optionally for one entity. */
+export function getPrivacyAuditEvents(
+  entityId?: string,
+  before?: string,
+  limit = 50,
+): Promise<PrivacyAuditEvent[]> {
+  const parameters = new URLSearchParams();
+  if (entityId) parameters.set("entity_id", entityId);
+  if (before) parameters.set("before", before);
+  if (limit !== 50) parameters.set("limit", String(limit));
+  const serialized = parameters.toString();
+  const query = serialized ? `?${serialized}` : "";
+  return requestJson(
+    `/privacy/audit-events${query}`,
+    PrivacyAuditEventListSchema,
+  );
+}
+
+/** Create a no-store portable export for one tenant-owned assessment. */
+export function exportCandidateData(
+  assessmentId: string,
+): Promise<CandidateDataExport> {
+  return requestJson(
+    `/candidates/${encodeURIComponent(assessmentId)}/export`,
+    CandidateDataExportSchema,
+    { method: "POST" },
+  );
+}
+
+/** Irreversibly anonymize one candidate and their derived reports. */
+export function deleteCandidateData(
+  assessmentId: string,
+): Promise<CandidateDeletion> {
+  return requestJson(
+    `/candidates/${encodeURIComponent(assessmentId)}`,
+    CandidateDeletionSchema,
+    { method: "DELETE" },
+  );
+}
+
+/** Run one bounded retention batch for the active organization. */
+export function runPrivacyRetention(): Promise<RetentionRun> {
+  return requestJson("/privacy/retention/run", RetentionRunSchema, {
+    method: "POST",
   });
 }

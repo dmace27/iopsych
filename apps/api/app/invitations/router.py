@@ -55,6 +55,7 @@ def _candidate_service(request: Request, session: Session) -> CandidateInvitatio
         session=session,
         settings=request.app.state.invitation_settings,
         token_codec=request.app.state.invite_token_codec,
+        privacy_settings=request.app.state.privacy_settings,
     )
 
 

@@ -312,6 +312,10 @@ def test_settings_schema_delivery_rendering_and_unconfigured_adapter_are_safe() 
         invitation_settings(default_expiry_hours=3, maximum_expiry_hours=2)
     with pytest.raises(ValidationError, match="cannot be blank"):
         invitation_settings(purpose_statement="  ")
+    with pytest.raises(ValidationError, match="retention_days"):
+        invitation_settings(retention_statement="Pilot data is retained briefly.")
+    with pytest.raises(ValidationError, match="invalid format field"):
+        invitation_settings(retention_statement="Retain for {retention_days} days {unknown}.")
     with pytest.raises(ValidationError, match="absolute HTTP"):
         invitation_settings(candidate_base_url="ftp://candidate.example.invalid")
     with pytest.raises(ValidationError, match="query or fragment"):

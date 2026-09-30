@@ -152,6 +152,11 @@ describe("CandidateAssessment", () => {
     expect(
       screen.getByText(/do not show or create a single overall fit score/i),
     ).toBeInTheDocument();
+    expect(
+      screen.getAllByRole("link", {
+        name: /data-rights contact|request a copy, correction, or deletion/i,
+      })[0],
+    ).toHaveAttribute("href", expect.stringContaining(INVITATION_ID));
 
     const storedValues = Object.values(window.localStorage);
     expect(storedValues.join(" ")).not.toMatch(

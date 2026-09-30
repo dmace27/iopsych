@@ -336,4 +336,60 @@ describe("internal API proxy", () => {
       "http://localhost:8000/v1/roles/role-id/assessments?offset=50&limit=10",
     );
   });
+
+  it("forwards only the exact admin privacy routes and preserves filters", async () => {
+    headerMocks.cookieGet.mockReturnValue({ value: "cookie-token" });
+    vi.mocked(fetch).mockResolvedValue(Response.json({ ok: true }));
+    const origin = { Origin: "http://web.test" };
+
+    await GET(
+      new Request(
+        "http://web.test/api/internal/privacy/audit-events?entity_id=assessment-id",
+      ),
+      context("privacy", "audit-events"),
+    );
+    await GET(
+      new Request("http://web.test/api/internal/privacy/status"),
+      context("privacy", "status"),
+    );
+    await POST(
+      new Request(
+        "http://web.test/api/internal/candidates/assessment-id/export",
+        { headers: origin, method: "POST" },
+      ),
+      context("candidates", "assessment-id", "export"),
+    );
+    await DELETE(
+      new Request("http://web.test/api/internal/candidates/assessment-id", {
+        headers: origin,
+        method: "DELETE",
+      }),
+      context("candidates", "assessment-id"),
+    );
+    await POST(
+      new Request("http://web.test/api/internal/privacy/retention/run", {
+        headers: origin,
+        method: "POST",
+      }),
+      context("privacy", "retention", "run"),
+    );
+
+    expect(vi.mocked(fetch).mock.calls.map(([url]) => String(url))).toEqual([
+      "http://localhost:8000/v1/privacy/audit-events?entity_id=assessment-id",
+      "http://localhost:8000/v1/privacy/status",
+      "http://localhost:8000/v1/candidates/assessment-id/export",
+      "http://localhost:8000/v1/candidates/assessment-id",
+      "http://localhost:8000/v1/privacy/retention/run",
+    ]);
+
+    const rejected = await PATCH(
+      new Request("http://web.test/api/internal/privacy/status", {
+        headers: origin,
+        method: "PATCH",
+      }),
+      context("privacy", "status"),
+    );
+    expect(rejected.status).toBe(404);
+    expect(fetch).toHaveBeenCalledTimes(5);
+  });
 });

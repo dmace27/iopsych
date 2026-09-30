@@ -41,7 +41,7 @@ class InvitationSettings(BaseSettings):
         "authorized members of the hiring team."
     )
     retention_statement: str = (
-        "Pilot data is retained only for the approved pilot retention period."
+        "Pilot data is retained for {retention_days} days after submission, then anonymized."
     )
     privacy_contact_email: str = "privacy@example.invalid"
     accommodation_contact_email: str = "accommodations@example.invalid"
@@ -71,6 +71,19 @@ class InvitationSettings(BaseSettings):
         if not normalized:
             raise ValueError("invitation settings cannot be blank")
         return normalized
+
+    @field_validator("retention_statement")
+    @classmethod
+    def validate_retention_template(cls, value: str) -> str:
+        """Keep approved disclosure copy coupled to the enforced duration."""
+
+        if "{retention_days}" not in value:
+            raise ValueError("retention statement must contain {retention_days}")
+        try:
+            value.format(retention_days=90)
+        except (IndexError, KeyError, ValueError) as exc:
+            raise ValueError("retention statement contains an invalid format field") from exc
+        return value
 
     @field_validator("candidate_base_url")
     @classmethod

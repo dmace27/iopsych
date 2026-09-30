@@ -23,6 +23,10 @@ describe("SiteHeader", () => {
     expect(
       screen.getByRole("link", { name: /iopsychrole studio/i }),
     ).toHaveAttribute("href", "/roles");
+    expect(screen.getByRole("link", { name: "Privacy" })).toHaveAttribute(
+      "href",
+      "/privacy",
+    );
   });
 
   it("removes internal navigation from bearer-token candidate pages", () => {
