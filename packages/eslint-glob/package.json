@@ -1,0 +1,11 @@
+{
+  "name": "@iopsych/eslint-glob",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Safe directory globbing for the Next.js ESLint plugin",
+  "type": "commonjs",
+  "main": "index.js",
+  "dependencies": {
+    "tinyglobby": "0.2.17"
+  }
+}

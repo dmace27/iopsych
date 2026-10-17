@@ -9,10 +9,14 @@
   },
   "workspaces": [
     "apps/web",
+    "packages/eslint-glob",
     "packages/shared"
   ],
   "overrides": {
     "@eslint/js": "9.39.5",
+    "@next/eslint-plugin-next": {
+      "fast-glob": "$fast-glob"
+    },
     "eslint": "9.39.5"
   },
   "scripts": {
@@ -50,7 +54,8 @@
     "security:smoke": "PYTHONPATH=apps/api .venv/bin/python scripts/security_smoke.py"
   },
   "devDependencies": {
-    "concurrently": "10.0.5",
+    "concurrently": "10.0.6",
+    "fast-glob": "file:./packages/eslint-glob",
     "npm-run-all2": "9.0.3",
     "prettier": "3.9.9"
   }
