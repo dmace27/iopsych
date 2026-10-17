@@ -19,7 +19,7 @@ Two release targets should be kept separate:
   it reproducibly, and demonstrate it with synthetic data. This can be a strong
   résumé project without claiming that the instrument is scientifically
   validated.
-- **Real candidate pilot:** additionally requires reviewed assessment content,
+- **Real candidate pilot:** additionaally requires reviewed assessment content,
   approved interpretation and privacy policies, operational privacy controls,
   accommodation support, and accountable pilot owners. The specification
   explicitly requires synthetic data until the relevant reviews are complete.
@@ -61,10 +61,7 @@ That distinction is central to the remaining plan.
 Reviewed the root product/specification/research documents, app/package READMEs,
 security threat model and verification documentation, workflows, environment
 templates, migrations, shared domain modules, API services/routes, browser
-workspaces/proxies/storage, setup/smoke scripts, and test coverage. The
-untracked CUDA lab and inference field guide are unrelated learning material,
-not IOPsych release requirements. `notes.md` is exploratory conversation and
-`test.md` contains greeting text; neither is an acceptance test plan. Treat
+workspaces/proxies/storage, setup/smoke scripts, and test coverage. `notes.md` is exploratory conversation and `test.md` contains greeting text; neither is an acceptance test plan. Treat
 `mvp-spec.md` as the product authority where older ideas conflict with it.
 
 Checks run against the existing local installations during this review:
@@ -94,7 +91,7 @@ incidents.
 
 ## Ordered completion plan
 
-### 1. Fix the documented first-run environment loading — P0, confirmed defect
+### 1. Fi x the documented first-run environment loading — P0, confirmed defect
 
 **Evidence:** [API environment template](apps/api/.env.example),
 [API launcher](scripts/run-api.sh), [setup instructions](README.md).
