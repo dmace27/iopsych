@@ -29,9 +29,10 @@ npm run db:seed
 npm run db:verify
 ```
 
-`npm run setup` installs the npm workspaces, creates `.venv`, and installs the
-API and test dependencies. Set `PYTHON_BIN` if `python3` is not the desired
-interpreter:
+Run these commands from the repository root. `npm run setup` uses `npm ci` to
+install the npm workspaces from the committed `package-lock.json`, creates
+`.venv`, and installs the API and test dependencies. Set `PYTHON_BIN` if
+`python3` is not the desired interpreter:
 
 ```bash
 PYTHON_BIN=python3.12 npm run setup
@@ -52,6 +53,18 @@ The web app is available at <http://localhost:3000> and the API at
 - API: <http://localhost:8000/health>
 
 Run either app independently with `npm run dev:web` or `npm run dev:api`.
+
+The API launcher parses `apps/api/.env` as dotenv data; do not source it in a
+shell. Values in that file override inherited environment variables, including
+`API_HOST`, `API_PORT`, and `LOG_LEVEL`. If the file is absent, the launcher
+uses the inherited values or defaults to `0.0.0.0`, `8000`, and `info`; empty
+values also use those defaults. Shell commands and `${...}` references in values
+are treated literally. Quote free-text values as shown in the example. If you
+change the API port, update `API_BASE_URL` in `apps/web/.env.local` to match.
+
+The example configuration can start both health endpoints without provider
+credentials. Role extraction and invitation delivery need their provider setup
+before those features can be used.
 
 The internal web workspace forwards requests through a same-origin server route,
 so bearer credentials are never persisted in browser JavaScript or shared

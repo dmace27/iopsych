@@ -1,19 +1,9 @@
 #!/usr/bin/env bash
 
-# Load optional local overrides while retaining safe development defaults.
+# Resolve the repository from this script so direct calls work from any directory.
 set -euo pipefail
 
-if [[ -f apps/api/.env ]]; then
-  set -a
-  # shellcheck disable=SC1091 -- the local environment file is intentionally optional.
-  source apps/api/.env
-  set +a
-fi
+cd "$(dirname "${BASH_SOURCE[0]}")/.."
 
-exec .venv/bin/python -m uvicorn app.main:app \
-  --reload \
-  --no-proxy-headers \
-  --app-dir apps/api \
-  --host "${API_HOST:-0.0.0.0}" \
-  --port "${API_PORT:-8000}" \
-  --log-level "${LOG_LEVEL:-info}"
+# Parse configuration as data before replacing this process with Uvicorn.
+exec .venv/bin/python scripts/run_api.py

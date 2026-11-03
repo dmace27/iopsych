@@ -93,28 +93,46 @@ incidents.
 
 ## Ordered completion plan
 
-### 1. Fi x the documented first-run environment loading — P0, confirmed defect
+### 1. Fix the documented first-run environment loading — P0, completed
 
 **Evidence:** [API environment template](apps/api/.env.example),
 [API launcher](scripts/run-api.sh), [setup instructions](README.md).
 
-The README instructs copying the template to `apps/api/.env`. The launcher then
-sources that file as shell code.
-`INVITE_RETENTION_STATEMENT=Pilot data is retained ...` is unquoted, so Bash
-attempts to execute `data` and the launcher exits under `set -e`. The advertised
-first-run path therefore fails even though the build/test gates pass.
+The reviewed launcher sourced `apps/api/.env` as shell code. The unquoted
+`INVITE_RETENTION_STATEMENT=Pilot data is retained ...` caused Bash to execute
+`data` and exit under `set -e`, breaking the advertised first-run path.
 
-- [ ] Quote the template's free-text values and preferably replace shell
+- [x] Quote the template's free-text values and preferably replace shell
       sourcing with a dotenv-aware startup path. Preserve the API host/port
       configuration behavior and avoid executing configuration as shell code.
-- [ ] Make clean setup use the committed JavaScript lockfile (`npm ci` where
+- [x] Make clean setup use the committed JavaScript lockfile (`npm ci` where
       appropriate); document the supported runtimes and exact start commands.
-- [ ] Add a setup/startup regression that uses the example configuration and
+- [x] Add a setup/startup regression that uses the example configuration and
       does not require genuine provider credentials.
 
 **Done when:** a fresh clone following only the README starts both applications
 and reaches their health endpoints. Test the actual launcher, not just dotenv
 parsing.
+
+**Completed November 3, 2026:** the shell wrapper now starts
+`scripts/run_api.py`, which parses dotenv data without shell execution or
+variable interpolation. File values retain precedence over inherited variables;
+host, port, and log-level defaults are preserved. Setup now uses `npm ci`, and
+the README documents configuration behavior and startup commands.
+
+Verification: `npm run setup` succeeded in a clean temporary source copy with
+no existing `node_modules` or `.venv`; copied example configuration then started
+both applications through `npm run dev`, and both HTTP health endpoints returned
+their expected responses. Temporary ports were configured for isolation. This
+startup check requires no provider credentials or database connection; it did
+not repeat PostgreSQL provisioning, migration, or seed verification. The local
+runtimes were Node.js 26.0.0, npm 12.0.1, and Python 3.14.5; the pinned CI
+baselines remain Node.js 22 and Python 3.12.
+
+`npm run check` passed: 426 tests passed and two PostgreSQL tests were skipped
+without a configured test database. The three new launcher regressions cover
+the example configuration, legacy unquoted free text, and a missing `.env`,
+including file precedence and non-execution of command-like configuration.
 
 ### 2. Resolve the contradictory structure comparison policy — P0, design/correctness blocker
 
