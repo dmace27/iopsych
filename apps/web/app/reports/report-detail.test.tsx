@@ -11,6 +11,8 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ReportDetail } from "./report-detail";
 import { reportFixture } from "./report-fixtures";
+import legacyFixture from "../../../../packages/shared/fixtures/v1/matching-result/legacy-structure.json";
+import { ReportSchema } from "../../lib/report-contracts";
 
 beforeEach(() => {
   Object.defineProperty(HTMLDialogElement.prototype, "showModal", {
@@ -51,8 +53,12 @@ describe("report presentation", () => {
     expect(screen.getByText("Potential friction")).toBeVisible();
     expect(screen.getByText(/Low confidence/)).toBeVisible();
     expect(
-      screen.getByText(/Structure uses an inverse comparison: 6 − 4 = 2/),
+      screen.getByText(/Available role structure is compared directly/),
     ).toBeVisible();
+    expect(screen.getByText("Role structure available")).toBeVisible();
+    expect(
+      screen.queryByText(/inverse structure comparison/),
+    ).not.toBeInTheDocument();
     expect(
       screen.getByRole("complementary", { name: "Responsible use" }),
     ).toHaveTextContent(reportFixture.usage_warning);
@@ -72,6 +78,32 @@ describe("report presentation", () => {
         { exact: false },
       ),
     ).toBeVisible();
+  });
+  it("renders a saved v1 report with its original inverse result and questions", () => {
+    const historical = ReportSchema.parse({
+      ...reportFixture,
+      result: legacyFixture.payload,
+    });
+    render(<ReportDetail report={historical} />);
+    expect(
+      screen.getByText(
+        /Algorithm v1 used an inverse structure comparison: 6 − 5 = 1/,
+      ),
+    ).toBeVisible();
+    expect(
+      screen.getByText(
+        /This historical result is preserved as originally generated/,
+      ),
+    ).toBeVisible();
+    expect(
+      screen.getByText(
+        legacyFixture.payload.items[1].interview_questions.primary.text,
+      ),
+    ).toBeVisible();
+    expect(screen.getByText("Potential friction")).toBeVisible();
+    expect(
+      screen.queryByText(/Available role structure is compared directly/),
+    ).not.toBeInTheDocument();
   });
   it("opens inspectable evidence, closes with Escape and restores trigger focus", async () => {
     const user = userEvent.setup();

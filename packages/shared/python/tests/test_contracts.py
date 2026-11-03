@@ -59,7 +59,7 @@ def fixture_is_valid(fixture: dict[str, Any]) -> bool:
 
 
 def test_construct_definitions_are_complete_and_behavioral() -> None:
-    """The API imports the same six keys and explicit structure exception as TypeScript."""
+    """The API imports the same six keys and direct structure comparison as TypeScript."""
 
     assert [key.value for key in CONSTRUCT_KEYS] == [
         "autonomy",
@@ -72,7 +72,7 @@ def test_construct_definitions_are_complete_and_behavioral() -> None:
     assert len(CONSTRUCT_DEFINITIONS) == 6
     assert (
         CONSTRUCT_DEFINITIONS_BY_KEY[ConstructKey.STRUCTURE].comparison_target
-        is ComparisonTarget.INVERSE_ROLE_RATING
+        is ComparisonTarget.ROLE_RATING
     )
     assert all(
         definition.comparison_target is ComparisonTarget.ROLE_RATING
@@ -86,7 +86,9 @@ def test_construct_definitions_are_complete_and_behavioral() -> None:
 def test_construct_definitions_match_language_neutral_document() -> None:
     """Pydantic metadata cannot drift from the document consumed by other runtimes."""
 
-    document = json.loads((DEFINITION_ROOT / "constructs.json").read_text(encoding="utf-8"))
+    document = json.loads(
+        (DEFINITION_ROOT.parent / "v2" / "constructs.json").read_text(encoding="utf-8")
+    )
     assert document["contract_version"] == "1.0.0"
     assert document["constructs"] == [
         definition.model_dump(mode="json") for definition in CONSTRUCT_DEFINITIONS

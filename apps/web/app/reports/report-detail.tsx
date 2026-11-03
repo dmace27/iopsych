@@ -99,7 +99,9 @@ export function ReportDetail({
               <dl className="mt-5 grid grid-cols-2 gap-4">
                 <div>
                   <dt className="text-sm font-semibold text-slate-600">
-                    Role demand
+                    {item.construct_key === "structure"
+                      ? "Role structure available"
+                      : "Role demand"}
                   </dt>
                   <dd className="mt-1 text-2xl font-bold text-slate-950">
                     {role.rating}
@@ -124,10 +126,10 @@ export function ReportDetail({
               </dl>
               {role.comparison_target === "inverse_role_rating" ? (
                 <p className="mt-4 text-sm leading-6 text-slate-700">
-                  Structure uses an inverse comparison: 6 − {role.rating} ={" "}
-                  {role.comparison_rating}. The candidate response is compared
-                  with {role.comparison_rating}, rather than the role demand
-                  shown above.
+                  Algorithm v1 used an inverse structure comparison: 6 −{" "}
+                  {role.rating} = {role.comparison_rating}. The candidate
+                  response is compared with {role.comparison_rating}. This
+                  historical result is preserved as originally generated.
                 </p>
               ) : null}
               <p className="mt-4 text-sm leading-6 text-slate-700">

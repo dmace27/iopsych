@@ -16,3 +16,10 @@ version folder; existing fixture meanings must not be silently changed.
 The scoring thresholds in these fixtures exist only to test the configuration
 shape. They are not reviewed assessment policy and must not be used as a
 production scoring definition.
+
+`v1/matching-result/legacy-structure.json` freezes a complete result from the
+original algorithm, with synthetic inputs for exact cross-language replay. Keep
+that payload unchanged when the current matcher changes.
+`v2/matching/structure-extremes.json` contains four meaning-based structure
+comparison cases under `contract: structure_comparison_cases`; both language
+suites check those same expected classifications and differences.

@@ -9,6 +9,7 @@
       "import": "./src/index.ts"
     },
     "./definitions/v1/*": "./definitions/v1/*",
+    "./definitions/v2/*": "./definitions/v2/*",
     "./schemas/v1/*": "./schemas/v1/*"
   },
   "files": [

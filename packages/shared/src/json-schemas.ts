@@ -10,6 +10,8 @@ import {
   InterviewQuestionLibrarySchema,
   MatchingResultSchema,
   MatchingRoleProfileSchema,
+  MatchingAlgorithmVersionSchema,
+  comparisonTarget,
 } from "./matching";
 import { ApiProblemSchema } from "./problem-details";
 import { RoleExtractionSchema } from "./role-extraction";
@@ -60,6 +62,36 @@ function requireEveryConstructKey(schema: JsonSchema): JsonSchema {
   };
 }
 
+/** Persist the same algorithm/target constraints enforced by both runtime readers. */
+function requireVersionedTargets(schema: JsonSchema): JsonSchema {
+  const targetConstraint = (target: string) => ({
+    properties: {
+      explanation: {
+        properties: {
+          role: { properties: { comparison_target: { const: target } } },
+        },
+      },
+    },
+  });
+  return {
+    ...schema,
+    allOf: MatchingAlgorithmVersionSchema.options.map((version) => ({
+      if: { properties: { algorithm_version: { const: version } } },
+      then: {
+        properties: {
+          items: {
+            items: {
+              if: { properties: { construct_key: { const: "structure" } } },
+              then: targetConstraint(comparisonTarget("structure", version)),
+              else: targetConstraint("role_rating"),
+            },
+          },
+        },
+      },
+    })),
+  };
+}
+
 /** Checked-in JSON Schema documents are generated from these Zod contracts. */
 export const JSON_SCHEMA_DOCUMENTS = {
   "assessment-definition.schema.json": createJsonSchema(
@@ -92,10 +124,12 @@ export const JSON_SCHEMA_DOCUMENTS = {
     "interview-question-library.schema.json",
     "Approved interview-question library",
   ),
-  "matching-result.schema.json": createJsonSchema(
-    MatchingResultSchema,
-    "matching-result.schema.json",
-    "Matching result",
+  "matching-result.schema.json": requireVersionedTargets(
+    createJsonSchema(
+      MatchingResultSchema,
+      "matching-result.schema.json",
+      "Matching result",
+    ),
   ),
   "matching-role-profile.schema.json": createJsonSchema(
     MatchingRoleProfileSchema,

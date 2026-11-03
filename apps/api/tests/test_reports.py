@@ -1,7 +1,9 @@
 """Package 3B persistence, authoritative input gates, and access audits."""
 
+import json
 from collections.abc import AsyncGenerator
 from datetime import UTC, datetime, timedelta
+from pathlib import Path
 from typing import Any
 from unittest.mock import patch
 from uuid import UUID, uuid4
@@ -188,6 +190,57 @@ async def test_report_persists_matching_snapshot_and_audits(
     assert cross.status_code == 404
     assert (await report_client.get(f"/v1/reports/{body['id']}")).status_code == 401
     assert (await report_client.get(f"/v1/reports/{uuid4()}", headers=auth)).status_code == 404
+
+
+@pytest.mark.anyio
+async def test_historical_report_remains_readable_without_recalculation(
+    report_client: AsyncClient,
+    report_factory: sessionmaker[Session],
+) -> None:
+    """The read endpoint returns the persisted v1 result, including its old questions."""
+
+    assessment_id = await submitted(report_client, report_factory)
+    path = (
+        Path(__file__).resolve().parents[3]
+        / "packages/shared/fixtures/v1/matching-result/legacy-structure.json"
+    )
+    saved = json.loads(path.read_text(encoding="utf-8"))["payload"]
+    with report_factory() as session:
+        report = AlignmentReport(
+            assessment_id=UUID(assessment_id),
+            role_profile_id=ALPHA_PROFILE_ID,
+            algorithm_version="1.0.0",
+            result_json=saved,
+        )
+        session.add(report)
+        session.commit()
+        report_id = report.id
+    read = await report_client.get(f"/v1/reports/{report_id}", headers=headers(report_factory))
+    assert read.status_code == 200, read.text
+    assert read.json()["result"] == saved
+    auth = headers(report_factory)
+    discovery = f"/v1/roles/{ALPHA_ROLE_ID}/assessments"
+    before_upgrade = await report_client.get(discovery, headers=auth)
+    assert before_upgrade.status_code == 200
+    assert before_upgrade.json()[0]["report_id"] == str(report_id)
+
+    # Explicit new generation creates a separate v2 report for the same inputs.
+    payload = {"assessment_id": assessment_id, "role_profile_id": str(ALPHA_PROFILE_ID)}
+    generated = await report_client.post("/v1/reports", headers=auth, json=payload)
+    assert generated.status_code == 201, generated.text
+    assert generated.json()["result"]["algorithm_version"] == "2.0.0"
+    assert generated.json()["id"] != str(report_id)
+    duplicate = await report_client.post("/v1/reports", headers=auth, json=payload)
+    assert duplicate.json() == generated.json()
+    after_upgrade = await report_client.get(discovery, headers=auth)
+    assert len(after_upgrade.json()) == 1
+    assert after_upgrade.json()[0]["report_id"] == generated.json()["id"]
+    historical = await report_client.get(f"/v1/reports/{report_id}", headers=auth)
+    assert historical.json()["result"] == saved
+    with report_factory() as session:
+        stored = session.get(AlignmentReport, report_id)
+        assert stored is not None
+        assert stored.result_json == saved
 
 
 @pytest.mark.anyio

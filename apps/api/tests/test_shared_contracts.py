@@ -10,5 +10,5 @@ def test_api_imports_shared_construct_definitions() -> None:
     assert len(CONSTRUCT_KEYS) == 6
     assert (
         CONSTRUCT_DEFINITIONS_BY_KEY[ConstructKey.STRUCTURE].comparison_target
-        is ComparisonTarget.INVERSE_ROLE_RATING
+        is ComparisonTarget.ROLE_RATING
     )

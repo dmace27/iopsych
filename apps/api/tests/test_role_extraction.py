@@ -258,6 +258,11 @@ def test_openai_adapter_sends_strict_schema_and_decodes_output(
     assert captured["body"]["text"]["format"]["schema"]["additionalProperties"] is False
     assert json.loads(captured["body"]["input"]) == asdict(role)
     assert "candidate" not in captured["body"]["input"].lower()
+    instructions = captured["body"]["instructions"]
+    assert "rate available clarity and routines" in instructions
+    assert "1 means goals and processes are largely" in instructions
+    assert "5 means goals, routines, and requirements are clearly defined" in instructions
+    assert "Do not invert structure" in instructions
 
 
 @pytest.mark.parametrize(

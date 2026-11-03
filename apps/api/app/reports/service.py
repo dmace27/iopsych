@@ -30,6 +30,7 @@ from iopsych_contracts import RoleConstructRating as RatingContract
 from iopsych_contracts.assessment import AssessmentScoreResult
 from iopsych_contracts.matching import (
     MATCHING_ALGORITHM_VERSION,
+    MatchingAlgorithmVersion,
     MatchingResult,
     MatchingRoleProfile,
     match_role_profile,
@@ -208,18 +209,24 @@ class ReportService:
         )
         if role is None:
             raise organization_resource_not_found()
+        # Prefer the current report, falling back to a supported historical one.
+        # A version upgrade must not hide existing reports or duplicate rows.
+        report_id = (
+            select(AlignmentReport.id)
+            .where(
+                AlignmentReport.assessment_id == Assessment.id,
+                AlignmentReport.role_profile_id == RoleProfile.id,
+                AlignmentReport.algorithm_version.in_(tuple(MatchingAlgorithmVersion)),
+            )
+            .order_by(AlignmentReport.algorithm_version.desc())
+            .limit(1)
+            .correlate(Assessment, RoleProfile)
+            .scalar_subquery()
+        )
         rows = self.session.execute(
-            select(Assessment, AssessmentInvite, RoleProfile, AlignmentReport.id)
+            select(Assessment, AssessmentInvite, RoleProfile, report_id)
             .join(AssessmentInvite, AssessmentInvite.id == Assessment.invite_id)
             .join(RoleProfile, RoleProfile.id == AssessmentInvite.role_profile_id)
-            .outerjoin(
-                AlignmentReport,
-                (
-                    (AlignmentReport.assessment_id == Assessment.id)
-                    & (AlignmentReport.role_profile_id == RoleProfile.id)
-                    & (AlignmentReport.algorithm_version == MATCHING_ALGORITHM_VERSION)
-                ),
-            )
             .where(
                 RoleProfile.role_id == role_id,
                 Assessment.submitted_at.is_not(None),

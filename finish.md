@@ -134,35 +134,55 @@ without a configured test database. The three new launcher regressions cover
 the example configuration, legacy unquoted free text, and a missing `.env`,
 including file precedence and non-execution of command-like configuration.
 
-### 2. Resolve the contradictory structure comparison policy — P0, design/correctness blocker
+### 2. Resolve the contradictory structure comparison policy — P0, completed
 
 **Evidence:** `mvp-spec.md` sections 5 and 7;
 [construct metadata](packages/shared/src/constructs.ts);
 [TypeScript matcher](packages/shared/src/matching.ts);
 [Python matcher](packages/shared/python/iopsych_contracts/matching.py).
 
-The implementation follows the spec's explicit inverse formula. However, the
-spec also says high role structure satisfies high candidate preference for
-structure. Under the implemented formula, role structure **5** and candidate
-structure preference **5** compare as `abs((6 - 5) - 5) = 4`, producing
-potential friction; role **1**, candidate **5** produces alignment. These
-examples conflict with the behavioral definitions. Existing boundary tests
-verify the formula, not the intended meaning.
+The original implementation followed the spec's inverse formula, contradicting
+its behavioral definitions: role structure **5** and candidate preference **5**
+produced potential friction, while role **1** and candidate **5** aligned. This
+is now resolved by the approved direct-comparison policy below.
 
-- [ ] Record one approved interpretation with the product/I-O reviewer: either
+- [x] Record one approved interpretation with the product/I-O reviewer: either
       compare structure availability directly to preference, or redefine the
       role quantity so inversion has the intended meaning.
-- [ ] Align the spec, extraction instructions, labels, definitions, both
+- [x] Align the spec, extraction instructions, labels, definitions, both
       matchers, schemas, fixtures, and report explanations with that decision.
-- [ ] Add meaning-based examples for low/high structure and low/high preference,
+- [x] Add meaning-based examples for low/high structure and low/high preference,
       plus cross-language parity cases.
-- [ ] If matching behavior changes, publish a new algorithm version and preserve
-      old report interpretation; complete task 7 before deploying the change
-      over existing data.
+- [x] If matching behavior changes, publish a new algorithm version and preserve
+      old report interpretation.
 
 **Done when:** a reviewer can explain the four extreme cases in plain language
 and both implementations produce the approved outcomes. Do not silently change
 historical reports.
+
+**Completed November 3, 2026:** the repository owner explicitly approved direct
+comparison of available role structure with candidate preference. Algorithm
+`2.0.0` uses `abs(R - C)`, so high/high and low/low align, while opposite
+extremes flag potential friction with sufficient evidence. The spec, provider
+instructions, current metadata, both matchers, generated reader schema, shared
+examples, and report wording now agree. See the
+[decision record](docs/decisions/structure-comparison.md) for the four examples
+and version policy. This product decision does not replace the independent
+I/O psychology review required by Task 16.
+
+Version-aware readers and explicit v1 replay retain old classifications,
+explanations, and questions. The original v1 metadata and a frozen pre-change
+result remain unchanged. Discovery retains v1 reports until an explicitly
+generated v2 report exists, then prefers v2 without hiding direct v1 reads.
+
+Verification: formatting, lint, type checks, and the production build passed.
+The web, shared TypeScript, shared Python, and API suites passed 432 tests in
+total; two PostgreSQL tests were skipped without a configured test database.
+Python application and shared-contract coverage gates remained at 100%.
+
+**Deployment dependency:** complete the remaining assessment-definition
+assignment and lifecycle work in Task 7 before deploying over existing data.
+This completion records implementation and local verification, not deployment.
 
 ### 3. Replace token-paste sign-in with an actual identity workflow — P0, missing implementation
 
@@ -312,7 +332,7 @@ old stored reports unreadable.
       mode while retaining historical read/scoring compatibility. The current
       pilot definition is explicitly `draft` and is nevertheless rendered and
       scored.
-- [ ] Add version-aware report readers and an algorithm registry/dispatch
+- [x] Add version-aware report readers and an algorithm registry/dispatch
       policy. A new algorithm must not reinterpret old persisted output.
 - [ ] Test an upgrade with an outstanding invitation, saved draft, submitted
       assessment, and v1 report already present.

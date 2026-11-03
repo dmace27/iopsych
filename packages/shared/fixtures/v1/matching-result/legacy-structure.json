@@ -1,0 +1,357 @@
+{
+  "contract": "matching_result",
+  "expected_valid": true,
+  "context": {
+    "role_profile": {
+      "approved": true,
+      "constructs": [
+        {
+          "key": "autonomy",
+          "rating": 5,
+          "confidence": "high",
+          "rationale": "Synthetic autonomy role context.",
+          "evidence": ["Synthetic evidence for autonomy."]
+        },
+        {
+          "key": "structure",
+          "rating": 5,
+          "confidence": "high",
+          "rationale": "Synthetic structure role context.",
+          "evidence": ["Synthetic evidence for structure."]
+        },
+        {
+          "key": "ambiguity",
+          "rating": 5,
+          "confidence": "high",
+          "rationale": "Synthetic ambiguity role context.",
+          "evidence": ["Synthetic evidence for ambiguity."]
+        },
+        {
+          "key": "collaboration",
+          "rating": 5,
+          "confidence": "high",
+          "rationale": "Synthetic collaboration role context.",
+          "evidence": ["Synthetic evidence for collaboration."]
+        },
+        {
+          "key": "mastery",
+          "rating": 5,
+          "confidence": "high",
+          "rationale": "Synthetic mastery role context.",
+          "evidence": ["Synthetic evidence for mastery."]
+        },
+        {
+          "key": "pace",
+          "rating": 5,
+          "confidence": "high",
+          "rationale": "Synthetic pace role context.",
+          "evidence": ["Synthetic evidence for pace."]
+        }
+      ]
+    },
+    "candidate_scores": {
+      "assessment_definition_id": "synthetic-assessment",
+      "assessment_definition_version": "1.0.0",
+      "scoring_version": "1.0.0",
+      "construct_scores": [
+        {
+          "construct_key": "autonomy",
+          "rating": 5,
+          "confidence": "high",
+          "raw_score": 4,
+          "assigned_item_count": 4,
+          "answered_item_count": 4,
+          "skipped_item_count": 0
+        },
+        {
+          "construct_key": "structure",
+          "rating": 5,
+          "confidence": "high",
+          "raw_score": 4,
+          "assigned_item_count": 4,
+          "answered_item_count": 4,
+          "skipped_item_count": 0
+        },
+        {
+          "construct_key": "ambiguity",
+          "rating": 5,
+          "confidence": "high",
+          "raw_score": 4,
+          "assigned_item_count": 4,
+          "answered_item_count": 4,
+          "skipped_item_count": 0
+        },
+        {
+          "construct_key": "collaboration",
+          "rating": 5,
+          "confidence": "high",
+          "raw_score": 4,
+          "assigned_item_count": 4,
+          "answered_item_count": 4,
+          "skipped_item_count": 0
+        },
+        {
+          "construct_key": "mastery",
+          "rating": 5,
+          "confidence": "high",
+          "raw_score": 4,
+          "assigned_item_count": 4,
+          "answered_item_count": 4,
+          "skipped_item_count": 0
+        },
+        {
+          "construct_key": "pace",
+          "rating": 5,
+          "confidence": "high",
+          "raw_score": 4,
+          "assigned_item_count": 4,
+          "answered_item_count": 4,
+          "skipped_item_count": 0
+        }
+      ]
+    }
+  },
+  "payload": {
+    "algorithm_version": "1.0.0",
+    "role_profile_approved": true,
+    "assessment_definition_id": "synthetic-assessment",
+    "assessment_definition_version": "1.0.0",
+    "scoring_version": "1.0.0",
+    "items": [
+      {
+        "construct_key": "autonomy",
+        "classification": "aligned",
+        "confidence": "high",
+        "explanation": {
+          "role": {
+            "rating": 5,
+            "confidence": "high",
+            "rationale": "Synthetic autonomy role context.",
+            "evidence": ["Synthetic evidence for autonomy."],
+            "comparison_target": "role_rating",
+            "comparison_rating": 5
+          },
+          "candidate_response": {
+            "rating": 5,
+            "confidence": "high",
+            "raw_score": 4,
+            "assigned_item_count": 4,
+            "answered_item_count": 4,
+            "skipped_item_count": 0
+          },
+          "applied_rule": {
+            "rule": "difference_at_most_one",
+            "absolute_difference": 0,
+            "description": "The absolute rating difference is at most 1."
+          },
+          "uncertainty": null
+        },
+        "interview_questions": {
+          "primary": {
+            "id": "autonomy.aligned.primary.v1",
+            "text": "Tell me about a role where the level of day-to-day ownership worked well for you."
+          },
+          "follow_up": {
+            "id": "autonomy.aligned.follow-up.v1",
+            "text": "What decisions did you make independently, and when did you seek direction?"
+          }
+        }
+      },
+      {
+        "construct_key": "structure",
+        "classification": "potential_friction",
+        "confidence": "high",
+        "explanation": {
+          "role": {
+            "rating": 5,
+            "confidence": "high",
+            "rationale": "Synthetic structure role context.",
+            "evidence": ["Synthetic evidence for structure."],
+            "comparison_target": "inverse_role_rating",
+            "comparison_rating": 1
+          },
+          "candidate_response": {
+            "rating": 5,
+            "confidence": "high",
+            "raw_score": 4,
+            "assigned_item_count": 4,
+            "answered_item_count": 4,
+            "skipped_item_count": 0
+          },
+          "applied_rule": {
+            "rule": "difference_at_least_three",
+            "absolute_difference": 4,
+            "description": "The absolute rating difference is at least 3."
+          },
+          "uncertainty": null
+        },
+        "interview_questions": {
+          "primary": {
+            "id": "structure.potential_friction.primary.v1",
+            "text": "Tell me about a time you worked with much more or less structure than you normally prefer."
+          },
+          "follow_up": {
+            "id": "structure.potential_friction.follow-up.v1",
+            "text": "What support, information, or routines helped you work effectively?"
+          }
+        }
+      },
+      {
+        "construct_key": "ambiguity",
+        "classification": "aligned",
+        "confidence": "high",
+        "explanation": {
+          "role": {
+            "rating": 5,
+            "confidence": "high",
+            "rationale": "Synthetic ambiguity role context.",
+            "evidence": ["Synthetic evidence for ambiguity."],
+            "comparison_target": "role_rating",
+            "comparison_rating": 5
+          },
+          "candidate_response": {
+            "rating": 5,
+            "confidence": "high",
+            "raw_score": 4,
+            "assigned_item_count": 4,
+            "answered_item_count": 4,
+            "skipped_item_count": 0
+          },
+          "applied_rule": {
+            "rule": "difference_at_most_one",
+            "absolute_difference": 0,
+            "description": "The absolute rating difference is at most 1."
+          },
+          "uncertainty": null
+        },
+        "interview_questions": {
+          "primary": {
+            "id": "ambiguity.aligned.primary.v1",
+            "text": "Tell me about a time you worked effectively while requirements were incomplete or changing."
+          },
+          "follow_up": {
+            "id": "ambiguity.aligned.follow-up.v1",
+            "text": "How did you decide what to clarify and what to act on?"
+          }
+        }
+      },
+      {
+        "construct_key": "collaboration",
+        "classification": "aligned",
+        "confidence": "high",
+        "explanation": {
+          "role": {
+            "rating": 5,
+            "confidence": "high",
+            "rationale": "Synthetic collaboration role context.",
+            "evidence": ["Synthetic evidence for collaboration."],
+            "comparison_target": "role_rating",
+            "comparison_rating": 5
+          },
+          "candidate_response": {
+            "rating": 5,
+            "confidence": "high",
+            "raw_score": 4,
+            "assigned_item_count": 4,
+            "answered_item_count": 4,
+            "skipped_item_count": 0
+          },
+          "applied_rule": {
+            "rule": "difference_at_most_one",
+            "absolute_difference": 0,
+            "description": "The absolute rating difference is at most 1."
+          },
+          "uncertainty": null
+        },
+        "interview_questions": {
+          "primary": {
+            "id": "collaboration.aligned.primary.v1",
+            "text": "Tell me about a team interaction pattern that helped you do strong work."
+          },
+          "follow_up": {
+            "id": "collaboration.aligned.follow-up.v1",
+            "text": "How did you contribute while preserving time for individual work?"
+          }
+        }
+      },
+      {
+        "construct_key": "mastery",
+        "classification": "aligned",
+        "confidence": "high",
+        "explanation": {
+          "role": {
+            "rating": 5,
+            "confidence": "high",
+            "rationale": "Synthetic mastery role context.",
+            "evidence": ["Synthetic evidence for mastery."],
+            "comparison_target": "role_rating",
+            "comparison_rating": 5
+          },
+          "candidate_response": {
+            "rating": 5,
+            "confidence": "high",
+            "raw_score": 4,
+            "assigned_item_count": 4,
+            "answered_item_count": 4,
+            "skipped_item_count": 0
+          },
+          "applied_rule": {
+            "rule": "difference_at_most_one",
+            "absolute_difference": 0,
+            "description": "The absolute rating difference is at most 1."
+          },
+          "uncertainty": null
+        },
+        "interview_questions": {
+          "primary": {
+            "id": "mastery.aligned.primary.v1",
+            "text": "Tell me about a technically difficult problem that kept you engaged."
+          },
+          "follow_up": {
+            "id": "mastery.aligned.follow-up.v1",
+            "text": "How did you deepen your knowledge while delivering the work?"
+          }
+        }
+      },
+      {
+        "construct_key": "pace",
+        "classification": "aligned",
+        "confidence": "high",
+        "explanation": {
+          "role": {
+            "rating": 5,
+            "confidence": "high",
+            "rationale": "Synthetic pace role context.",
+            "evidence": ["Synthetic evidence for pace."],
+            "comparison_target": "role_rating",
+            "comparison_rating": 5
+          },
+          "candidate_response": {
+            "rating": 5,
+            "confidence": "high",
+            "raw_score": 4,
+            "assigned_item_count": 4,
+            "answered_item_count": 4,
+            "skipped_item_count": 0
+          },
+          "applied_rule": {
+            "rule": "difference_at_most_one",
+            "absolute_difference": 0,
+            "description": "The absolute rating difference is at most 1."
+          },
+          "uncertainty": null
+        },
+        "interview_questions": {
+          "primary": {
+            "id": "pace.aligned.primary.v1",
+            "text": "Tell me about a work pace and mix of priorities that helped you be effective."
+          },
+          "follow_up": {
+            "id": "pace.aligned.follow-up.v1",
+            "text": "How did you protect quality while maintaining momentum?"
+          }
+        }
+      }
+    ]
+  }
+}
