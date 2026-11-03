@@ -8,7 +8,7 @@ from datetime import UTC, datetime, timedelta
 from html import escape
 from typing import Any, cast
 from unittest.mock import patch
-from uuid import UUID
+from uuid import UUID, uuid4
 
 import pytest
 from fastapi import FastAPI
@@ -27,6 +27,8 @@ from app.database.models import (
     CandidateConsent,
     ConsentDecision,
     InternalUserRole,
+    InvitationDelivery,
+    InvitationDeliveryStatus,
     Role,
     RoleProfile,
     RoleProfileStatus,
@@ -52,6 +54,7 @@ from app.invitations.delivery import (
     build_invitation_email,
 )
 from app.invitations.logging import CandidateInviteTokenFilter, install_invite_token_log_filter
+from app.invitations.outbox import process_delivery_batch
 from app.invitations.rate_limit import InMemoryRateLimiter
 from app.invitations.schemas import InvitationCreateRequest
 from app.invitations.service import InternalInvitationService, require_consented_invite
@@ -76,16 +79,17 @@ class RecordingDelivery:
     def __init__(self) -> None:
         self.messages: list[InvitationEmail] = []
 
-    def send(self, message: InvitationEmail) -> None:
+    def send(self, message: InvitationEmail, *, idempotency_key: str) -> str:
         """Record one message exactly as the provider would receive it."""
 
         self.messages.append(message)
+        return str(uuid4())
 
 
 class FailingDelivery:
     """Simulate a provider failure without exposing provider internals."""
 
-    def send(self, message: InvitationEmail) -> None:
+    def send(self, message: InvitationEmail, *, idempotency_key: str) -> str:
         """Reject every send."""
 
         del message
@@ -161,6 +165,7 @@ def invitation_settings(**overrides: Any) -> InvitationSettings:
 
     values: dict[str, Any] = {
         "token_signing_secret": INVITE_SECRET,
+        "delivery_encryption_key": "MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA=",
         "candidate_base_url": "https://candidate.example.invalid/invites/",
         "default_expiry_hours": 24,
         "maximum_expiry_hours": 48,
@@ -234,6 +239,7 @@ def invite_payload(**overrides: object) -> dict[str, object]:
 
     payload: dict[str, object] = {
         "role_profile_id": str(ALPHA_PROFILE_ID),
+        "request_id": str(uuid4()),
         "email": "candidate@synthetic.example.invalid",
         "expires_in_hours": 12,
     }
@@ -253,6 +259,7 @@ async def create_invite(
     client: AsyncClient,
     headers: dict[str, str],
     delivery_adapter: RecordingDelivery,
+    factory: sessionmaker[Session],
     **overrides: object,
 ) -> tuple[dict[str, Any], str]:
     """Create an invitation and return its safe response plus emailed token."""
@@ -263,6 +270,8 @@ async def create_invite(
         json=invite_payload(**overrides),
     )
     assert response.status_code == 201
+    assert response.json()["sent_at"] is None
+    process_delivery_batch(factory, invitation_settings(), delivery_adapter)
     return cast(dict[str, Any], response.json()), token_from_message(delivery_adapter.messages[-1])
 
 
@@ -326,10 +335,12 @@ def test_settings_schema_delivery_rendering_and_unconfigured_adapter_are_safe() 
     for invalid_email in ("not-an-email", "one@two@example.invalid"):
         with pytest.raises(ValidationError, match="valid address"):
             InvitationCreateRequest(
+                request_id=uuid4(),
                 role_profile_id=ALPHA_PROFILE_ID,
                 email=invalid_email,
             )
     normalized = InvitationCreateRequest(
+        request_id=uuid4(),
         role_profile_id=ALPHA_PROFILE_ID,
         email="Candidate@Example.INVALID",
     )
@@ -349,7 +360,7 @@ def test_settings_schema_delivery_rendering_and_unconfigured_adapter_are_safe() 
     assert escape(organization) in message.html_body
     assert "&quot;unsafe&quot;" in message.html_body
     with pytest.raises(InvitationDeliveryError, match="not configured"):
-        UnconfiguredInvitationDelivery().send(message)
+        UnconfiguredInvitationDelivery().send(message, idempotency_key="test")
 
 
 def test_fixed_window_rate_limiter_resets_and_rejects_invalid_policy() -> None:
@@ -420,7 +431,11 @@ async def test_invite_consent_happy_path_is_private_hashed_and_audited(
     """Approved invitations deliver safely and consent is explicit, terminal, and audited."""
 
     created, token = await create_invite(
-        invitation_client, alpha_headers, delivery, email="Person@Synthetic.Example.Invalid"
+        invitation_client,
+        alpha_headers,
+        delivery,
+        invitation_session_factory,
+        email="Person@Synthetic.Example.Invalid",
     )
     assert created["status"] == "active"
     assert created["email"] == "Person@synthetic.example.invalid"
@@ -479,6 +494,8 @@ async def test_invite_consent_happy_path_is_private_hashed_and_audited(
         events = list(session.scalars(select(AuditEvent).where(AuditEvent.entity_id == invite.id)))
         assert {event.event_type for event in events} == {
             "assessment_invite.created",
+            "invitation_delivery.queued",
+            "invitation_delivery.sent",
             "candidate_invite.accessed",
             "candidate_consent.recorded",
         }
@@ -494,7 +511,9 @@ async def test_decline_never_opens_assessment_and_revocation_is_immediate(
 ) -> None:
     """A decline is persisted without penalty and a revoked link stops working."""
 
-    created, token = await create_invite(invitation_client, alpha_headers, delivery)
+    created, token = await create_invite(
+        invitation_client, alpha_headers, delivery, invitation_session_factory
+    )
     declined = await invitation_client.post(
         f"/v1/candidate/invites/{token}/consent", json={"decision": "decline"}
     )
@@ -532,7 +551,9 @@ async def test_expired_pending_invalid_and_tampered_links_fail_safely(
 ) -> None:
     """Every unusable token state fails without returning candidate or tenant data."""
 
-    created, token = await create_invite(invitation_client, alpha_headers, delivery)
+    created, token = await create_invite(
+        invitation_client, alpha_headers, delivery, invitation_session_factory
+    )
     with invitation_session_factory() as session:
         invite = session.get(AssessmentInvite, UUID(created["id"]))
         assert invite is not None
@@ -631,7 +652,9 @@ async def test_internal_invite_rules_enforce_approval_tenant_role_and_expiry_pol
     assert too_long.json()["code"] == "invite_expiry_exceeds_policy"
     assert delivery.messages == []
 
-    created, _ = await create_invite(invitation_client, alpha_headers, delivery)
+    created, _ = await create_invite(
+        invitation_client, alpha_headers, delivery, invitation_session_factory
+    )
     wrong_role = await invitation_client.post(
         f"/v1/roles/{BEACON_ROLE_ID}/invites/{created['id']}/revoke",
         headers=beacon_headers,
@@ -648,7 +671,7 @@ async def test_delivery_and_missing_security_configuration_fail_closed(
     invitation_session_factory: sessionmaker[Session],
     alpha_headers: dict[str, str],
 ) -> None:
-    """No invite survives failed delivery, and absent signing secrets expose no links."""
+    """Delivery failures remain recoverable, and missing signing keys expose no links."""
 
     failing_app = build_app(invitation_session_factory, FailingDelivery())
     async with AsyncClient(
@@ -659,11 +682,14 @@ async def test_delivery_and_missing_security_configuration_fail_closed(
             headers=alpha_headers,
             json=invite_payload(),
         )
-    assert failed.status_code == 502
-    assert failed.json()["code"] == "invitation_delivery_failed"
-    assert "provider" not in failed.json()["detail"]
+    assert failed.status_code == 201  # Queued, not a claim of successful email delivery.
+    process_delivery_batch(invitation_session_factory, invitation_settings(), FailingDelivery())
     with invitation_session_factory() as session:
-        assert session.scalar(select(func.count()).select_from(AssessmentInvite)) == 0
+        assert session.scalar(select(func.count()).select_from(AssessmentInvite)) == 1
+        queued = session.scalar(select(InvitationDelivery))
+        assert queued is not None
+        assert queued.status == InvitationDeliveryStatus.RETRYING
+        assert queued.encrypted_message is not None
 
     unconfigured = InvitationSettings(token_signing_secret=None)
     missing_app = build_app(
@@ -697,7 +723,9 @@ async def test_candidate_and_internal_rate_limits_return_retry_after(
     settings = invitation_settings(candidate_rate_limit=1, internal_rate_limit=1)
     app = build_app(invitation_session_factory, delivery, settings=settings, limiter=limiter)
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-        created, token = await create_invite(client, alpha_headers, delivery)
+        created, token = await create_invite(
+            client, alpha_headers, delivery, invitation_session_factory
+        )
         internal_limited = await client.post(
             f"/v1/roles/{ALPHA_ROLE_ID}/invites",
             headers=alpha_headers,
@@ -736,12 +764,13 @@ def test_service_handles_disappeared_tenant_and_consent_gate_expiry(
         # Simulate the tenant disappearing between authentication and service
         # work without violating database foreign keys.
         with (
-            patch.object(session, "get", return_value=None),
+            patch.object(session, "scalar", return_value=None),
             pytest.raises(AccessProblemError) as unavailable,
         ):
             service.create(
                 ALPHA_ROLE_ID,
                 InvitationCreateRequest(
+                    request_id=uuid4(),
                     role_profile_id=ALPHA_PROFILE_ID,
                     email="candidate@synthetic.example.invalid",
                 ),

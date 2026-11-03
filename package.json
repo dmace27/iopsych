@@ -51,7 +51,8 @@
     "build:shared": "npm run build --workspace @iopsych/shared",
     "build:web": "npm run build --workspace @iopsych/web",
     "check": "run-s format:check lint typecheck test",
-    "security:smoke": "PYTHONPATH=apps/api .venv/bin/python scripts/security_smoke.py"
+    "security:smoke": "PYTHONPATH=apps/api .venv/bin/python scripts/security_smoke.py",
+    "invitations:deliver": "cd apps/api && ../../.venv/bin/python -m app.invitations.worker"
   },
   "devDependencies": {
     "concurrently": "10.0.6",

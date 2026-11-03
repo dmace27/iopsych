@@ -65,13 +65,24 @@ profile in the authenticated organization. Candidate links expire, can be
 revoked immediately, and are rate-limited independently from internal-user
 actions.
 
-Invite tokens contain 32 random bytes plus an HMAC signature. Only a SHA-256
-fingerprint is stored; neither API responses nor audit metadata include the raw
-token, and the Uvicorn access logger redacts candidate token path segments.
-Email is rendered through a narrow delivery interface that accepts no assessment
-questions, responses, or scores. The default adapter fails closed without
-logging the link, so a hosted deployment must install a transactional email
-adapter explicitly.
+Invite tokens contain 32 random bytes plus an HMAC signature. The invitation row
+stores only a SHA-256 token hash. Creation requires a UUID `request_id`;
+identical retries return the same invitation. The invitation, encrypted delivery
+payload and issuance audit commit together before the worker can contact Resend.
+`sent_at=null` on creation means queued, not delivered. Use the authenticated
+`GET /v1/roles/{role_id}/invites/{invite_id}/delivery` route to inspect safe
+progress, `/reissue` to explicitly replace an unused link with a new request ID,
+and `/revoke` to cancel access/pending delivery.
+
+The configured Resend adapter uses bounded HTTPS requests and stable provider
+idempotency keys. Run `npm run invitations:deliver` from a deployment scheduler.
+Retries preserve the original encrypted message and stop within 23 hours or
+invitation expiry. Signed Resend callbacks at `/v1/webhooks/resend` update
+delivery state, deduplicate events and handle bounces/complaints. Raw tokens and
+queue payloads never appear in API responses/audits. Confirmed/terminal
+outcomes, revocation and anonymization clear pending ciphertext. Email rendering
+accepts no assessment questions, responses or scores. See
+[delivery configuration, encryption, recovery and staging acceptance](../../docs/invitation-delivery.md).
 
 Consent is an explicit `consent` or `decline` decision tied to a versioned
 notice. A decision is terminal for its invitation, repeated identical requests

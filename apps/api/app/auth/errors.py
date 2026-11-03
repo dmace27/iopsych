@@ -110,17 +110,6 @@ def service_unavailable(*, code: str, detail: str) -> AccessProblemError:
     )
 
 
-def upstream_delivery_failed() -> AccessProblemError:
-    """Hide transactional-email provider details from API clients."""
-
-    return AccessProblemError(
-        status=502,
-        code="invitation_delivery_failed",
-        title="Invitation delivery failed",
-        detail="The invitation could not be delivered. No active invitation was created.",
-    )
-
-
 def upstream_extraction_failed() -> AccessProblemError:
     """Hide provider output and error details when structured extraction fails."""
 

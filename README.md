@@ -64,7 +64,10 @@ change the API port, update `API_BASE_URL` in `apps/web/.env.local` to match.
 
 The example configuration can start both health endpoints without provider
 credentials. Role extraction and invitation delivery need their provider setup
-before those features can be used.
+before those features can be used. Invitation email uses Resend and a durable
+encrypted queue; follow
+[delivery setup and recovery](docs/invitation-delivery.md) and schedule
+`npm run invitations:deliver` to process committed work.
 
 Internal users sign in through Auth0 Universal Login. Configure the provider,
 bootstrap the first administrator, and provision recruiter/manager accounts

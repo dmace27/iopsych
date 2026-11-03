@@ -9,7 +9,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints, field_validator
 
-from app.database.models import AssessmentInviteStatus, ConsentDecision
+from app.database.models import AssessmentInviteStatus, ConsentDecision, InvitationDeliveryStatus
 
 EmailText = Annotated[str, StringConstraints(strip_whitespace=True, min_length=3, max_length=320)]
 _EMAIL_SHAPE = re.compile(r"[^@\s]+@[^@\s]+\.[^@\s]+")
@@ -20,6 +20,7 @@ class InvitationCreateRequest(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
+    request_id: UUID
     role_profile_id: UUID
     email: EmailText
     expires_in_hours: int | None = Field(default=None, ge=1, le=720)
@@ -87,3 +88,24 @@ class ConsentRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     decision: ConsentDecision
+
+
+class InvitationReissueRequest(BaseModel):
+    """A new explicit issuance action; retries must keep the same request identifier."""
+
+    model_config = ConfigDict(extra="forbid")
+    request_id: UUID
+    expires_in_hours: int | None = Field(default=None, ge=1, le=720)
+
+
+class InvitationDeliveryResponse(BaseModel):
+    """Safe delivery state; no encrypted payload or provider credentials are exposed."""
+
+    model_config = ConfigDict(from_attributes=True)
+    id: UUID
+    invite_id: UUID
+    status: InvitationDeliveryStatus
+    attempt_count: int
+    next_attempt_at: datetime
+    retry_until: datetime
+    last_error_code: str | None

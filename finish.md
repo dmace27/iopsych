@@ -35,7 +35,7 @@ or unit tests exist.
 Preserve these capabilities rather than rebuilding them:
 
 - Next.js/FastAPI monorepo, shared Zod/Pydantic/JSON Schema contracts,
-  reproducible scripts, and eight Alembic migrations.
+  reproducible scripts, and nine Alembic migrations.
 - Database-backed tenant/RBAC enforcement and HTTP-only internal session
   cookies, same-origin mutation checks, CSP nonces, response hardening, and
   credential redaction.
@@ -234,39 +234,57 @@ the same totals/package set as an audit of the original lockfile and workspace
 manifests. None target `openid-client`, `jose`, or `oauth4webapi`. These existing
 dependency findings still require resolution under the later security/release gate.
 
-### 4. Implement production invitation delivery and reliable issuance — P0, missing implementation/reliability risk
+### 4. Implement production invitation delivery and reliable issuance — P0, implemented; live mailbox acceptance pending
 
-**Evidence:** [delivery interface](apps/api/app/invitations/delivery.py),
-[app factory](apps/api/app/main.py),
-[invitation service](apps/api/app/invitations/service.py).
+**Evidence:** [Resend adapter](apps/api/app/invitations/provider.py),
+[encrypted queue and worker](apps/api/app/invitations/outbox.py),
+[webhooks](apps/api/app/invitations/webhooks.py),
+[issuance service](apps/api/app/invitations/service.py),
+[operations guide](docs/invitation-delivery.md).
 
-The module-level application always defaults to
-`UnconfiguredInvitationDelivery`, which rejects sending. There is no
-environment-configured production email adapter. In addition, the service sends
-email before the request's database/audit transaction commits. A provider
-success followed by commit failure can deliver a link whose database record
-never exists; retries can send additional invitations. This is a code-derived
-failure scenario, not a reproduced provider incident.
-
-- [ ] Implement and configure a transactional delivery adapter with verified
-      sender identity, timeouts, safe errors, and delivery credentials in a
-      secret store.
-- [ ] Define issuance idempotency and recovery for uncertain provider outcomes
-      and database failures. Use a durable delivery design or an explicitly
-      documented minimal retry strategy.
-- [ ] Keep raw invite tokens out of database records, ordinary logs, audit
-      metadata, and API responses. If a queue needs delivery credentials,
-      explicitly design its encryption, access, expiry, and deletion policy
-      rather than persisting plaintext tokens in an outbox.
-- [ ] Handle failed delivery, reissue/resend, revocation, bounces, and provider
-      webhook authentication/deduplication where used. Reissuing must make the
-      old link's status clear.
-- [ ] Test provider failure, timeout after acceptance, duplicate requests, and
-      commit/audit failure after provider acceptance.
+- [x] Implement environment-configured Resend delivery with a verified-sender
+      setup procedure, bounded HTTPS requests and safe errors. Actual sending,
+      encryption and webhook credentials must come from the deployment secret store.
+- [x] Commit invitation, encrypted outbox and issuance audit before delivery;
+      retain tenant-scoped request IDs and frozen provider payload/idempotency
+      keys for crash/timeout/duplicate recovery. Stop retries before the provider's
+      24-hour deduplication window and after any credential scope change.
+- [x] Keep plaintext tokens out of database records, logs, audits and API
+      responses. Document queue encryption, access, short lifetime, key rotation,
+      deletion, backup/deletion replay and provider data handling.
+- [x] Add delivery progress, idempotent explicit reissue, immediate revocation,
+      ciphertext cleanup, terminal failure/bounce/complaint handling, authenticated
+      bounded Svix webhooks, replay deduplication and monotonic event processing.
+- [x] Test provider failures, timeout after acceptance, repeated requests,
+      issuance/audit commit failure, worker/audit failure after acceptance,
+      encryption/key changes, webhook races and real PostgreSQL concurrency/upgrades.
+- [ ] Record a real staging issuance reaching a controlled mailbox with a valid
+      candidate link, configured verified sender, running scheduler and signed
+      live events. No provider credentials/domain/mailbox were supplied.
 
 **Done when:** an invite created in staging reaches a controlled mailbox, opens
 a valid candidate page, and failures have a recoverable state without token
 disclosure or uncontrolled duplicate email.
+
+**Implementation November 3, 2026:** repository owner selected Resend. Migration
+`20261103_0009` adds separate delivery/event tables without changing legacy
+links. Invitation creation acknowledges durable queuing, not successful sending;
+`npm run invitations:deliver` processes bounded batches. The operations guide
+records recovery, the 23-hour queue cutoff, immutable request/provider keys,
+credential scope checks, provider/webhook configuration and the remaining live
+acceptance procedure. Browser invitation management remains Task 5.
+
+Verification: `npm run check` passed **518 tests with zero skips** using disposable
+PostgreSQL 16 (142 web, 101 shared TypeScript, 95 shared Python, 180 API).
+Configured API application coverage remains 100%. The production build and
+PostgreSQL-backed production HTTP smoke passed. New tests verify protocol request
+shape, real encrypted payloads/Svix signatures, initial audit rollback, accepted
+mail followed by worker/audit failure, identical retry bodies/keys, synchronized
+concurrent issuance, busy-worker locks, reissue/revocation, webhook ordering and
+populated legacy migration upgrades. An existing keyboard/resume component test
+now waits for initial page focus before interacting, avoiding a focus-timing race.
+These are local working-tree checks; live sender/mailbox/webhook and deployed
+scheduler evidence remains pending.
 
 ### 5. Complete recruiter invitation management — P0, missing implementation
 

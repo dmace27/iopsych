@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
+from hashlib import sha256
 from pathlib import Path
 from uuid import UUID
 
@@ -17,7 +19,6 @@ from app.auth.errors import (
     resource_unavailable,
     resource_validation_failed,
     service_unavailable,
-    upstream_delivery_failed,
 )
 from app.database.models import (
     Assessment,
@@ -26,6 +27,8 @@ from app.database.models import (
     AuditEvent,
     CandidateConsent,
     ConsentDecision,
+    InvitationDelivery,
+    InvitationDeliveryStatus,
     Organization,
     Role,
     RoleProfile,
@@ -37,14 +40,17 @@ from app.database.session import commit_or_flush
 from app.invitations.config import InvitationSettings
 from app.invitations.delivery import (
     InvitationDeliveryAdapter,
-    InvitationDeliveryError,
+    UnconfiguredInvitationDelivery,
     build_invitation_email,
 )
+from app.invitations.encryption import encrypt_message
+from app.invitations.outbox import append_delivery_audit, cancel_delivery
 from app.invitations.schemas import (
     CandidateInviteResponse,
     ConsentNotice,
     ConsentRequest,
     InvitationCreateRequest,
+    InvitationReissueRequest,
 )
 from app.invitations.tokens import InvalidInviteTokenError, InviteTokenCodec
 from app.privacy.config import PrivacySettings
@@ -89,9 +95,56 @@ class InternalInvitationService:
         self._data = OrganizationDataAccess(session, context.organization.organization_id)
 
     def create(self, role_id: UUID, request: InvitationCreateRequest) -> AssessmentInvite:
-        """Create, deliver, and activate an invite for an approved profile only."""
+        """Commit an idempotent invitation/outbox pair before any delivery is attempted."""
+        invite = self._issue(role_id, request)
+        commit_or_flush(self._session)
+        return invite
 
+    def _issue(
+        self, role_id: UUID, request: InvitationCreateRequest, *, replaces: UUID | None = None
+    ) -> AssessmentInvite:
+        """Freeze the full provider payload and retain the request key permanently."""
         codec = self._require_codec()
+        if self._settings.delivery_encryption_key is None or isinstance(
+            self._delivery, UnconfiguredInvitationDelivery
+        ):
+            raise service_unavailable(
+                code="invitation_delivery_unconfigured",
+                detail="Invitation email delivery is not configured. Contact your administrator.",
+            )
+        # Serialize issuance keys across all roles in this tenant. NO KEY UPDATE
+        # permits worker audit foreign-key checks while blocking another issuer.
+        organization = self._session.scalar(
+            select(Organization)
+            .where(Organization.id == self._context.organization.organization_id)
+            .with_for_update(key_share=True)
+        )
+        if organization is None:
+            raise service_unavailable(
+                code="invitation_service_unavailable",
+                detail="Candidate invitations are temporarily unavailable.",
+            )
+        canonical = {
+            "role_id": str(role_id),
+            "replaces": str(replaces),
+            **request.model_dump(mode="json", exclude={"request_id"}),
+        }
+        fingerprint = sha256(json.dumps(canonical, sort_keys=True).encode()).hexdigest()
+        existing = self._session.scalar(
+            select(InvitationDelivery).where(
+                InvitationDelivery.organization_id == organization.id,
+                InvitationDelivery.request_id == request.request_id,
+            )
+        )
+        if existing is not None:
+            if existing.request_fingerprint != fingerprint:
+                raise resource_conflict(
+                    code="invitation_request_conflict",
+                    detail="This request identifier was used with different invitation details.",
+                )
+            invite = self._session.get(AssessmentInvite, existing.invite_id)
+            assert invite is not None
+            return invite
         role = self._data.get_role(role_id)
         profile = self._data.get_role_profile_for_role(role_id, request.role_profile_id)
         if role is None or profile is None:
@@ -105,7 +158,6 @@ class InternalInvitationService:
                 code="profile_not_approved",
                 detail="Candidate invitations require an approved role profile.",
             )
-
         expiry_hours = request.expires_in_hours or self._settings.default_expiry_hours
         if expiry_hours > self._settings.maximum_expiry_hours:
             raise resource_conflict(
@@ -114,57 +166,123 @@ class InternalInvitationService:
             )
         now = datetime.now(UTC)
         generated = codec.generate()
+        # The row is valid before sending. Only the encrypted queue knows the
+        # bearer token, so acceptance followed by a worker crash still yields a
+        # usable link whose invitation and issuance audit have already committed.
         invite = AssessmentInvite(
             role_profile_id=profile.id,
             email=request.email,
             token_hash=generated.token_hash,
             expires_at=now + timedelta(hours=expiry_hours),
-            status=AssessmentInviteStatus.PENDING_DELIVERY,
+            status=AssessmentInviteStatus.ACTIVE,
         )
         self._session.add(invite)
         self._session.flush()
-
-        organization = self._session.get(Organization, self._context.organization.organization_id)
-        if organization is None:
-            # Authentication already proved this tenant. Treat disappearance as
-            # unavailable instead of exposing an impossible storage race.
-            self._session.rollback()
-            raise service_unavailable(
-                code="invitation_service_unavailable",
-                detail="Candidate invitations are temporarily unavailable.",
-            )
-        invite_url = f"{self._settings.candidate_base_url}/{generated.raw_token}"
         message = build_invitation_email(
             recipient_email=request.email,
+            sender_email=self._settings.delivery_from_email,
             organization_name=organization.name,
-            invite_url=invite_url,
+            invite_url=f"{self._settings.candidate_base_url}/{generated.raw_token}",
             expires_at=invite.expires_at,
             privacy_contact_email=self._settings.privacy_contact_email,
         )
-        try:
-            self._delivery.send(message)
-        except InvitationDeliveryError as exc:
-            self._session.rollback()
-            raise upstream_delivery_failed() from exc
-
-        invite.status = AssessmentInviteStatus.ACTIVE
-        invite.sent_at = now
-        commit_or_flush(self._session)
+        delivery = InvitationDelivery(
+            organization_id=organization.id,
+            invite_id=invite.id,
+            requested_by=self._context.user_id,
+            request_id=request.request_id,
+            request_fingerprint=fingerprint,
+            replaces_invite_id=replaces,
+            encrypted_message=encrypt_message(message, self._settings),
+            status=InvitationDeliveryStatus.QUEUED,
+            attempt_count=0,
+            next_attempt_at=now,
+            retry_until=min(invite.expires_at, now + timedelta(hours=23)),
+        )
+        self._session.add(delivery)
+        self._session.flush()
+        append_delivery_audit(self._session, delivery, "queued")
         return invite
+
+    def delivery_state(self, role_id: UUID, invite_id: UUID) -> InvitationDelivery:
+        """Read tenant-scoped progress without returning queue contents."""
+        if self._data.get_assessment_invite_for_role(role_id, invite_id) is None:
+            raise organization_resource_not_found()
+        delivery = self._session.scalar(
+            select(InvitationDelivery).where(InvitationDelivery.invite_id == invite_id)
+        )
+        if delivery is None:
+            raise organization_resource_not_found()
+        return delivery
 
     def revoke(self, role_id: UUID, invite_id: UUID) -> AssessmentInvite:
-        """Revoke a tenant-owned invite without revealing foreign identifiers."""
-
-        invite = self._data.get_assessment_invite_for_role(role_id, invite_id)
-        if invite is None:
-            raise organization_resource_not_found()
+        """Revoke immediately and remove pending delivery credentials atomically."""
+        invite = self._locked_invite(role_id, invite_id)
         if invite.status is AssessmentInviteStatus.REVOKED:
             return invite
-        invite.status = AssessmentInviteStatus.REVOKED
-        invite.revoked_at = datetime.now(UTC)
-        invite.revoked_by = self._context.user_id
+        self._revoke(invite)
         commit_or_flush(self._session)
         return invite
+
+    def reissue(
+        self, role_id: UUID, invite_id: UUID, request: InvitationReissueRequest
+    ) -> AssessmentInvite:
+        """Explicitly replace an unused link; retries never mint another replacement."""
+        # Match issuance's tenant lock before taking the old invitation lock.
+        self._session.execute(
+            select(Organization.id)
+            .where(Organization.id == self._context.organization.organization_id)
+            .with_for_update(key_share=True)
+        )
+        previous = self._locked_invite(role_id, invite_id)
+        if (
+            self._session.scalar(
+                select(CandidateConsent.id).where(CandidateConsent.invite_id == previous.id)
+            )
+            is not None
+            or self._session.scalar(
+                select(Assessment.id).where(Assessment.invite_id == previous.id)
+            )
+            is not None
+        ):
+            raise resource_conflict(
+                code="invitation_already_used",
+                detail="Consented, declined or submitted invitations cannot be reissued.",
+            )
+        invite = self._issue(
+            role_id,
+            InvitationCreateRequest(
+                request_id=request.request_id,
+                role_profile_id=previous.role_profile_id,
+                email=previous.email,
+                expires_in_hours=request.expires_in_hours,
+            ),
+            replaces=previous.id,
+        )
+        self._revoke(previous)
+        commit_or_flush(self._session)
+        return invite
+
+    def _locked_invite(self, role_id: UUID, invite_id: UUID) -> AssessmentInvite:
+        """Resolve scope first, then lock only the invitation, before its delivery row."""
+        if self._data.get_assessment_invite_for_role(role_id, invite_id) is None:
+            raise organization_resource_not_found()
+        invite = self._session.scalar(
+            select(AssessmentInvite)
+            .where(AssessmentInvite.id == invite_id)
+            .with_for_update()
+            .execution_options(populate_existing=True)
+        )
+        assert invite is not None
+        return invite
+
+    def _revoke(self, invite: AssessmentInvite) -> None:
+        """Preserve the first revocation timestamp and purge any pending payload."""
+        if invite.status is not AssessmentInviteStatus.REVOKED:
+            invite.status = AssessmentInviteStatus.REVOKED
+            invite.revoked_at = datetime.now(UTC)
+            invite.revoked_by = self._context.user_id
+        cancel_delivery(self._session, invite.id)
 
     def _require_codec(self) -> InviteTokenCodec:
         """Fail closed when hosted configuration omitted the signing key."""
@@ -343,6 +461,7 @@ class CandidateInvitationService:
             )
         if invite.expires_at <= datetime.now(UTC):
             invite.status = AssessmentInviteStatus.EXPIRED
+            cancel_delivery(self._session, invite.id)
             self._append_audit(candidate_invite, "candidate_invite.expired")
             commit_or_flush(self._session)
             raise resource_unavailable(

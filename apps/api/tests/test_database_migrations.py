@@ -16,6 +16,8 @@ EXPECTED_TABLES = {
     "alignment_items",
     "alembic_version",
     "assessment_invites",
+    "invitation_deliveries",
+    "invitation_delivery_events",
     "audit_events",
     "candidate_consents",
     "organizations",

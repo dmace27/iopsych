@@ -9,7 +9,13 @@ from typing import Protocol
 
 
 class InvitationDeliveryError(RuntimeError):
-    """A safe provider-agnostic delivery failure."""
+    """A safe provider-agnostic delivery failure with an explicit retry policy."""
+
+    def __init__(
+        self, message: str = "invitation delivery failed", *, permanent: bool = False
+    ) -> None:
+        super().__init__(message)
+        self.permanent = permanent
 
 
 @dataclass(frozen=True)
@@ -20,19 +26,20 @@ class InvitationEmail:
     subject: str
     text_body: str
     html_body: str
+    sender_email: str = ""
 
 
 class InvitationDeliveryAdapter(Protocol):
     """Send one already-rendered invitation through a transactional provider."""
 
-    def send(self, message: InvitationEmail) -> None:
+    def send(self, message: InvitationEmail, *, idempotency_key: str) -> str:
         """Deliver the email or raise ``InvitationDeliveryError``."""
 
 
 class UnconfiguredInvitationDelivery:
     """Fail closed without printing or otherwise leaking candidate links."""
 
-    def send(self, message: InvitationEmail) -> None:
+    def send(self, message: InvitationEmail, *, idempotency_key: str) -> str:
         """Reject delivery until an explicit provider adapter is installed."""
 
         del message
@@ -46,6 +53,7 @@ def build_invitation_email(
     invite_url: str,
     expires_at: datetime,
     privacy_contact_email: str,
+    sender_email: str = "",
 ) -> InvitationEmail:
     """Render the minimal-purpose email; answers, items, and scores are impossible inputs."""
 
@@ -69,6 +77,7 @@ def build_invitation_email(
         f"{escape(privacy_contact_email)}.</p>"
     )
     return InvitationEmail(
+        sender_email=sender_email,
         recipient_email=recipient_email,
         subject=subject,
         text_body=text_body,

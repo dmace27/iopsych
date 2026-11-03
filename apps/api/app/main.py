@@ -30,12 +30,13 @@ from app.extraction.provider import (
 from app.invitations.config import InvitationSettings
 from app.invitations.delivery import (
     InvitationDeliveryAdapter,
-    UnconfiguredInvitationDelivery,
 )
 from app.invitations.logging import install_invite_token_log_filter
+from app.invitations.provider import build_invitation_delivery
 from app.invitations.rate_limit import InMemoryRateLimiter
 from app.invitations.router import router as invitations_router
 from app.invitations.tokens import InviteTokenCodec
+from app.invitations.webhooks import router as delivery_webhook_router
 from app.privacy.config import PrivacySettings
 from app.privacy.router import candidate_router as candidate_privacy_router
 from app.privacy.router import privacy_router
@@ -107,7 +108,9 @@ def create_app(
     application.state.session_factory = resolved_session_factory
     application.state.token_verifier = resolved_verifier
     application.state.invitation_settings = invite_settings
-    application.state.invitation_delivery = invitation_delivery or UnconfiguredInvitationDelivery()
+    application.state.invitation_delivery = invitation_delivery or build_invitation_delivery(
+        invite_settings
+    )
     application.state.invitation_rate_limiter = invitation_rate_limiter or InMemoryRateLimiter()
     application.state.role_extraction_settings = extraction_settings
     application.state.role_extraction_provider = (
@@ -127,6 +130,7 @@ def create_app(
     application.include_router(users_router)
     application.include_router(roles_router)
     application.include_router(invitations_router)
+    application.include_router(delivery_webhook_router)
     application.include_router(reports_router)
     application.include_router(submission_router)
     application.include_router(candidate_privacy_router)
