@@ -1,4 +1,4 @@
-# IOPsych: remaining work before release
+#: remaining work before release
 
 Reviewed October 11, 2026. This is a code-and-documentation readiness review,
 not a record of a deployed release. Tasks below are ordered by dependency and
@@ -61,8 +61,10 @@ That distinction is central to the remaining plan.
 Reviewed the root product/specification/research documents, app/package READMEs,
 security threat model and verification documentation, workflows, environment
 templates, migrations, shared domain modules, API services/routes, browser
-workspaces/proxies/storage, setup/smoke scripts, and test coverage. `notes.md` is exploratory conversation and `test.md` contains greeting text; neither is an acceptance test plan. Treat
-`mvp-spec.md` as the product authority where older ideas conflict with it.
+workspaces/proxies/storage, setup/smoke scripts, and test coverage. `notes.md`
+is exploratory conversation and `test.md` contains greeting text; neither is an
+acceptance test plan. Treat `mvp-spec.md` as the product authority where older
+ideas conflict with it.
 
 Checks run against the existing local installations during this review:
 
