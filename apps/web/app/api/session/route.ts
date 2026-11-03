@@ -1,4 +1,5 @@
 import { cookies } from "next/headers";
+import { LOGIN_COOKIE } from "../../../lib/provider-auth";
 
 import {
   INTERNAL_SESSION_COOKIE,
@@ -37,6 +38,15 @@ export async function POST(request: Request): Promise<Response> {
       "cross_site_request_denied",
       "Cross-site request denied",
       "Sign-in requests must originate from this application.",
+    );
+  }
+
+  if (process.env.ENABLE_TOKEN_SIGN_IN !== "true") {
+    return problem(
+      404,
+      "route_not_found",
+      "Route not found",
+      "Use provider sign-in.",
     );
   }
 
@@ -130,7 +140,9 @@ export async function DELETE(request: Request): Promise<Response> {
     );
   }
 
-  (await cookies()).delete(INTERNAL_SESSION_COOKIE);
+  const store = await cookies();
+  store.delete(INTERNAL_SESSION_COOKIE);
+  store.delete(LOGIN_COOKIE);
   return new Response(null, {
     status: 204,
     headers: { "Cache-Control": "no-store" },

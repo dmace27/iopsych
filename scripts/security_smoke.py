@@ -280,6 +280,8 @@ def main() -> None:
             os.environ, DATABASE_URL=isolated_url.render_as_string(hide_password=False)
         )
         environment.update(
+            ENABLE_TOKEN_SIGN_IN="true",
+            AUTH_PROVIDER="hmac",
             AUTH_JWT_SECRET=secrets.token_urlsafe(48),
             INVITE_TOKEN_SIGNING_SECRET=secrets.token_urlsafe(48),
         )

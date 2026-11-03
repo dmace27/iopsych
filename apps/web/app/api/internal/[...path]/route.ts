@@ -12,6 +12,8 @@ interface RouteContext {
 
 const ALLOWED_INTERNAL_ROUTES = [
   /^GET \/auth\/me$/,
+  /^(?:GET|POST) \/users$/,
+  /^PATCH \/users\/[^/]+$/,
   /^(?:GET|POST) \/roles$/,
   /^(?:GET|PATCH|DELETE) \/roles\/[^/]+$/,
   /^(?:GET|POST) \/roles\/[^/]+\/profiles$/,
@@ -118,6 +120,8 @@ async function proxyInternalApi(
       body: body.byteLength > 0 ? body : undefined,
       cache: "no-store",
     });
+    if (upstream.status === 401)
+      (await cookies()).delete(INTERNAL_SESSION_COOKIE);
     if (upstream.status === 204) {
       return new Response(null, { status: 204 });
     }

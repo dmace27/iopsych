@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { AccountMenu } from "./account-menu";
 
 /** Keep bearer-token candidate pages separate from the internal workspace UI. */
 export function SiteHeader() {
@@ -10,7 +11,7 @@ export function SiteHeader() {
 
   return (
     <header className="border-b border-slate-200 bg-white">
-      <div className="mx-auto flex max-w-7xl items-center justify-between gap-6 px-5 py-4 sm:px-8">
+      <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-6 px-5 py-4 sm:px-8">
         {candidatePage ? (
           <div className="inline-flex items-center gap-3">
             <BrandMark />
@@ -43,7 +44,7 @@ export function SiteHeader() {
           </span>
         ) : (
           <nav aria-label="Primary navigation">
-            <div className="flex items-center gap-1">
+            <div className="flex flex-wrap items-center gap-3">
               <Link
                 className="rounded-md px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 hover:text-slate-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-700"
                 href="/roles"
@@ -56,12 +57,7 @@ export function SiteHeader() {
               >
                 Privacy
               </Link>
-              <Link
-                className="rounded-md px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 hover:text-slate-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-700"
-                href="/sign-in"
-              >
-                Sign in
-              </Link>
+              <AccountMenu />
             </div>
           </nav>
         )}

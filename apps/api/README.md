@@ -13,13 +13,17 @@ through Alembic. From the repository root, use `npm run db:migrate`,
 the two synthetic seed organizations cannot read one another's users, roles,
 profiles, or audit data through the organization-scoped access layer.
 
-Internal API routes accept provider-issued HS256 bearer JWTs. The token must
-contain `sub`, `organization_id`, `iss`, `aud`, and `exp` claims; the configured
-issuer, audience, and secret are documented in `.env.example`. Roles always come
-from the current database user rather than token claims, and organization
-lookups use the verified token tenant plus the scoped repository. Sensitive
-endpoints marked with `@audited(...)` append an immutable audit event for
-successful, rejected, and failed authenticated requests.
+Internal API routes accept Auth0 RS256 API access tokens when
+`AUTH_PROVIDER=auth0`. Signature verification uses the configured issuer's JWKS,
+with exact issuer/audience and required expiry, issue-time and subject checks.
+Database account state assigns the organization and permissions on every
+request; disabled accounts are rejected immediately. The first pilot supports
+one organization per globally unique provider subject. Administrator account
+provisioning and changes use `/v1/users` and are audited and tenant-scoped. See
+[identity setup and operations](../../docs/identity.md) for Auth0 configuration,
+one-time administrator bootstrap, browser account management and revocation
+limits. `AUTH_PROVIDER=hmac` retains the old HS256/organization-claim contract
+only for explicit development/test configurations.
 
 ## Role and profile lifecycle
 

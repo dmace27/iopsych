@@ -66,13 +66,17 @@ The example configuration can start both health endpoints without provider
 credentials. Role extraction and invitation delivery need their provider setup
 before those features can be used.
 
-The internal web workspace forwards requests through a same-origin server route,
-so bearer credentials are never persisted in browser JavaScript or shared
-through a process-wide fallback. Open <http://localhost:3000/sign-in> and submit
-a valid identity-provider token. The server validates it with FastAPI before
-creating an HTTP-only, `SameSite=Strict` session cookie. Mutating browser
-requests are also restricted to the same origin. The web server reads the
-FastAPI origin from `API_BASE_URL`, documented in `apps/web/.env.example`.
+Internal users sign in through Auth0 Universal Login. Configure the provider,
+bootstrap the first administrator, and provision recruiter/manager accounts
+using [the identity setup and operations guide](docs/identity.md).
+Administrators manage access in the browser's **Accounts** workspace. The pilot
+intentionally supports one organization per provider account.
+
+The same-origin browser proxy keeps API credentials in an HTTP-only session
+cookie and checks mutation origins. Sessions expire with the provider token or
+after eight hours, whichever comes first. The header shows account/organization
+context and sign-out. The example configuration starts health endpoints without
+provider credentials; actual sign-in requires Auth0 setup.
 
 ## Database commands
 

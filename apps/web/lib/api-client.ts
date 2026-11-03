@@ -3,6 +3,10 @@ import type { z } from "zod";
 
 import {
   CurrentUserSchema,
+  ManagedUserSchema,
+  type ManagedUser,
+  type ManagedUserInput,
+  type InternalUserRole,
   RoleListSchema,
   RoleProfileListSchema,
   RoleProfileSchema,
@@ -76,6 +80,10 @@ async function requestJson<T>(
 
   const payload: unknown = await response.json().catch(() => null);
   if (!response.ok) {
+    // Let account navigation offer recovery as soon as any workspace loses its session.
+    if (response.status === 401 && typeof window !== "undefined") {
+      window.dispatchEvent(new Event("iopsych:session-expired"));
+    }
     const problem = ApiProblemSchema.safeParse(payload);
     throw new ApiClientError(
       problem.success
@@ -253,5 +261,33 @@ export function deleteCandidateData(
 export function runPrivacyRetention(): Promise<RetentionRun> {
   return requestJson("/privacy/retention/run", RetentionRunSchema, {
     method: "POST",
+  });
+}
+
+/** Read a bounded page of accounts in the administrator's organization. */
+export function getManagedUsers(offset = 0): Promise<ManagedUser[]> {
+  return requestJson(
+    `/users?limit=50&offset=${offset}`,
+    ManagedUserSchema.array(),
+  );
+}
+
+/** Grant explicit application access to an existing Auth0 identity. */
+export function provisionUser(input: ManagedUserInput): Promise<ManagedUser> {
+  return requestJson("/users", ManagedUserSchema, {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+/** Recheck permissions on the API; hidden browser controls are not authorization. */
+export function updateManagedUser(
+  id: string,
+  role: InternalUserRole,
+  isActive: boolean,
+): Promise<ManagedUser> {
+  return requestJson(`/users/${encodeURIComponent(id)}`, ManagedUserSchema, {
+    method: "PATCH",
+    body: JSON.stringify({ role, is_active: isActive }),
   });
 }

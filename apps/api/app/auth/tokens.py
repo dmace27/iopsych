@@ -24,7 +24,7 @@ class TokenIdentity:
     """Verified identity claims needed to resolve an internal user."""
 
     subject: str
-    organization_id: UUID
+    organization_id: UUID | None
 
 
 class TokenVerifier(Protocol):

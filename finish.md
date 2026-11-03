@@ -8,8 +8,8 @@ existing tests alone does not close it.
 ## Release assessment
 
 **The project has a substantial functional core, but it is not yet a
-self-service, deployable product.** The largest gaps are production identity
-integration, working invitation delivery and management, complete browser
+self-service, deployable product.** The largest gaps are live production identity
+verification, working invitation delivery and management, complete browser
 end-to-end coverage, and deployment/operations. There are also specific setup,
 browser persistence, privacy, and versioning defects to address.
 
@@ -35,7 +35,7 @@ or unit tests exist.
 Preserve these capabilities rather than rebuilding them:
 
 - Next.js/FastAPI monorepo, shared Zod/Pydantic/JSON Schema contracts,
-  reproducible scripts, and seven Alembic migrations.
+  reproducible scripts, and eight Alembic migrations.
 - Database-backed tenant/RBAC enforcement and HTTP-only internal session
   cookies, same-origin mutation checks, CSP nonces, response hardening, and
   credential redaction.
@@ -184,39 +184,55 @@ Python application and shared-contract coverage gates remained at 100%.
 assignment and lifecycle work in Task 7 before deploying over existing data.
 This completion records implementation and local verification, not deployment.
 
-### 3. Replace token-paste sign-in with an actual identity workflow — P0, missing implementation
+### 3. Replace token-paste sign-in with an actual identity workflow — P0, implemented; live-provider acceptance pending
 
-**Evidence:** [sign-in form](apps/web/app/sign-in/sign-in-form.tsx),
-[session route](apps/web/app/api/session/route.ts),
-[JWT verifier](apps/api/app/auth/tokens.py),
-[user model](apps/api/app/database/models.py),
-[header](apps/web/app/ui/site-header.tsx).
+**Evidence:** [provider flow](apps/web/lib/provider-auth.ts),
+[Auth0 verifier](apps/api/app/auth/auth0.py),
+[account endpoints](apps/api/app/auth/users.py),
+[account workspace](apps/web/app/accounts/accounts-workspace.tsx),
+[identity setup and operations](docs/identity.md).
 
-Current sign-in requires an internal user to supply a JWT manually. The API
-verifies HS256 tokens, but there is no provider login/callback, user
-provisioning, or administrator account-management workflow. Users currently
-belong to one organization and have a globally unique `auth_subject`; a
-multi-organization switcher cannot simply be added to that model. The sign-out
-endpoint exists but there is no visible sign-out action. Report links supply
-`returnTo`, but successful sign-in always redirects to `/roles`.
-
-- [ ] Integrate a vetted identity provider and its actual claim/signature
-      verification contract. Keep database-authoritative permissions and tenant
-      isolation.
-- [ ] Provide a documented, controlled way to provision the pilot organization,
-      administrator, recruiter, and manager; deactivate users and change
-      permissions. Add explicit active/disabled state if using that policy.
-- [ ] Add account/organization context, visible sign-out, expired-session
-      recovery, and safe local-path `returnTo` handling.
-- [ ] Decide whether the first pilot intentionally supports one organization per
-      user. Document that limit or implement memberships and a tested tenant
-      switcher.
-- [ ] Test callback/session failures, revoked/disabled users, role changes,
-      token expiry, tenant switching if supported, and open-redirect prevention.
+- [x] Integrate Auth0 Universal Login through `openid-client`, with authorization
+      code/PKCE, state, nonce, signed ID-token validation and RS256 API access-token
+      verification through PyJWT/JWKS. Permissions and tenants remain database-authoritative.
+- [x] Document controlled organization/administrator bootstrap; add tenant-scoped
+      administrator provision/list/role-change/deactivation controls and active state.
+- [x] Add account/organization context, visible sign-out, expired-session recovery,
+      and safe workspace-local `returnTo` handling.
+- [x] Intentionally support one organization per globally unique provider subject
+      for the first pilot; document the limit and provider revocation behavior.
+- [x] Test provider/callback/session failures, disabled/unknown users, fresh role
+      changes, expiry, wrong signatures/claims, key rotation, tenant denial and
+      open-redirect prevention using a simulated provider contract and real signatures.
+- [ ] Complete and record live Auth0 acceptance with controlled recruiter and
+      manager accounts in an HTTPS staging browser. No tenant credentials were
+      supplied, so the automated protocol tests do not close this operational gate.
 
 **Done when:** a nontechnical recruiter and manager can independently sign in
 and complete their permitted tasks without generating tokens or asking an
 engineer to edit the database.
+
+**Implementation November 3, 2026:** repository owner selected Auth0. The token
+paste form is replaced by provider login. The old manual exchange is disabled
+by default and enabled only in the isolated deterministic production smoke.
+Migration `20261103_0008` backfills existing users as active. Account mutations
+and audits commit atomically; tenant locking and actor rechecks protect concurrent
+administrator changes. Setup, bootstrap, account operations and the remaining
+live-provider acceptance procedure are documented in `docs/identity.md`.
+
+Verification: `npm run check` passed **478 tests with zero skips** using a
+throwaway PostgreSQL 16 container (142 web, 101 shared TypeScript, 95 shared
+Python, 140 API). This includes actual launcher tests, empty/populated migration
+upgrades and synchronized concurrent administrator mutations. API application
+coverage remains 100%. The production build and PostgreSQL-backed production
+HTTP smoke passed. A mandatory-audit commit failure regression also verifies
+that a provisioned account is rolled back. These are local working-tree checks,
+not hosted CI or live-provider evidence.
+
+A fresh npm audit reports 25 advisories (21 moderate, 3 high, 1 critical), exactly
+the same totals/package set as an audit of the original lockfile and workspace
+manifests. None target `openid-client`, `jose`, or `oauth4webapi`. These existing
+dependency findings still require resolution under the later security/release gate.
 
 ### 4. Implement production invitation delivery and reliable issuance — P0, missing implementation/reliability risk
 

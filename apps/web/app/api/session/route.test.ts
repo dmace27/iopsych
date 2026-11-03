@@ -33,6 +33,7 @@ describe("internal browser session", () => {
       delete: cookieMocks.delete,
       set: cookieMocks.set,
     });
+    vi.stubEnv("ENABLE_TOKEN_SIGN_IN", "true");
     vi.stubGlobal("fetch", vi.fn());
   });
 
@@ -159,6 +160,7 @@ describe("internal browser session", () => {
 });
 
 it("preserves API throttling and never creates a session on a rate-limit failure", async () => {
+  vi.stubEnv("ENABLE_TOKEN_SIGN_IN", "true");
   cookieMocks.set.mockClear();
   vi.stubGlobal(
     "fetch",
@@ -180,5 +182,14 @@ it("preserves API throttling and never creates a session on a rate-limit failure
     ).toBe("60");
   } finally {
     vi.unstubAllGlobals();
+  }
+});
+
+it("disables manual token exchange unless explicitly enabled", async () => {
+  vi.stubEnv("ENABLE_TOKEN_SIGN_IN", "false");
+  try {
+    expect((await POST(signInRequest("token"))).status).toBe(404);
+  } finally {
+    vi.unstubAllEnvs();
   }
 });

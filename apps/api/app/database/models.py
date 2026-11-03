@@ -10,6 +10,7 @@ from uuid import UUID
 from sqlalchemy import (
     DDL,
     JSON,
+    Boolean,
     CheckConstraint,
     Enum,
     ForeignKey,
@@ -110,6 +111,9 @@ class User(UuidPrimaryKeyMixin, CreatedAtMixin, Base):
     )
     email: Mapped[str] = mapped_column(String(320), nullable=False)
     name: Mapped[str] = mapped_column(String(160), nullable=False)
+    is_active: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=True, server_default="1"
+    )
     # The authentication provider's stable subject is deliberately separate
     # from email, which can change and must never be used as an identity key.
     auth_subject: Mapped[str] = mapped_column(String(255), nullable=False)

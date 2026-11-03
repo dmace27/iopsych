@@ -1,6 +1,7 @@
 """Environment-backed settings for provider-issued internal-user tokens."""
 
 from pathlib import Path
+from typing import Literal
 
 from pydantic import Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -9,12 +10,12 @@ API_ROOT = Path(__file__).resolve().parents[2]
 
 
 class AuthenticationSettings(BaseSettings):
-    """Describe the trusted JWT issuer, audience, and HS256 verification key.
+    """Describe the pinned provider contract and local development verification key.
 
     ``jwt_secret`` is optional so operational routes can start while auth is
-    not configured. Internal routes fail closed with a service error in that
-    state. Hosted environments must inject the secret through their secret
-    manager rather than committing it to source control.
+    not configured. HMAC routes fail closed with a service error in that state.
+    Auth0 uses public signing keys and needs no shared signing secret. Hosted
+    environments must inject any credentials through their secret manager.
     """
 
     model_config = SettingsConfigDict(
@@ -24,6 +25,7 @@ class AuthenticationSettings(BaseSettings):
         extra="ignore",
     )
 
+    provider: Literal["hmac", "auth0"] = "hmac"
     jwt_secret: SecretStr | None = None
     jwt_issuer: str = "https://auth.example.invalid"
     jwt_audience: str = "iopsych-api"
