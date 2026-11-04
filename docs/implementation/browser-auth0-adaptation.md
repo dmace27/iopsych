@@ -36,3 +36,19 @@ Awaiting coordinator reconciled HEAD and exact session-contract confirmation
 before the single combined production-browser run on exclusive ports
 3116/8116/5556/1136/8136. These focused results are not browser execution,
 live Auth0/Resend acceptance, hosted HTTPS evidence, or manual accessibility approval.
+
+## Reconciled-contract preparation
+
+Coordinator confirmed the Auth0 owner agrees with the exact exchange contract.
+Service policy changed after the first commit: Standard/default only; the live
+terminal no longer displays Fast and no worker toggle was made.
+
+Inspection of reconciliation commit `aeb7584` confirms newly generated reports
+use algorithm 2.0.0 with retained v1 assignments/scoring. Smoke now asserts the
+actual generated result uses the direct structure target, and the actual trace
+response has algorithm 2.0.0, trace/scoring 1.0.0, all six matching question
+selection versions, and the frozen legacy definition hash. Both browser specs
+read the retained definition fixture instead of the mutable current definition.
+Strict TypeScript and scoped Prettier checks passed after these assertions.
+This prepares current-v2 browser evidence; it does not claim browser replay of
+an existing persisted v1 report (separate backend compatibility tests cover it).

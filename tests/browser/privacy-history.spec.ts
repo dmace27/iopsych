@@ -9,7 +9,7 @@ const foreignAssessment = "00000000-0000-4000-8000-000000000097";
 const definition = JSON.parse(
   readFileSync(
     new URL(
-      "../../packages/shared/definitions/v1/pilot-assessment.json",
+      "../../apps/api/app/assignments/definitions/legacy-v1.json",
       import.meta.url,
     ),
     "utf8",

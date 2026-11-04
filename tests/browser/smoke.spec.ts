@@ -6,7 +6,7 @@ import AxeBuilder from "@axe-core/playwright";
 const definition = JSON.parse(
   readFileSync(
     new URL(
-      "../../packages/shared/definitions/v1/pilot-assessment.json",
+      "../../apps/api/app/assignments/definitions/legacy-v1.json",
       import.meta.url,
     ),
     "utf8",
@@ -396,7 +396,21 @@ test("submitted responses generate a saved report and native evidence dialog", a
   });
   await expect(generate).toBeVisible();
   await accessible(page);
+  const generatedResponse = page.waitForResponse(
+    (response) =>
+      response.url().endsWith("/api/internal/reports") &&
+      response.request().method() === "POST",
+  );
   await generate.click();
+  const generated = await generatedResponse;
+  expect(generated.ok()).toBe(true);
+  const saved = await generated.json();
+  expect(saved.result.algorithm_version).toBe("2.0.0");
+  expect(
+    saved.result.items.find(
+      (item: { construct_key: string }) => item.construct_key === "structure",
+    ).explanation.role.comparison_target,
+  ).toBe("role_rating");
   await expect(
     page.getByRole("heading", { name: "Report for complete@example.invalid" }),
   ).toBeVisible();
@@ -404,7 +418,24 @@ test("submitted responses generate a saved report and native evidence dialog", a
   const trigger = page.getByRole("button", {
     name: "View evidence for Autonomy",
   });
+  const traceResponse = page.waitForResponse((response) =>
+    response.url().endsWith(`/api/internal/reports/${saved.id}/trace`),
+  );
   await trigger.click();
+  const trace = await traceResponse;
+  expect(trace.status()).toBe(200);
+  const evidenceTrace = await trace.json();
+  expect(evidenceTrace).toMatchObject({
+    report_id: saved.id,
+    algorithm_version: "2.0.0",
+    trace_version: "1.0.0",
+    scoring_version: "1.0.0",
+    definition_sha256:
+      "021233ca4dab9c86b87aeabca88f503bf7c70fd0b0d324c64e788b620aeb6e3c",
+  });
+  expect(evidenceTrace.constructs).toHaveLength(6);
+  for (const construct of evidenceTrace.constructs)
+    expect(construct.question_selection.algorithm_version).toBe("2.0.0");
   await expect(
     page.getByRole("dialog", { name: "Evidence: Autonomy" }),
   ).toBeVisible();
