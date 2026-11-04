@@ -423,3 +423,52 @@ it("preserves Retry-After and rejects URL normalization segments", async () => {
     vi.unstubAllGlobals();
   }
 });
+
+it("allows only exact GET trace paths", async () => {
+  headerMocks.cookies.mockResolvedValue({ get: () => ({ value: "token" }) });
+  vi.stubGlobal(
+    "fetch",
+    vi.fn().mockImplementation(async () => Response.json({})),
+  );
+  try {
+    const response = await GET(
+      new Request("http://web.test/api/internal/reports/id/trace"),
+      context("reports", "id", "trace"),
+    );
+    expect(response.status).toBe(200);
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
+    expect(fetch).toHaveBeenCalledWith(
+      new URL("http://localhost:8000/v1/reports/id/trace"),
+      expect.objectContaining({ method: "GET", cache: "no-store" }),
+    );
+    for (const handler of [POST, PATCH, DELETE]) {
+      expect(
+        (
+          await handler(
+            new Request("http://web.test/api/internal/reports/id/trace", {
+              method:
+                handler === POST
+                  ? "POST"
+                  : handler === PATCH
+                    ? "PATCH"
+                    : "DELETE",
+              headers: { Origin: "http://web.test" },
+            }),
+            context("reports", "id", "trace"),
+          )
+        ).status,
+      ).toBe(404);
+    }
+    expect(
+      (
+        await GET(
+          new Request("http://web.test/api/internal/reports/id/trace/extra"),
+          context("reports", "id", "trace", "extra"),
+        )
+      ).status,
+    ).toBe(404);
+    expect(fetch).toHaveBeenCalledTimes(1);
+  } finally {
+    vi.unstubAllGlobals();
+  }
+});

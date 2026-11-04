@@ -1,11 +1,14 @@
 "use client";
 
-import {
-  CONSTRUCT_DEFINITIONS_BY_KEY,
-  type AlignmentItem,
-} from "@iopsych/shared";
+import { type AlignmentItem } from "@iopsych/shared";
 import { useEffect, useRef, useState } from "react";
 
+import { ApiClientError } from "../../lib/api-client";
+import { getReportTrace } from "../../lib/report-trace-client";
+import {
+  V1_REPORT_LABELS,
+  type ReportTraceV1,
+} from "../../lib/report-trace-contracts";
 import type { Report } from "../../lib/report-contracts";
 import { formatDate } from "../../lib/role-ui";
 
@@ -30,7 +33,16 @@ export function ReportDetail({
   report: Report;
   candidateEmail?: string;
 }) {
-  const [evidence, setEvidence] = useState<AlignmentItem | null>(null);
+  const [evidence, setEvidence] = useState<{
+    reportId: string;
+    constructKey: AlignmentItem["construct_key"];
+  } | null>(null);
+  const selectedEvidence =
+    evidence?.reportId === report.id
+      ? report.result.items.find(
+          (item) => item.construct_key === evidence.constructKey,
+        )
+      : undefined;
   return (
     <section aria-labelledby="report-heading" className="space-y-8">
       <header>
@@ -72,7 +84,7 @@ export function ReportDetail({
       </aside>
       <div className="grid gap-5 md:grid-cols-2">
         {report.result.items.map((item) => {
-          const definition = CONSTRUCT_DEFINITIONS_BY_KEY[item.construct_key];
+          const definition = V1_REPORT_LABELS[item.construct_key];
           const { role, candidate_response: candidate } = item.explanation;
           return (
             <article
@@ -141,7 +153,12 @@ export function ReportDetail({
               ) : null}
               <button
                 type="button"
-                onClick={() => setEvidence(item)}
+                onClick={() =>
+                  setEvidence({
+                    reportId: report.id,
+                    constructKey: item.construct_key,
+                  })
+                }
                 className="mt-5 min-h-11 rounded-lg border border-teal-700 px-4 py-2 font-semibold text-teal-900 hover:bg-teal-50 focus-visible:ring-2 focus-visible:ring-teal-700 focus-visible:ring-offset-2"
               >
                 View evidence for {definition.label}
@@ -173,7 +190,7 @@ export function ReportDetail({
               className="border-t border-slate-200 pt-5"
             >
               <h4 className="font-bold text-slate-950">
-                {CONSTRUCT_DEFINITIONS_BY_KEY[item.construct_key].label}
+                {V1_REPORT_LABELS[item.construct_key].label}
               </h4>
               <p className="mt-2 leading-7 text-slate-800">
                 {item.interview_questions.primary.text}
@@ -226,17 +243,24 @@ export function ReportDetail({
           </div>
         </dl>
       </details>
-      {evidence ? (
-        <EvidenceDrawer item={evidence} onDismiss={() => setEvidence(null)} />
+      {selectedEvidence ? (
+        <EvidenceDrawer
+          key={`${report.id}:${selectedEvidence.construct_key}`}
+          report={report}
+          item={selectedEvidence}
+          onDismiss={() => setEvidence(null)}
+        />
       ) : null}
     </section>
   );
 }
 
 function EvidenceDrawer({
+  report,
   item,
   onDismiss,
 }: {
+  report: Report;
   item: AlignmentItem;
   onDismiss: () => void;
 }) {
@@ -268,7 +292,7 @@ function EvidenceDrawer({
     >
       <div className="flex items-start justify-between gap-4">
         <h2 id="evidence-heading" className="text-xl font-bold">
-          Evidence: {CONSTRUCT_DEFINITIONS_BY_KEY[item.construct_key].label}
+          Evidence: {V1_REPORT_LABELS[item.construct_key].label}
         </h2>
         <button
           type="button"
@@ -297,6 +321,11 @@ function EvidenceDrawer({
         Raw construct score: {candidate.raw_score}. Response confidence:{" "}
         {candidate.confidence}.
       </p>
+      <p className="mt-2 text-sm">
+        Candidate confidence describes response completeness, not a probability
+        or a prediction of performance.
+      </p>
+      <ItemEvidence report={report} item={item} />
       <h3 className="mt-6 font-bold">Comparison rule</h3>
       <p className="mt-2 leading-7">
         Comparison target {role.comparison_rating} / 5; candidate response{" "}
@@ -314,5 +343,158 @@ function EvidenceDrawer({
         </p>
       ) : null}
     </dialog>
+  );
+}
+
+function ItemEvidence({
+  report,
+  item,
+}: {
+  report: Report;
+  item: AlignmentItem;
+}) {
+  const [attempt, setAttempt] = useState(0);
+  return (
+    <TraceAttempt
+      key={attempt}
+      report={report}
+      item={item}
+      retry={() => setAttempt((value) => value + 1)}
+    />
+  );
+}
+
+function TraceAttempt({
+  report,
+  item,
+  retry,
+}: {
+  report: Report;
+  item: AlignmentItem;
+  retry: () => void;
+}) {
+  const [state, setState] = useState<{
+    report?: Report;
+    trace?: ReportTraceV1;
+    error?: unknown;
+  }>({});
+  useEffect(() => {
+    const controller = new AbortController();
+    let active = true;
+    void getReportTrace(report, controller.signal)
+      .then((trace) => {
+        if (active) setState({ report, trace });
+      })
+      .catch((error: unknown) => {
+        if (active) setState({ report, error });
+      });
+    return () => {
+      active = false;
+      controller.abort();
+    };
+  }, [report]);
+  const current = state.report === report ? state : {};
+  const construct = current.trace?.constructs.find(
+    (value) => value.construct_key === item.construct_key,
+  );
+  if (current.error) {
+    const error =
+      current.error instanceof ApiClientError ? current.error : null;
+    return (
+      <section aria-label="Item-level evidence" className="mt-6 space-y-3">
+        <p role="status">
+          Item-level evidence unavailable for this saved report
+        </p>
+        {error?.status === 401 ? (
+          <a
+            className="font-bold underline"
+            href={`/sign-in?returnTo=${encodeURIComponent(`/reports/${report.id}`)}`}
+          >
+            Sign in to view reports
+          </a>
+        ) : error?.status === 403 || error?.status === 410 ? (
+          <p>
+            {error.status === 403
+              ? "You no longer have access to this evidence."
+              : "This candidate’s evidence is no longer available."}
+          </p>
+        ) : (
+          <>
+            {error?.status === 404 ? (
+              <p>The trace endpoint or saved evidence could not be found.</p>
+            ) : null}
+            <button
+              className="min-h-11 rounded border px-3 font-semibold"
+              type="button"
+              onClick={retry}
+            >
+              Retry item-level evidence
+            </button>
+          </>
+        )}
+      </section>
+    );
+  }
+  if (!construct)
+    return (
+      <p role="status" className="mt-6">
+        Loading item-level evidence…
+      </p>
+    );
+  const choices = {
+    most_like: "Most like",
+    least_like: "Least like",
+    not_selected: "Not selected (answered block)",
+    block_skipped: "Block skipped",
+  };
+  return (
+    <section aria-labelledby="item-evidence-heading" className="mt-6">
+      <h3 id="item-evidence-heading" className="font-bold">
+        Item-level evidence
+      </h3>
+      <p className="mt-2 text-sm">
+        Four historical statements in definition order. Unselected statements
+        and skipped blocks both contribute zero; only skipped blocks reduce
+        completeness.
+      </p>
+      <ol className="mt-4 space-y-4">
+        {construct.items.map((row) => (
+          <li key={row.item_id} className="rounded border border-slate-200 p-3">
+            <p className="font-semibold">{row.statement}</p>
+            <p>
+              {choices[row.choice]} · Contribution:{" "}
+              {row.contribution > 0 ? "+" : ""}
+              {row.contribution}
+            </p>
+            <p className="break-all text-xs">
+              Block {row.block_position}: {row.block_id} · Item: {row.item_id}
+            </p>
+            {row.choice !== "block_skipped" ? (
+              <p className="break-all text-xs">
+                Most like: {row.most_like_item_id} · Least like:{" "}
+                {row.least_like_item_id}
+              </p>
+            ) : null}
+          </li>
+        ))}
+      </ol>
+      <p className="mt-4">
+        Raw total: {item.explanation.candidate_response.raw_score}. Inclusive
+        rating band: {construct.rating_threshold.minimum_raw_score} to{" "}
+        {construct.rating_threshold.maximum_raw_score} →{" "}
+        {construct.rating_threshold.rating} / 5.
+      </p>
+      <p className="mt-2">
+        Completeness: {construct.confidence_rule.level}; skipped statements:{" "}
+        {construct.confidence_rule.minimum_skipped_items}
+        {construct.confidence_rule.maximum_skipped_items === null
+          ? " or more"
+          : construct.confidence_rule.maximum_skipped_items ===
+              construct.confidence_rule.minimum_skipped_items
+            ? ""
+            : ` to ${construct.confidence_rule.maximum_skipped_items}`}
+        .
+      </p>
+    </section>
   );
 }
