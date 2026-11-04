@@ -1,7 +1,7 @@
 /** @vitest-environment jsdom */
 
 import "@testing-library/jest-dom/vitest";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { PILOT_ASSESSMENT_DEFINITION_V1 } from "@iopsych/shared";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -412,6 +412,13 @@ describe("CandidateAssessment", () => {
     const continueButton = await screen.findByRole("button", {
       name: "Continue",
     });
+    await waitFor(() =>
+      expect(
+        screen.getByRole("heading", {
+          name: /which statements are most and least like you/i,
+        }),
+      ).toHaveFocus(),
+    );
     continueButton.focus();
     await user.keyboard("{Enter}");
 
@@ -658,5 +665,277 @@ describe("CandidateAssessment", () => {
       ),
     ).toBeNull();
     expect(screen.queryAllByRole("radio")).toHaveLength(0);
+  });
+  it("restarts at block one with no stale choices or errors after clearing from review", async () => {
+    apiMocks.getCandidateInvite.mockResolvedValue(
+      candidateInvite({ can_start_assessment: true, decision: "consent" }),
+    );
+    apiMocks.submitCandidateAssessment.mockRejectedValueOnce(
+      new Error("Old submission error"),
+    );
+    const user = userEvent.setup();
+    render(<CandidateAssessment token="signed-token" />);
+    for (let index = 0; index < 6; index++) {
+      await user.click(await screen.findByRole("checkbox"));
+      await user.click(
+        screen.getByRole("button", {
+          name: index === 5 ? "Review answers" : "Continue",
+        }),
+      );
+    }
+    await user.click(
+      screen.getByRole("button", { name: "Submit my responses" }),
+    );
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Old submission error",
+    );
+    await user.click(screen.getByRole("button", { name: "Clear device data" }));
+    expect(
+      screen.getByRole("heading", { name: "Assessment paused" }),
+    ).toHaveFocus();
+    expect(
+      localStorage.getItem(`iopsych.candidate.v1.${INVITATION_ID}.draft`),
+    ).toBeNull();
+    await user.click(
+      screen.getByRole("button", { name: "Continue assessment" }),
+    );
+    expect(screen.getByText("Block 1 of 6")).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", {
+        name: /which statements are most and least like you/i,
+      }),
+    ).toHaveFocus();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    expect(
+      screen.queryByText(/All six blocks are ready/),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText(/Device data cleared/)).not.toBeInTheDocument();
+    expect(screen.getByText("Not saved yet")).toBeInTheDocument();
+    for (let index = 0; index < 6; index++) {
+      expect(screen.getByRole("checkbox")).not.toBeChecked();
+      for (const radio of screen.getAllByRole("radio"))
+        expect(radio).not.toBeChecked();
+      if (index === 0) {
+        await user.click(screen.getByRole("button", { name: "Continue" }));
+        expect(await screen.findByRole("alert")).toHaveTextContent(
+          /choose one statement/i,
+        );
+      }
+      await user.click(screen.getByRole("checkbox"));
+      await user.click(
+        screen.getByRole("button", {
+          name: index === 5 ? "Review answers" : "Continue",
+        }),
+      );
+    }
+    expect(
+      screen.getByRole("heading", { name: "Review your responses" }),
+    ).toHaveFocus();
+    await user.click(
+      screen.getByRole("button", { name: "Submit my responses" }),
+    );
+    expect(
+      await screen.findByRole("heading", {
+        name: "Your responses are complete",
+      }),
+    ).toBeInTheDocument();
+  });
+
+  it("immediately removes preexisting answers and receipts on acknowledged decline", async () => {
+    apiMocks.getCandidateInvite.mockResolvedValue(candidateInvite());
+    apiMocks.recordCandidateConsent.mockResolvedValue(
+      candidateInvite({ decision: "decline", status: "declined" }),
+    );
+    const draftKey = `iopsych.candidate.v1.${INVITATION_ID}.draft`;
+    const completionKey = `iopsych.candidate.v1.${INVITATION_ID}.completion`;
+    localStorage.setItem(
+      draftKey,
+      JSON.stringify({
+        saved_at: new Date().toISOString(),
+        response_set: {
+          assessment_definition_id: PILOT_ASSESSMENT_DEFINITION_V1.id,
+          assessment_definition_version: PILOT_ASSESSMENT_DEFINITION_V1.version,
+          responses: [
+            {
+              block_id: "block-1",
+              skipped: true,
+              most_like_item_id: null,
+              least_like_item_id: null,
+            },
+          ],
+        },
+      }),
+    );
+    render(<CandidateAssessment token="signed-token" />);
+    const decline = await screen.findByRole("button", { name: "I decline" });
+    expect(localStorage.getItem(draftKey)).not.toBeNull();
+    localStorage.setItem(
+      completionKey,
+      JSON.stringify({
+        assessment_id: INVITATION_ID,
+        submitted_at: new Date().toISOString(),
+      }),
+    );
+    await userEvent.setup().click(decline);
+    expect(
+      await screen.findByRole("heading", {
+        name: "You declined the assessment",
+      }),
+    ).toHaveFocus();
+    expect(localStorage.getItem(draftKey)).toBeNull();
+    expect(localStorage.getItem(completionKey)).toBeNull();
+    expect(apiMocks.getCandidateDefinition).not.toHaveBeenCalled();
+  });
+
+  it("hides the old assignment and choices immediately when the invitation token changes", async () => {
+    apiMocks.getCandidateInvite.mockResolvedValueOnce(
+      candidateInvite({ can_start_assessment: true, decision: "consent" }),
+    );
+    const user = userEvent.setup();
+    const page = render(<CandidateAssessment token="old-token" />);
+    await user.click(await screen.findByRole("checkbox"));
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+    let resolveInvite!: (value: CandidateInvite) => void;
+    apiMocks.getCandidateInvite.mockReturnValueOnce(
+      new Promise<CandidateInvite>((resolve) => {
+        resolveInvite = resolve;
+      }),
+    );
+    page.rerender(<CandidateAssessment token="new-token" />);
+    expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
+    expect(screen.getByText("Opening invitation…")).toBeInTheDocument();
+    await act(async () =>
+      resolveInvite(
+        candidateInvite({
+          invitation_id: "22222222-2222-4222-8222-222222222222",
+          can_start_assessment: true,
+          decision: "consent",
+        }),
+      ),
+    );
+    expect(await screen.findByText("Block 1 of 6")).toBeInTheDocument();
+    expect(screen.getByRole("checkbox")).not.toBeChecked();
+    expect(
+      localStorage.getItem(
+        "iopsych.candidate.v1.22222222-2222-4222-8222-222222222222.draft",
+      ),
+    ).toBeNull();
+  });
+
+  it.each(["consent", "definition"])(
+    "ignores an old pending %s response after a token change",
+    async (pendingStage) => {
+      apiMocks.getCandidateInvite.mockResolvedValue(candidateInvite());
+      const consented = candidateInvite({
+        can_start_assessment: true,
+        decision: "consent",
+      });
+      let finish!: () => void;
+      if (pendingStage === "consent") {
+        apiMocks.recordCandidateConsent.mockReturnValueOnce(
+          new Promise((resolve) => {
+            finish = () => resolve(consented);
+          }),
+        );
+      } else {
+        apiMocks.recordCandidateConsent.mockResolvedValueOnce(consented);
+        const pinned = await apiMocks.getCandidateDefinition();
+        apiMocks.getCandidateDefinition.mockClear();
+        apiMocks.getCandidateDefinition.mockReturnValueOnce(
+          new Promise((resolve) => {
+            finish = () => resolve(pinned);
+          }),
+        );
+      }
+      const page = render(<CandidateAssessment token="old-token" />);
+      await userEvent.setup().click(
+        await screen.findByRole("button", {
+          name: "I consent and want to begin",
+        }),
+      );
+      apiMocks.getCandidateInvite.mockResolvedValueOnce(
+        candidateInvite({
+          invitation_id: "22222222-2222-4222-8222-222222222222",
+          role_title: "New invitation role",
+        }),
+      );
+      page.rerender(<CandidateAssessment token="new-token" />);
+      await screen.findByText("New invitation role");
+      await act(async () => finish());
+      expect(
+        screen.getByRole("heading", { name: "Your choice and your data" }),
+      ).toBeInTheDocument();
+      expect(screen.getByText("New invitation role")).toBeInTheDocument();
+      expect(screen.queryByRole("radio")).not.toBeInTheDocument();
+      expect(apiMocks.getCandidateDefinition).toHaveBeenCalledTimes(
+        pendingStage === "consent" ? 0 : 1,
+      );
+      expect(localStorage.length).toBe(0);
+    },
+  );
+  it("does not apply an old submission receipt to a new invitation", async () => {
+    apiMocks.getCandidateInvite.mockResolvedValueOnce(
+      candidateInvite({ can_start_assessment: true, decision: "consent" }),
+    );
+    localStorage.setItem(
+      `iopsych.candidate.v1.${INVITATION_ID}.draft`,
+      JSON.stringify({
+        saved_at: new Date().toISOString(),
+        response_set: {
+          assessment_definition_id: PILOT_ASSESSMENT_DEFINITION_V1.id,
+          assessment_definition_version: PILOT_ASSESSMENT_DEFINITION_V1.version,
+          responses: PILOT_ASSESSMENT_DEFINITION_V1.blocks.map((block) => ({
+            block_id: block.id,
+            skipped: true,
+            most_like_item_id: null,
+            least_like_item_id: null,
+          })),
+        },
+      }),
+    );
+    let finish!: () => void;
+    apiMocks.submitCandidateAssessment.mockReturnValueOnce(
+      new Promise((resolve) => {
+        finish = () => resolve({ assessment_id: INVITATION_ID });
+      }),
+    );
+    const user = userEvent.setup();
+    const page = render(<CandidateAssessment token="old-token" />);
+    await user.click(
+      await screen.findByRole("button", { name: "Review answers" }),
+    );
+    await user.click(
+      screen.getByRole("button", { name: "Submit my responses" }),
+    );
+    expect(screen.getByRole("button", { name: "Submitting…" })).toBeDisabled();
+    apiMocks.getCandidateInvite.mockResolvedValueOnce(
+      candidateInvite({
+        invitation_id: "22222222-2222-4222-8222-222222222222",
+        can_start_assessment: true,
+        decision: "consent",
+      }),
+    );
+    page.rerender(<CandidateAssessment token="new-token" />);
+    await screen.findByText("Block 1 of 6");
+    await act(async () => finish());
+    expect(screen.getByText("Block 1 of 6")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("heading", { name: "Your responses are complete" }),
+    ).not.toBeInTheDocument();
+    expect(
+      localStorage.getItem(`iopsych.candidate.v1.${INVITATION_ID}.completion`),
+    ).toBeNull();
+    expect(
+      localStorage.getItem(
+        "iopsych.candidate.v1.22222222-2222-4222-8222-222222222222.completion",
+      ),
+    ).toBeNull();
+    await user.click(screen.getByRole("checkbox"));
+    expect(screen.getByRole("checkbox")).toBeChecked();
+    expect(apiMocks.submitCandidateAssessment).toHaveBeenCalledTimes(1);
+    expect(apiMocks.submitCandidateAssessment).toHaveBeenCalledWith(
+      "old-token",
+      expect.objectContaining({ responses: expect.any(Array) }),
+    );
   });
 });

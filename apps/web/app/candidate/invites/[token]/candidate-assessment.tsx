@@ -136,6 +136,10 @@ function formatExpiry(value: string): string {
 
 /** Public, consent-gated candidate journey for one bearer invitation. */
 export function CandidateAssessment({ token }: CandidateAssessmentProps) {
+  return <InvitationAssessment key={token} token={token} />;
+}
+
+function InvitationAssessment({ token }: CandidateAssessmentProps) {
   const [state, setState] = useState<LoadState>({ status: "loading" });
   const [assigned, setAssigned] = useState<CandidateDefinition | null>(null);
   const assessment = assigned?.definition;
@@ -144,6 +148,7 @@ export function CandidateAssessment({ token }: CandidateAssessmentProps) {
   const [submittingConsent, setSubmittingConsent] = useState(false);
   const [submittingAssessment, setSubmittingAssessment] = useState(false);
   const submissionPending = useRef(false);
+  const activeInvitation = useRef(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [validationError, setValidationError] = useState<string | null>(null);
   const [saveStatus, setSaveStatus] = useState("Not saved yet");
@@ -156,6 +161,13 @@ export function CandidateAssessment({ token }: CandidateAssessmentProps) {
     () => (assessment ? responseSetFromChoices(choices, assessment) : null),
     [choices, assessment],
   );
+
+  useEffect(() => {
+    activeInvitation.current = true;
+    return () => {
+      activeInvitation.current = false;
+    };
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -293,6 +305,7 @@ export function CandidateAssessment({ token }: CandidateAssessmentProps) {
     setActionError(null);
     try {
       const invite = await recordCandidateConsent(token, decision);
+      if (!activeInvitation.current) return;
       if (decision === "consent") {
         if (invite.decision !== "consent" || !invite.can_start_assessment) {
           throw new Error(
@@ -301,6 +314,7 @@ export function CandidateAssessment({ token }: CandidateAssessmentProps) {
         }
         setState({ status: "loading" });
         const pinned = await getCandidateDefinition(token);
+        if (!activeInvitation.current) return;
         setAssigned(pinned);
         setState({
           completion: null,
@@ -318,6 +332,7 @@ export function CandidateAssessment({ token }: CandidateAssessmentProps) {
         });
       }
     } catch (error) {
+      if (!activeInvitation.current) return;
       if (decision === "consent")
         setState({ message: inviteErrorMessage(error), status: "error" });
       setActionError(inviteErrorMessage(error));
@@ -408,6 +423,7 @@ export function CandidateAssessment({ token }: CandidateAssessmentProps) {
     setValidationError(null);
     try {
       const receipt = await submitCandidateAssessment(token, responseSet);
+      if (!activeInvitation.current) return;
       let completion: DeviceReceipt | null = null;
       try {
         completion = completeCandidateAssessment(
@@ -426,6 +442,7 @@ export function CandidateAssessment({ token }: CandidateAssessmentProps) {
         view: "complete",
       });
     } catch (error: unknown) {
+      if (!activeInvitation.current) return;
       setValidationError(
         error instanceof Error
           ? error.message
@@ -519,6 +536,10 @@ export function CandidateAssessment({ token }: CandidateAssessmentProps) {
             invite.invitation_id,
           );
           setChoices({});
+          setCurrentBlockIndex(0);
+          setValidationError(null);
+          setActionError(null);
+          setSaveStatus("Not saved yet");
           setState({
             ...state,
             view: state.view === "complete" ? "complete" : "paused",
@@ -571,7 +592,10 @@ export function CandidateAssessment({ token }: CandidateAssessmentProps) {
         {deviceControls}
         <button
           type="button"
-          onClick={() => setState({ ...state, view: "assessment" })}
+          onClick={() => {
+            setDeviceMessage(null);
+            setState({ ...state, view: "assessment" });
+          }}
         >
           Continue assessment
         </button>
