@@ -6,7 +6,17 @@ Protected main baseline: `f5224c9d7d7d6b143bd43c3ca5c77022856cdb90`.
 
 ## Operating contract
 
-Only reviewed worker commits integrate here. Dependent workers start from the latest committed integration revision. Maximum three implementation workers plus one read-only reviewer. Coordinator owns this ledger, integration and shared-contract/migration allocation. Workers must propose contract shape, compatibility and migration strategy before changes. No schema allocation in the first wave.
+Only reviewed worker commits integrate here. Dependent workers start from the latest committed integration revision. User scheduling update supersedes the original worker cap: optimize wall-clock completion, initially target 6–8 useful active workers, then scale dynamically with memory/provider capacity and disjoint ownership; there is no fixed cap. Do not launch duplicate or waiting workers. Coordinator owns this ledger, integration and shared-contract/migration allocation. Workers must propose contract shape, compatibility and migration strategy before changes. No schema allocation in the first wave.
+
+Run targeted checks per worker, with broad combined checks at meaningful integration checkpoints; avoid redundant full suites and shared test state. Timebox decision preparation to concrete recommendations and unresolved approvals. Keep reviewers checking finished diffs, integrate continuously, and automatically replace finished workers with newly eligible tasks. Partial preparation or interface-preserving fixes do not satisfy whole-package dependency/acceptance gates.
+
+## Current scheduling and critical path
+
+Capacity check: 24 GiB RAM, memory-pressure tool reports 37% free, 655 GiB disk available. `gpt-6-astra` verified by actual worker tool execution. Expand four active tasks to eight with independent bounded slices.
+
+Engineering critical path: decision record → approved assignment/version contract (6C) → invitation delivery API (8A) and candidate progress (9A/9B) → privacy lifecycle (10A) → full browser integration (12A). Parallel identity path: identity/membership decisions plus 6A → 7A → 7B/7C → 8B, converging at 12A. Hosting/operations path: 11A preparation → configured hosting/runtime (11B/11C) → 10C restore/retention → 12C rehearsal. Actual product/scientific/provider decisions and external review are gates, not elapsed engineering estimates.
+
+Start now without deciding those gates: 9A storage denial/stale-save/receipt fixes preserving current interfaces; 11A provider-neutral packaging of existing Next/FastAPI/PostgreSQL topology; 12A isolated production browser scaffold; 12B audit/checklist/tool preparation; 12C runbook and rehearsal preparation. Split later API/UI tasks only after contract agreement. Keep root dependency files, shared contracts and migrations singly owned.
 
 Synthetic data and controlled local mail only. No push, public deployment, purchases, real email, production secrets or existing database resets. Preserve ports 3000, 8001 and 8000. Each worker uses a separate checkout and isolated database/schema. No scientific or external approval is inferred from implementation authority.
 
