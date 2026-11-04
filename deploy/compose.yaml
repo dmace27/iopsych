@@ -1,17 +1,18 @@
 # Synthetic loopback rehearsal only; not a hosted deployment configuration.
 name: iopsych_11a
 x-api: &api
-  image: iopsych-api:${REVISION:-11a-local}
+  image: iopsych-api:${REVISION:-unknown}
   build:
     context: ..
     dockerfile: apps/api/Dockerfile
     args:
-      REVISION: ${REVISION:-11a-local}
+      REVISION: ${REVISION:-unknown}
   init: true
   cap_drop: [ALL]
   security_opt: [no-new-privileges:true]
   stop_grace_period: 35s
   environment:
+    IOPSYCH_RELEASE_ID: ${REVISION:-unknown}
     DATABASE_URL: postgresql+psycopg://iopsych_11a:synthetic-local-only@db:5432/iopsych_11a
     INVITE_CANDIDATE_BASE_URL: http://localhost:3106/candidate/invites
     # No signing keys, provider keys, mail adapter or automatic seed.
@@ -52,17 +53,18 @@ services:
     profiles: [tools]
     command: [alembic, upgrade, head]
   web:
-    image: iopsych-web:${REVISION:-11a-local}
+    image: iopsych-web:${REVISION:-unknown}
     build:
       context: ..
       dockerfile: apps/web/Dockerfile
       args:
-        REVISION: ${REVISION:-11a-local}
+        REVISION: ${REVISION:-unknown}
     init: true
     cap_drop: [ALL]
     security_opt: [no-new-privileges:true]
     stop_grace_period: 35s
     environment:
+      IOPSYCH_RELEASE_ID: ${REVISION:-unknown}
       API_BASE_URL: http://api:8000
     ports: ["127.0.0.1:3106:3000"]
     depends_on:

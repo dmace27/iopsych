@@ -14,7 +14,7 @@ loopback ports web 3106, API 8106, DB 5546, and a dedicated persistent volume.
 Do not change the project name to an existing project or run `down --volumes`.
 
 ```sh
-export REVISION=$(git rev-parse HEAD)
+export REVISION="$(git rev-parse --verify HEAD)"
 docker compose -f deploy/compose.yaml config --quiet
 docker compose -f deploy/compose.yaml build api
 docker compose -f deploy/compose.yaml build web
@@ -36,6 +36,32 @@ invitation delivery and extraction remain unconfigured and fail closed. The HTTP
 rehearsal checks packaging only: production Secure cookies/TLS, login, email,
 consent and candidate journeys require separate integrated staging evidence.
 Never inject real provider credentials into this rehearsal.
+
+`REVISION` is the single attribution input for API, migration and web image
+tags, Dockerfile `ARG REVISION` (the OCI revision label), and runtime
+`IOPSYCH_RELEASE_ID`. Supply the actual clean checkout SHA using the command
+above, or export the exact source revision supplied by CI before both build and
+start. Do not change it between those steps or independently override the
+runtime ID. A host `IOPSYCH_RELEASE_ID` does not override this Compose mapping.
+Missing or empty `REVISION` resolves to `unknown`; Compose never infers `HEAD`.
+Use a non-secret identifier matching `[A-Za-z0-9][A-Za-z0-9._-]{0,63}` so the
+existing API telemetry accepts it. Web receives the same environment value; this
+does not add web telemetry or prove which source an image contains.
+
+The Git command reads only the revision; do not dump the shell environment,
+source secret files, or pass credentials in build arguments. For a read-only
+configuration check without loading a local `.env`, run:
+
+```sh
+REVISION="$(git rev-parse --verify HEAD)" docker compose --env-file /dev/null -f deploy/compose.yaml config --quiet
+python3 -m unittest discover -s deploy -p 'test_*.py' -v
+```
+
+The focused tests render Compose models with synthetic environment values and do
+not build images, start containers or access a database. Any later final image
+check must include the canonical fixture COPY fix `1a5b3c0` and verify the
+resulting image label and API completion telemetry against the supplied
+revision. Model checks alone are not image or hosted-release evidence.
 
 Both runtime images use non-root users. API executes Uvicorn directly without
 reload; web executes `next start` directly with Node. Compose uses an init
