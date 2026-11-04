@@ -32,6 +32,7 @@ import {
   formatDate,
   sortProfiles,
 } from "../../../lib/role-ui";
+import { canManageInvitations } from "../../../lib/invitation-contracts";
 import { StatusBadge } from "../../ui/status-badge";
 import {
   EmptyState,
@@ -238,6 +239,14 @@ export function RoleProfileWorkspace({ roleId }: { roleId: string }) {
         ← Back to roles
       </Link>
 
+      {canManageInvitations(state.user.role) ? (
+        <Link
+          className="ml-5 rounded font-bold text-teal-800 underline"
+          href={`/roles/${roleId}/invites`}
+        >
+          Manage invitations
+        </Link>
+      ) : null}
       <header className="mt-6 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
         <div className="flex flex-col justify-between gap-6 md:flex-row md:items-start">
           <div>

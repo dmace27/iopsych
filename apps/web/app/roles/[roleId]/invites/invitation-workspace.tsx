@@ -1,0 +1,259 @@
+"use client";
+
+import Link from "next/link";
+import { useEffect, useRef, useState } from "react";
+import {
+  ApiClientError,
+  getCurrentUser,
+  getRole,
+} from "../../../../lib/api-client";
+import {
+  getInvitations,
+  revokeInvitation,
+} from "../../../../lib/invitation-client";
+import {
+  canManageInvitations,
+  type Invitation,
+} from "../../../../lib/invitation-contracts";
+import { formatDate } from "../../../../lib/role-ui";
+import { EmptyState, LoadingState } from "../../../ui/workspace-states";
+
+const labels: Record<Invitation["status"], string> = {
+  pending_delivery: "Pending delivery",
+  active: "Active",
+  consented: "Consented",
+  declined: "Declined",
+  revoked: "Revoked",
+  expired: "Expired",
+};
+type Failure = { message: string; status: number; restart: boolean };
+function failure(error: unknown): Failure {
+  const status = error instanceof ApiClientError ? error.status : 0;
+  const restart =
+    error instanceof ApiClientError &&
+    error.code === "invalid_invitation_cursor";
+  return {
+    status,
+    restart,
+    message: restart
+      ? "This page reference is no longer valid. Restart the list."
+      : status === 401
+        ? "Your session has expired. Sign in again."
+        : status === 403
+          ? "Only recruiters and administrators can manage invitations."
+          : status === 404
+            ? "This role or invitation is unavailable."
+            : status === 429
+              ? "Too many requests. Wait before trying again."
+              : "The invitation request could not be completed. Try again.",
+  };
+}
+const button =
+  "min-h-11 rounded-lg border border-teal-700 px-4 py-2 font-bold text-teal-900 disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-teal-700";
+export function InvitationWorkspace({ roleId }: { roleId: string }) {
+  return <Invitations key={roleId} roleId={roleId} />;
+}
+function Invitations({ roleId }: { roleId: string }) {
+  const [title, setTitle] = useState("");
+  const [items, setItems] = useState<Invitation[]>([]);
+  const [cursor, setCursor] = useState<string | null>(null);
+  const [ready, setReady] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<Failure | null>(null);
+  const [attempt, setAttempt] = useState(0);
+  const [announcement, setAnnouncement] = useState("");
+  const lock = useRef(false);
+  const generation = useRef(0);
+  const retry = useRef<() => void>(() => {});
+  useEffect(() => {
+    const version = ++generation.current;
+    const ref = generation;
+    void (async () => {
+      const user = await getCurrentUser();
+      if (!canManageInvitations(user.role))
+        throw new ApiClientError("", { status: 403, code: "forbidden" });
+      const [role, list] = await Promise.all([
+        getRole(roleId),
+        getInvitations(roleId),
+      ]);
+      if (ref.current !== version) return;
+      setTitle(role.title);
+      setItems(list.items);
+      setCursor(list.next_cursor);
+      setReady(true);
+    })().catch((error: unknown) => {
+      if (ref.current === version) setError(failure(error));
+    });
+    return () => {
+      ref.current++;
+    };
+  }, [roleId, attempt]);
+  function restart() {
+    setReady(false);
+    setItems([]);
+    setCursor(null);
+    setError(null);
+    setAnnouncement("");
+    setAttempt((value) => value + 1);
+  }
+  async function act(invitation?: Invitation) {
+    if (lock.current) return;
+    if (
+      invitation &&
+      !window.confirm(
+        `Revoke the invitation for ${invitation.email}? This invalidates their assessment link. It does not delete existing responses or reports.`,
+      )
+    )
+      return;
+    lock.current = true;
+    setBusy(true);
+    setError(null);
+    const version = generation.current;
+    retry.current = () => {
+      void act(invitation);
+    };
+    try {
+      if (invitation) {
+        const updated = await revokeInvitation(roleId, invitation.id);
+        if (version !== generation.current) return;
+        setItems((rows) =>
+          rows.map((row) => (row.id === updated.id ? updated : row)),
+        );
+        setAnnouncement("Invitation status refreshed after revocation.");
+      } else if (cursor) {
+        const list = await getInvitations(roleId, cursor);
+        if (version !== generation.current) return;
+        setItems((rows) => [
+          ...rows,
+          ...list.items.filter(
+            (item) => !rows.some((row) => row.id === item.id),
+          ),
+        ]);
+        setCursor(list.next_cursor);
+        setAnnouncement(`${list.items.length} more invitations loaded.`);
+      }
+    } catch (error) {
+      if (version === generation.current) setError(failure(error));
+    } finally {
+      if (version === generation.current) {
+        lock.current = false;
+        setBusy(false);
+      }
+    }
+  }
+  const denied =
+    error?.status === 401 || error?.status === 403 || error?.status === 404;
+  return (
+    <main
+      id="main-content"
+      className="mx-auto max-w-7xl space-y-6 px-5 py-8 sm:px-8"
+    >
+      <Link
+        className="font-bold text-teal-800 underline"
+        href={`/roles/${roleId}`}
+      >
+        ← Back to role profile
+      </Link>
+      <h1 className="text-3xl font-bold">
+        {title ? `${title}: invitations` : "Invitations"}
+      </h1>
+      <p>
+        Invitation history across all role profile versions, newest first.
+        Status is the stored invitation state; delivery receipt and assessment
+        submission are not reported here. Expiry dates do not change the
+        displayed status.
+      </p>
+      <div role="status" aria-live="polite">
+        {announcement}
+      </div>
+      {!ready && !error ? <LoadingState label="Loading invitations" /> : null}
+      {error ? (
+        <div
+          role="alert"
+          className="space-y-3 rounded-lg border border-red-200 p-4"
+        >
+          <p>{error.message}</p>
+          {error.status === 401 ? (
+            <Link
+              className="underline"
+              href={`/sign-in?returnTo=${encodeURIComponent(`/roles/${roleId}/invites`)}`}
+            >
+              Sign in to manage invitations
+            </Link>
+          ) : null}
+          {!denied ? (
+            <button
+              className={button}
+              disabled={busy}
+              onClick={() =>
+                error.restart || !ready ? restart() : retry.current()
+              }
+            >
+              {error.restart ? "Restart list" : "Try again"}
+            </button>
+          ) : null}
+        </div>
+      ) : null}
+      {ready && !denied ? (
+        <>
+          <button className={button} disabled={busy} onClick={restart}>
+            Refresh invitation history
+          </button>
+          {items.length === 0 ? (
+            <EmptyState
+              title="No invitations yet"
+              description="There are no recorded invitations for this role."
+            />
+          ) : (
+            <ul className="divide-y divide-slate-200">
+              {items.map((item) => (
+                <li key={item.id} className="space-y-3 py-5">
+                  <h2 className="break-all text-lg font-bold">{item.email}</h2>
+                  <p>
+                    Stored status: <strong>{labels[item.status]}</strong>
+                  </p>
+                  <p className="break-all text-sm">
+                    Profile ID: {item.role_profile_id}
+                  </p>
+                  <p className="text-sm">
+                    Created {formatDate(item.created_at)} (UTC) · Expires{" "}
+                    {formatDate(item.expires_at)} (UTC)
+                  </p>
+                  <p className="text-sm">
+                    {item.sent_at
+                      ? `Sent ${formatDate(item.sent_at)} (UTC)`
+                      : "No sent time recorded"}{" "}
+                    ·{" "}
+                    {item.revoked_at
+                      ? `Revoked ${formatDate(item.revoked_at)} (UTC)`
+                      : "No revocation time recorded"}
+                  </p>
+                  {item.status !== "revoked" ? (
+                    <button
+                      className={button}
+                      disabled={busy}
+                      aria-label={`Revoke invitation for ${item.email}`}
+                      onClick={() => void act(item)}
+                    >
+                      Revoke invitation
+                    </button>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+          )}
+          {cursor && !error?.restart ? (
+            <button
+              className={button}
+              disabled={busy}
+              onClick={() => void act()}
+            >
+              Load more invitations
+            </button>
+          ) : null}
+          {busy ? <LoadingState label="Updating invitations" /> : null}
+        </>
+      ) : null}
+    </main>
+  );
+}

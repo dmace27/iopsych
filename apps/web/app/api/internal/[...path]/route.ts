@@ -17,6 +17,8 @@ const ALLOWED_INTERNAL_ROUTES = [
   /^(?:GET|POST) \/roles\/[^/]+\/profiles$/,
   /^POST \/roles\/[^/]+\/extract-profile$/,
   /^GET \/roles\/[^/]+\/assessments$/,
+  /^GET \/roles\/[^/]+\/invites$/,
+  /^POST \/roles\/[^/]+\/invites\/[^/]+\/revoke$/,
   /^(?:GET|PATCH) \/roles\/[^/]+\/profiles\/[^/]+$/,
   /^POST \/roles\/[^/]+\/profiles\/[^/]+\/approve$/,
   /^POST \/reports$/,
