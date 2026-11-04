@@ -297,10 +297,10 @@ test("keyboard invitation revocation retains useful focus after its action disap
   page.once("dialog", (dialog) => dialog.dismiss());
   await page.keyboard.press("Enter");
   await expect(revoke).toBeFocused();
-  await expect(row.getByText("Stored status: Active")).toBeVisible();
+  await expect(row.getByText("Stored invitation state: Active")).toBeVisible();
   page.once("dialog", (dialog) => dialog.accept());
   await page.keyboard.press("Enter");
-  await expect(row.getByText("Stored status: Revoked")).toBeVisible();
+  await expect(row.getByText("Stored invitation state: Revoked")).toBeVisible();
   await expect(revoke).toHaveCount(0);
   await expect(row).toBeFocused();
   await page.keyboard.press("Tab");
@@ -318,15 +318,24 @@ test("keyboard final invitation pagination focuses the first appended record", a
 }) => {
   await signIn(page);
   await page.goto(`/roles/${alphaRole}/invites`);
+  const response = await page.request.get(
+    `/api/internal/roles/${alphaRole}/invites?limit=100`,
+  );
+  expect(response.status()).toBe(200);
+  const total = (await response.json()).items.length;
+  expect(total).toBeGreaterThan(25);
+  expect(total).toBeLessThanOrEqual(50);
   const rows = page.getByRole("main").getByRole("listitem");
   await expect(rows).toHaveCount(25);
   const more = page.getByRole("button", { name: "Load more invitations" });
   await tabTo(page, more);
   await page.keyboard.press("Enter");
-  await expect(rows).toHaveCount(34);
+  await expect(rows).toHaveCount(total);
   await expect(more).toHaveCount(0);
   await expect(rows.nth(25)).toBeFocused();
   await expect(
-    page.getByRole("status").filter({ hasText: "9 more invitations loaded." }),
+    page
+      .getByRole("status")
+      .filter({ hasText: `${total - 25} more invitations loaded.` }),
   ).toBeVisible();
 });

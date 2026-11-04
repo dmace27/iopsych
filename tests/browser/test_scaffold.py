@@ -239,3 +239,20 @@ def test_fixture_environment_explicitly_opts_into_synthetic_auth_only():
     assert environment["ROLE_EXTRACTION_PROVIDER"] == "disabled"
     assert not any(key.startswith(("AUTH0_", "RESEND_")) for key in environment)
     assert "must-not-be-inherited" not in environment.values()
+
+
+def test_browser_specs_keep_rate_limits_and_continue_after_failures():
+    results = {"accounts.spec.ts": False, "smoke.spec.ts": True}
+    with patch.object(runner.time, "sleep") as pause:
+        failed = runner.run_browser_specs(list(results), results.__getitem__)
+    assert failed == ["accounts.spec.ts"]
+    pause.assert_called_once_with(61)
+
+
+def test_default_browser_specs_run_all_checked_in_specs_once():
+    expected = sorted(path.name for path in runner.BROWSER.glob("*.spec.ts"))
+    visited = []
+    with patch.object(runner.time, "sleep") as pause:
+        assert runner.run_browser_specs([], lambda name: visited.append(name) or True) == []
+    assert visited == expected
+    assert pause.call_count == len(expected) - 1

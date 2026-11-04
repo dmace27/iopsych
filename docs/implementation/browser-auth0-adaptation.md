@@ -52,3 +52,29 @@ read the retained definition fixture instead of the mutable current definition.
 Strict TypeScript and scoped Prettier checks passed after these assertions.
 This prepares current-v2 browser evidence; it does not claim browser replay of
 an existing persisted v1 report (separate backend compatibility tests cover it).
+
+## First actual combined run (failed)
+
+`f918bbb` merges coordinator-approved aggregate `ad06206` with browser assertion
+commit `ff7c247`. After successful `npm ci` and
+`PYTHON_BIN=python3.12 npm run api:install`, `bash scripts/browser-e2e.sh`
+passed the production build and fresh PostgreSQL migrations through0012, then
+ran47 Chromium156.0.8078.4 cases: **37 passed,10 failed, zero skipped (3.2m)**.
+Compact axe evidence is in `tests/browser/evidence/auth0-aggregate-initial.json`.
+Owned containers/network and temporary artifacts were removed after failure.
+
+Six failures reproduce axe `label-content-name-mismatch` on version buttons:
+three profile viewport cases, draft keyboard, recruiter extraction, manager
+profile. Coordinator owns the app fix; the axe checks are unchanged.
+Other failures: renamed invitation state copy, shared privacy invite already
+anonymized by another spec, and missing revocation/pagination controls around a
+confirmed shared-peer429. New v2 result/direct target/trace provenance passed.
+
+Fixture repair uses a distinct HISTORY invite and exact invitation discovery,
+updates state copy and actual pagination counts, and executes each spec once
+with61s rate-window separation in the same owned build/database. The real
+300/min API limiter is unchanged; failures still collect and fail the runner.
+Focused runner checks now **34 passed**; strict browser TypeScript, scoped
+Prettier, Ruff checks/format and diff checks pass. No new browser pass is claimed
+until the app repair and packaging build-slot handoff permit the affected-spec
+rerun. Green accounts/issuance cases are not scheduled for duplicate execution.

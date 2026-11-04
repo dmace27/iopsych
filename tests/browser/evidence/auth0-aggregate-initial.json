@@ -1,0 +1,495 @@
+{
+  "revision": "f918bbb",
+  "aggregate": "ad06206",
+  "assertions": "ff7c247",
+  "command": "bash scripts/browser-e2e.sh",
+  "result": "failed",
+  "tests": {
+    "passed": 37,
+    "failed": 10,
+    "skipped": 0,
+    "discovered": 47
+  },
+  "duration": "3.2 minutes",
+  "production_build": "passed",
+  "fresh_migration_head": "20261104_0012",
+  "browser": "Chromium 156.0.8078.4",
+  "axe": "4.14.0",
+  "axe_scans": [
+    {
+      "test": "sign-in: names, target spacing, reflow and reduced motion at 320px",
+      "browser": "156.0.8078.4",
+      "axe": "4.14.0",
+      "violations": [],
+      "incomplete": []
+    },
+    {
+      "test": "sign-in: names, target spacing, reflow and reduced motion at 375px",
+      "browser": "156.0.8078.4",
+      "axe": "4.14.0",
+      "violations": [],
+      "incomplete": []
+    },
+    {
+      "test": "sign-in: names, target spacing, reflow and reduced motion at 1280px",
+      "browser": "156.0.8078.4",
+      "axe": "4.14.0",
+      "violations": [],
+      "incomplete": []
+    },
+    {
+      "test": "roles: names, target spacing, reflow and reduced motion at 320px",
+      "browser": "156.0.8078.4",
+      "axe": "4.14.0",
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "nodes": 1
+        }
+      ]
+    },
+    {
+      "test": "roles: names, target spacing, reflow and reduced motion at 375px",
+      "browser": "156.0.8078.4",
+      "axe": "4.14.0",
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "nodes": 1
+        }
+      ]
+    },
+    {
+      "test": "roles: names, target spacing, reflow and reduced motion at 1280px",
+      "browser": "156.0.8078.4",
+      "axe": "4.14.0",
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "nodes": 1
+        }
+      ]
+    },
+    {
+      "test": "profile: names, target spacing, reflow and reduced motion at 320px",
+      "browser": "156.0.8078.4",
+      "axe": "4.14.0",
+      "violations": [
+        {
+          "id": "label-content-name-mismatch",
+          "nodes": 1
+        }
+      ],
+      "incomplete": []
+    },
+    {
+      "test": "profile: names, target spacing, reflow and reduced motion at 375px",
+      "browser": "156.0.8078.4",
+      "axe": "4.14.0",
+      "violations": [
+        {
+          "id": "label-content-name-mismatch",
+          "nodes": 1
+        }
+      ],
+      "incomplete": []
+    },
+    {
+      "test": "profile: names, target spacing, reflow and reduced motion at 1280px",
+      "browser": "156.0.8078.4",
+      "axe": "4.14.0",
+      "violations": [
+        {
+          "id": "label-content-name-mismatch",
+          "nodes": 1
+        }
+      ],
+      "incomplete": []
+    },
+    {
+      "test": "consent: names, target spacing, reflow and reduced motion at 320px",
+      "browser": "156.0.8078.4",
+      "axe": "4.14.0",
+      "violations": [],
+      "incomplete": []
+    },
+    {
+      "test": "consent: names, target spacing, reflow and reduced motion at 375px",
+      "browser": "156.0.8078.4",
+      "axe": "4.14.0",
+      "violations": [],
+      "incomplete": []
+    },
+    {
+      "test": "consent: names, target spacing, reflow and reduced motion at 1280px",
+      "browser": "156.0.8078.4",
+      "axe": "4.14.0",
+      "violations": [],
+      "incomplete": []
+    },
+    {
+      "test": "unavailable: names, target spacing, reflow and reduced motion at 320px",
+      "browser": "156.0.8078.4",
+      "axe": "4.14.0",
+      "violations": [],
+      "incomplete": []
+    },
+    {
+      "test": "unavailable: names, target spacing, reflow and reduced motion at 375px",
+      "browser": "156.0.8078.4",
+      "axe": "4.14.0",
+      "violations": [],
+      "incomplete": []
+    },
+    {
+      "test": "unavailable: names, target spacing, reflow and reduced motion at 1280px",
+      "browser": "156.0.8078.4",
+      "axe": "4.14.0",
+      "violations": [],
+      "incomplete": []
+    },
+    {
+      "test": "sign-in: keyboard skip link, empty and rejected session exchange, recovery",
+      "browser": "156.0.8078.4",
+      "axe": "4.14.0",
+      "violations": [],
+      "incomplete": []
+    },
+    {
+      "test": "profile: independent draft keyboard ratings, focus and narrow reflow",
+      "browser": "156.0.8078.4",
+      "axe": "4.14.0",
+      "violations": [
+        {
+          "id": "label-content-name-mismatch",
+          "nodes": 1
+        }
+      ],
+      "incomplete": []
+    },
+    {
+      "state": "discovery",
+      "axe": "4.14.0",
+      "browser": "156.0.8078.4",
+      "violations": [],
+      "incomplete": []
+    },
+    {
+      "state": "role confirmation",
+      "axe": "4.14.0",
+      "browser": "156.0.8078.4",
+      "violations": [],
+      "incomplete": []
+    },
+    {
+      "state": "inactive account",
+      "axe": "4.14.0",
+      "browser": "156.0.8078.4",
+      "violations": [],
+      "incomplete": []
+    },
+    {
+      "state": "stale conflict",
+      "axe": "4.14.0",
+      "browser": "156.0.8078.4",
+      "violations": [],
+      "incomplete": []
+    },
+    {
+      "state": "manager denial",
+      "axe": "4.14.0",
+      "browser": "156.0.8078.4",
+      "violations": [],
+      "incomplete": []
+    },
+    {
+      "test": "manager invitation denial retains separate account context",
+      "width": 1280,
+      "violations": [],
+      "incomplete": []
+    },
+    {
+      "test": "issuance: manager is denied in the UI and same-organization POST",
+      "width": 1280,
+      "browser": "156.0.8078.4",
+      "axe": "4.14.0",
+      "violations": [],
+      "incomplete": []
+    },
+    {
+      "test": "issuance: keyboard preview and axe at narrow and desktop widths",
+      "width": 320,
+      "browser": "156.0.8078.4",
+      "axe": "4.14.0",
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "aria-prohibited-attr",
+          "nodes": 1
+        }
+      ]
+    },
+    {
+      "test": "issuance: keyboard preview and axe at narrow and desktop widths",
+      "width": 375,
+      "browser": "156.0.8078.4",
+      "axe": "4.14.0",
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "aria-prohibited-attr",
+          "nodes": 1
+        }
+      ]
+    },
+    {
+      "test": "issuance: keyboard preview and axe at narrow and desktop widths",
+      "width": 1280,
+      "browser": "156.0.8078.4",
+      "axe": "4.14.0",
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "aria-prohibited-attr",
+          "nodes": 1
+        }
+      ]
+    },
+    {
+      "test": "public sign-in is accessible and rejects invalid credentials",
+      "engine": "4.14.0",
+      "violations": [],
+      "incomplete": []
+    },
+    {
+      "test": "consent gates questions and decline survives refresh",
+      "engine": "4.14.0",
+      "violations": [],
+      "incomplete": []
+    },
+    {
+      "test": "consent gates questions and decline survives refresh",
+      "engine": "4.14.0",
+      "violations": [],
+      "incomplete": []
+    },
+    {
+      "test": "recruiter creates and extracts a synthetic draft with immutable revision",
+      "engine": "4.14.0",
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "nodes": 3
+        }
+      ]
+    },
+    {
+      "test": "recruiter creates and extracts a synthetic draft with immutable revision",
+      "engine": "4.14.0",
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "nodes": 3
+        }
+      ]
+    },
+    {
+      "test": "recruiter creates and extracts a synthetic draft with immutable revision",
+      "engine": "4.14.0",
+      "violations": [
+        {
+          "id": "label-content-name-mismatch",
+          "impact": "serious",
+          "nodes": 1
+        }
+      ],
+      "incomplete": []
+    },
+    {
+      "test": "separate manager tenant cannot read or mutate recruiter resources",
+      "engine": "4.14.0",
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "nodes": 1
+        }
+      ]
+    },
+    {
+      "test": "separate manager tenant cannot read or mutate recruiter resources",
+      "engine": "4.14.0",
+      "violations": [],
+      "incomplete": []
+    },
+    {
+      "test": "separate manager tenant cannot read or mutate recruiter resources",
+      "engine": "4.14.0",
+      "violations": [
+        {
+          "id": "label-content-name-mismatch",
+          "impact": "serious",
+          "nodes": 1
+        }
+      ],
+      "incomplete": []
+    },
+    {
+      "test": "separate manager tenant cannot read or mutate recruiter resources",
+      "engine": "4.14.0",
+      "violations": [],
+      "incomplete": []
+    },
+    {
+      "test": "candidate completes with complete device storage",
+      "engine": "4.14.0",
+      "violations": [],
+      "incomplete": []
+    },
+    {
+      "test": "candidate completes with complete device storage",
+      "engine": "4.14.0",
+      "violations": [],
+      "incomplete": []
+    },
+    {
+      "test": "candidate completes with complete device storage",
+      "engine": "4.14.0",
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "nodes": 1
+        }
+      ]
+    },
+    {
+      "test": "candidate completes with denied device storage",
+      "engine": "4.14.0",
+      "violations": [],
+      "incomplete": []
+    },
+    {
+      "test": "candidate completes with denied device storage",
+      "engine": "4.14.0",
+      "violations": [],
+      "incomplete": []
+    },
+    {
+      "test": "candidate completes with denied device storage",
+      "engine": "4.14.0",
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "nodes": 1
+        }
+      ]
+    },
+    {
+      "test": "candidate completes with quota device storage",
+      "engine": "4.14.0",
+      "violations": [],
+      "incomplete": []
+    },
+    {
+      "test": "candidate completes with quota device storage",
+      "engine": "4.14.0",
+      "violations": [],
+      "incomplete": []
+    },
+    {
+      "test": "candidate completes with quota device storage",
+      "engine": "4.14.0",
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "nodes": 1
+        }
+      ]
+    },
+    {
+      "test": "candidate completes with clear device storage",
+      "engine": "4.14.0",
+      "violations": [],
+      "incomplete": []
+    },
+    {
+      "test": "candidate completes with clear device storage",
+      "engine": "4.14.0",
+      "violations": [],
+      "incomplete": []
+    },
+    {
+      "test": "candidate completes with clear device storage",
+      "engine": "4.14.0",
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "nodes": 1
+        }
+      ]
+    },
+    {
+      "test": "submitted responses generate a saved report and native evidence dialog",
+      "engine": "4.14.0",
+      "violations": [],
+      "incomplete": []
+    },
+    {
+      "test": "submitted responses generate a saved report and native evidence dialog",
+      "engine": "4.14.0",
+      "violations": [],
+      "incomplete": []
+    },
+    {
+      "test": "submitted responses generate a saved report and native evidence dialog",
+      "engine": "4.14.0",
+      "violations": [],
+      "incomplete": []
+    },
+    {
+      "test": "submitted responses generate a saved report and native evidence dialog",
+      "engine": "4.14.0",
+      "violations": [],
+      "incomplete": []
+    },
+    {
+      "test": "submitted responses generate a saved report and native evidence dialog",
+      "engine": "4.14.0",
+      "violations": [],
+      "incomplete": []
+    },
+    {
+      "test": "submitted responses generate a saved report and native evidence dialog",
+      "engine": "4.14.0",
+      "violations": [],
+      "incomplete": []
+    },
+    {
+      "test": "synthetic administrator exports and anonymizes only the disposable candidate",
+      "engine": "4.14.0",
+      "violations": [],
+      "incomplete": []
+    },
+    {
+      "test": "synthetic administrator exports and anonymizes only the disposable candidate",
+      "engine": "4.14.0",
+      "violations": [],
+      "incomplete": []
+    }
+  ],
+  "cleanup": "owned PostgreSQL/Mailpit containers and network removed; temporary browser artifacts deleted",
+  "limits": [
+    "Synthetic HMAC and local mail only",
+    "No Auth0/Resend/hosted/manual acceptance",
+    "v2 result and frozen v1 trace provenance passed; no persisted-v1 browser replay claim"
+  ]
+}

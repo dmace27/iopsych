@@ -60,7 +60,7 @@ test("selected assessment traverses real linked history, retains pagination scop
   page,
 }) => {
   test.setTimeout(120_000);
-  await page.goto(`/candidate/invites/${process.env.BROWSER_E2E_PRIVACY}`);
+  await page.goto(`/candidate/invites/${process.env.BROWSER_E2E_HISTORY}`);
   await page
     .getByRole("button", { name: "I consent and want to begin" })
     .click();
@@ -94,11 +94,11 @@ test("selected assessment traverses real linked history, retains pagination scop
   await page.goto(`/roles/${alphaRole}/reports`);
   await page
     .getByRole("button", {
-      name: "Generate report for privacy@example.invalid",
+      name: "Generate report for history@example.invalid",
     })
     .click();
   await expect(
-    page.getByRole("heading", { name: "Report for privacy@example.invalid" }),
+    page.getByRole("heading", { name: "Report for history@example.invalid" }),
   ).toBeVisible();
   const evidence = page.getByRole("button", {
     name: "View evidence for Autonomy",
@@ -115,9 +115,20 @@ test("selected assessment traverses real linked history, retains pagination scop
   await page.keyboard.press("Escape");
   await expect(page.getByRole("dialog")).toHaveCount(0);
   await expect(evidence).toBeFocused();
+  const submissions = await page.request.get(
+    `/api/internal/roles/${alphaRole}/assessments`,
+  );
+  expect(submissions.status()).toBe(200);
+  const subject = (await submissions.json()).find(
+    (item: { candidate_email: string }) =>
+      item.candidate_email === "history@example.invalid",
+  );
+  expect(subject).toBeDefined();
   await page.goto("/privacy");
-  await page.getByLabel("Reference type").selectOption("role_id");
-  await page.getByLabel("Reference ID", { exact: true }).fill(alphaRole);
+  await page.getByLabel("Reference type").selectOption("invite_id");
+  await page
+    .getByLabel("Reference ID", { exact: true })
+    .fill(subject.invitation_id);
   await page.getByRole("button", { name: "Find assessments" }).click();
   const select = page.getByRole("button", { name: /^Select assessment / });
   await expect(select).toHaveCount(1);

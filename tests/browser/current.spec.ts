@@ -54,7 +54,7 @@ test("invitations: independent active fixture, cancel, revoke and refresh", asyn
       exact: true,
     }),
   });
-  await expect(row.getByText("Stored status: Active")).toBeVisible();
+  await expect(row.getByText("Stored invitation state: Active")).toBeVisible();
   for (const width of [320, 375, 1280]) {
     await page.setViewportSize({ width, height: 800 });
     await inspect(page);
@@ -67,13 +67,13 @@ test("invitations: independent active fixture, cancel, revoke and refresh", asyn
     await dialog.dismiss();
   });
   await revoke.click();
-  await expect(row.getByText("Stored status: Active")).toBeVisible();
+  await expect(row.getByText("Stored invitation state: Active")).toBeVisible();
   page.once("dialog", async (dialog) => {
     expect(dialog.type()).toBe("confirm");
     await dialog.accept();
   });
   await revoke.click();
-  await expect(row.getByText("Stored status: Revoked")).toBeVisible();
+  await expect(row.getByText("Stored invitation state: Revoked")).toBeVisible();
   await expect(revoke).toHaveCount(0);
   await expect(
     page
@@ -83,9 +83,9 @@ test("invitations: independent active fixture, cancel, revoke and refresh", asyn
   await page
     .getByRole("button", { name: "Refresh invitation history" })
     .click();
-  await expect(row.getByText("Stored status: Revoked")).toBeVisible();
+  await expect(row.getByText("Stored invitation state: Revoked")).toBeVisible();
   await page.reload();
-  await expect(row.getByText("Stored status: Revoked")).toBeVisible();
+  await expect(row.getByText("Stored invitation state: Revoked")).toBeVisible();
   await inspect(page);
   await page.goto(`/candidate/invites/${process.env.BROWSER_E2E_REVOKE}`);
   await expect(

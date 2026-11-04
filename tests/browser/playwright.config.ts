@@ -10,6 +10,7 @@ if (
     "CLEAR",
     "REVOKE",
     "PRIVACY",
+    "HISTORY",
     "FOCUS",
     "RECRUITER",
     "MANAGER",

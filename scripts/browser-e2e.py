@@ -33,6 +33,21 @@ def selected_specs(arguments):
     return list(dict.fromkeys(arguments))
 
 
+def run_browser_specs(specs, run_spec):
+    """Keep real peer limits intact while separate specs share the owned stack."""
+    selected = specs or sorted(path.name for path in BROWSER.glob("*.spec.ts"))
+    failed = []
+    for index, spec in enumerate(selected):
+        if index:
+            # All browser-proxy traffic shares one API peer and its 60s budget.
+            # Separate scenarios by a full window rather than raising that limit.
+            print("Waiting for the owned API peer rate window", flush=True)
+            time.sleep(61)
+        if not run_spec(spec):
+            failed.append(spec)
+    return failed
+
+
 def preflight():
     # No inherited destination, proxy, credentials, or dotenv can redirect this run.
     protected = (
@@ -199,6 +214,7 @@ def main():
                 "CLEAR",
                 "REVOKE",
                 "PRIVACY",
+                "HISTORY",
                 "FOCUS",
             ):
                 token = InviteTokenCodec(environment["INVITE_TOKEN_SIGNING_SECRET"]).generate()
@@ -277,36 +293,42 @@ def main():
         artifacts = stack.enter_context(
             tempfile.TemporaryDirectory(prefix="iopsych-e2e-artifacts-")
         )
-        result = subprocess.run(
-            [
-                "npm",
-                "--prefix",
-                "tests/browser",
-                "test",
-                "--",
-                *specs,
-                "--output",
-                artifacts,
-            ],
-            cwd=ROOT,
-            env=environment,
-            check=False,
-            text=True,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-        )
-        print(
-            redact(
-                result.stdout,
-                (
-                    *tokens.values(),
-                    *credentials.values(),
-                    environment["AUTH_JWT_SECRET"],
-                    environment["INVITE_TOKEN_SIGNING_SECRET"],
-                ),
+
+        def run_spec(spec):
+            result = subprocess.run(
+                [
+                    "npm",
+                    "--prefix",
+                    "tests/browser",
+                    "test",
+                    "--",
+                    spec,
+                    "--output",
+                    artifacts,
+                ],
+                cwd=ROOT,
+                env=environment,
+                check=False,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
             )
-        )
-        result.check_returncode()
+            print(
+                redact(
+                    result.stdout,
+                    (
+                        *tokens.values(),
+                        *credentials.values(),
+                        environment["AUTH_JWT_SECRET"],
+                        environment["INVITE_TOKEN_SIGNING_SECRET"],
+                    ),
+                )
+            )
+            return result.returncode == 0
+
+        failed = run_browser_specs(specs, run_spec)
+        if failed:
+            raise RuntimeError("Browser specifications failed: " + ", ".join(failed))
     print("PASS: expanded isolated browser coverage; full package 12A acceptance remains open")
 
 
