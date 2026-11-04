@@ -22,10 +22,12 @@ export function RoleMaintenance({
   role,
   userRole,
   onChanged,
+  descriptionLocked = false,
 }: {
   role: Role;
   userRole: InternalUserRole;
   onChanged: (role: Role) => void;
+  descriptionLocked?: boolean;
 }) {
   const [confirming, setConfirming] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -56,7 +58,11 @@ export function RoleMaintenance({
     if (!writable || inFlight.current) return;
     const patch: RoleUpdateInput = {};
     for (const [key] of fields)
-      if (values[key].trim() !== role[key]) patch[key] = values[key];
+      if (
+        !(descriptionLocked && key === "job_description") &&
+        values[key].trim() !== role[key]
+      )
+        patch[key] = values[key];
     const parsed = RoleUpdateSchema.safeParse(patch);
     if (!parsed.success) {
       setError(
@@ -187,6 +193,7 @@ export function RoleMaintenance({
                     {key === "job_description" ? (
                       <textarea
                         className="field-control"
+                        disabled={descriptionLocked}
                         required
                         maxLength={limit}
                         value={values[key]}
@@ -207,6 +214,11 @@ export function RoleMaintenance({
                     )}
                   </label>
                 ))}
+                {descriptionLocked ? (
+                  <p>
+                    Job description is locked after profile versioning begins.
+                  </p>
+                ) : null}
                 <button className={buttonClass} type="submit">
                   {busy ? "Saving role details…" : "Save role details"}
                 </button>

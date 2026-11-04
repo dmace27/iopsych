@@ -289,11 +289,15 @@ export function RoleProfileWorkspace({ roleId }: { roleId: string }) {
         </details>
       </header>
       <RoleMaintenance
+        key={state.role.id}
         role={state.role}
         userRole={state.user.role}
+        descriptionLocked={state.profiles.length > 0}
         onChanged={(role) => {
           setState((current) =>
-            current.status === "ready" ? { ...current, role } : current,
+            current.status === "ready" && current.role.id === role.id
+              ? { ...current, role }
+              : current,
           );
           if (role.status === "archived") setStartingReplacement(false);
         }}

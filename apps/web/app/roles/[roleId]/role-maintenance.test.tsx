@@ -27,6 +27,26 @@ beforeEach(() => {
   };
 });
 afterEach(cleanup);
+it("keeps versioned descriptions read-only while permitting metadata edits", async () => {
+  const user = userEvent.setup();
+  mocks.updateRole.mockResolvedValue({ ...role, location: "Remote" });
+  render(
+    <RoleMaintenance
+      role={role}
+      userRole="admin"
+      onChanged={vi.fn()}
+      descriptionLocked
+    />,
+  );
+  await user.click(screen.getByText("Edit role details"));
+  expect(screen.getByLabelText(/Job description/)).toBeDisabled();
+  await user.clear(screen.getByLabelText(/Location/));
+  await user.type(screen.getByLabelText(/Location/), "Remote");
+  await user.click(screen.getByText("Save role details"));
+  expect(mocks.updateRole).toHaveBeenCalledWith(role.id, {
+    location: "Remote",
+  });
+});
 it.each(["admin", "recruiter"] as const)(
   "saves only changed trimmed metadata for %s",
   async (userRole) => {
