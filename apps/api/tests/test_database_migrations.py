@@ -6,10 +6,10 @@ from pathlib import Path
 from weakref import ReferenceType, WeakValueDictionary
 
 import pytest
+from alembic import command
 from alembic.config import Config
 from sqlalchemy import create_engine, inspect, text
 
-from alembic import command
 from app.database import seed, verify
 
 API_ROOT = Path(__file__).resolve().parents[1]

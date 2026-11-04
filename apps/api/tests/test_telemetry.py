@@ -8,6 +8,7 @@ from unittest.mock import AsyncMock, MagicMock
 from uuid import UUID, uuid4
 
 import pytest
+from alembic import command
 from alembic.config import Config
 from fastapi import Request
 from fastapi.testclient import TestClient
@@ -15,7 +16,6 @@ from sqlalchemy.orm import sessionmaker
 from starlette.routing import Route
 from starlette.types import Message, Receive, Scope, Send
 
-from alembic import command
 from app.invitations.config import InvitationSettings
 from app.main import create_app
 from app.runtime.config import RuntimeSettings

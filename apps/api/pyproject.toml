@@ -37,6 +37,7 @@ select = ["E", "F", "I", "N", "UP", "B", "SIM", "RUF"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["app", "iopsych_contracts"]
+known-third-party = ["alembic"]
 
 [tool.ruff.format]
 quote-style = "double"
