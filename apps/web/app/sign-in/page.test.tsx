@@ -5,14 +5,17 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 vi.mock("./sign-in-form", () => ({
   SignInForm: ({
     localLogin,
+    tokenLogin,
     returnTo,
   }: {
     localLogin: boolean;
+    tokenLogin: boolean;
     returnTo: string;
   }) => (
     <div
       data-testid="form"
       data-local={String(localLogin)}
+      data-token={String(tokenLogin)}
       data-return-to={returnTo}
     />
   ),
@@ -25,6 +28,12 @@ afterEach(() => {
 });
 
 describe("sign-in page", () => {
+  it("does not offer token paste in production even when fixture exchange is enabled", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("ENABLE_TOKEN_SIGN_IN", "true");
+    render(await SignInPage({ searchParams: Promise.resolve({}) }));
+    expect(screen.getByTestId("form")).toHaveAttribute("data-token", "false");
+  });
   it.each([
     ["development", "true", "true"],
     ["development", "false", "false"],

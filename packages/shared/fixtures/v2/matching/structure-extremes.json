@@ -1,0 +1,34 @@
+{
+  "contract": "structure_comparison_cases",
+  "expected_valid": true,
+  "payload": [
+    {
+      "description": "Clearly defined goals and routines meet a strong preference for predictable direction.",
+      "role_rating": 5,
+      "candidate_rating": 5,
+      "classification": "aligned",
+      "absolute_difference": 0
+    },
+    {
+      "description": "Little predefined process matches a low preference for predictable direction.",
+      "role_rating": 1,
+      "candidate_rating": 1,
+      "classification": "aligned",
+      "absolute_difference": 0
+    },
+    {
+      "description": "Little predefined process differs from a strong preference for predictable direction.",
+      "role_rating": 1,
+      "candidate_rating": 5,
+      "classification": "potential_friction",
+      "absolute_difference": 4
+    },
+    {
+      "description": "Highly defined routines differ from a low preference for predictable direction.",
+      "role_rating": 5,
+      "candidate_rating": 1,
+      "classification": "potential_friction",
+      "absolute_difference": 4
+    }
+  ]
+}

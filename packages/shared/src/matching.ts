@@ -16,6 +16,7 @@ import {
   type AlignmentClassification,
   type ConfidenceLevel,
   type ConstructKey,
+  type ComparisonTarget,
 } from "./constructs";
 import {
   RoleConstructRatingSchema,
@@ -24,7 +25,33 @@ import {
 import { ContractVersionSchema } from "./scoring-config";
 
 /** Version of the deterministic rules and question-selection behavior. */
-export const MATCHING_ALGORITHM_VERSION = "1.0.0" as const;
+export const MATCHING_ALGORITHM_VERSION = "2.0.0" as const;
+
+/** Readers retain historical algorithms when the current generator changes. */
+export const MatchingAlgorithmVersionSchema = z.enum(["1.0.0", "2.0.0"]);
+export type MatchingAlgorithmVersion = z.infer<
+  typeof MatchingAlgorithmVersionSchema
+>;
+
+/** Immutable comparison policies; v1 remains available for historical replay. */
+const structureTargets: Readonly<
+  Record<MatchingAlgorithmVersion, ComparisonTarget>
+> = {
+  "1.0.0": "inverse_role_rating",
+  "2.0.0": "role_rating",
+};
+
+/** Resolve the selected algorithm's rule and reject unsupported versions. */
+export function comparisonTarget(
+  constructKey: ConstructKey,
+  algorithmVersion: MatchingAlgorithmVersion = MATCHING_ALGORITHM_VERSION,
+): ComparisonTarget {
+  const structureTarget =
+    structureTargets[MatchingAlgorithmVersionSchema.parse(algorithmVersion)];
+  return constructKey === "structure"
+    ? structureTarget
+    : CONSTRUCT_DEFINITIONS_BY_KEY[constructKey].comparison_target;
+}
 
 export const MatchingRuleSchema = z.enum([
   "role_profile_not_approved",
@@ -243,7 +270,7 @@ export type AlignmentItem = z.infer<typeof AlignmentItemSchema>;
 
 export const MatchingResultSchema = z
   .strictObject({
-    algorithm_version: z.literal(MATCHING_ALGORITHM_VERSION),
+    algorithm_version: MatchingAlgorithmVersionSchema,
     role_profile_approved: z.boolean(),
     assessment_definition_id: z.string().trim().min(1),
     assessment_definition_version: ContractVersionSchema,
@@ -255,6 +282,18 @@ export const MatchingResultSchema = z
       result.items.map((item) => ({ key: item.construct_key })),
       context,
     );
+    result.items.forEach((item, index) => {
+      if (
+        item.explanation.role.comparison_target !==
+        comparisonTarget(item.construct_key, result.algorithm_version)
+      ) {
+        context.addIssue({
+          code: "custom",
+          message: "comparison target must match the stored algorithm version",
+          path: ["items", index, "explanation", "role", "comparison_target"],
+        });
+      }
+    });
   });
 export type MatchingResult = z.infer<typeof MatchingResultSchema>;
 
@@ -441,12 +480,13 @@ const confidenceOrder: Readonly<Record<ConfidenceLevel, number>> = {
   high: 2,
 };
 
-/** Return the inspectable role target, applying structure's inverse rule. */
+/** Derive the target using the selected algorithm, including legacy v1 replay. */
 export function comparisonRating(
   constructKey: ConstructKey,
   roleRating: number,
+  algorithmVersion: MatchingAlgorithmVersion = MATCHING_ALGORITHM_VERSION,
 ): number {
-  return CONSTRUCT_DEFINITIONS_BY_KEY[constructKey].comparison_target ===
+  return comparisonTarget(constructKey, algorithmVersion) ===
     "inverse_role_rating"
     ? 6 - roleRating
     : roleRating;
@@ -535,6 +575,7 @@ export function matchConstruct(
   role: RoleConstructRating,
   candidate: CandidateConstructScore,
   roleProfileApproved: boolean,
+  algorithmVersion: MatchingAlgorithmVersion = MATCHING_ALGORITHM_VERSION,
 ): AlignmentItem {
   if (role.key !== candidate.construct_key) {
     throw new MatchingError(
@@ -543,8 +584,12 @@ export function matchConstruct(
     );
   }
 
-  const definition = CONSTRUCT_DEFINITIONS_BY_KEY[role.key];
-  const targetRating = comparisonRating(role.key, role.rating);
+  const target = comparisonTarget(role.key, algorithmVersion);
+  const targetRating = comparisonRating(
+    role.key,
+    role.rating,
+    algorithmVersion,
+  );
   const difference = Math.abs(targetRating - candidate.rating);
   const confidence = lowerConfidence(role.confidence, candidate.confidence);
   const outcome = classify(roleProfileApproved, confidence, difference);
@@ -559,7 +604,7 @@ export function matchConstruct(
         confidence: role.confidence,
         rationale: role.rationale,
         evidence: [...role.evidence],
-        comparison_target: definition.comparison_target,
+        comparison_target: target,
         comparison_rating: targetRating,
       },
       candidate_response: {
@@ -573,7 +618,11 @@ export function matchConstruct(
       applied_rule: {
         rule: outcome.rule,
         absolute_difference: difference,
-        description: outcome.description,
+        description:
+          role.key === "structure" && algorithmVersion === "2.0.0"
+            ? "Available role structure is compared directly with the candidate's preference. " +
+              outcome.description
+            : outcome.description,
       },
       uncertainty: outcome.uncertainty,
     },
@@ -585,6 +634,7 @@ export function matchConstruct(
 export function matchRoleProfile(
   roleProfile: MatchingRoleProfile,
   candidateScores: AssessmentScoreResult,
+  algorithmVersion: MatchingAlgorithmVersion = MATCHING_ALGORITHM_VERSION,
 ): MatchingResult {
   const parsedRoleProfile = MatchingRoleProfileSchema.parse(roleProfile);
   const parsedCandidateScores =
@@ -603,11 +653,12 @@ export function matchRoleProfile(
       rolesByKey.get(key)!,
       candidatesByKey.get(key)!,
       parsedRoleProfile.approved,
+      algorithmVersion,
     ),
   );
 
   return MatchingResultSchema.parse({
-    algorithm_version: MATCHING_ALGORITHM_VERSION,
+    algorithm_version: algorithmVersion,
     role_profile_approved: parsedRoleProfile.approved,
     assessment_definition_id: parsedCandidateScores.assessment_definition_id,
     assessment_definition_version:

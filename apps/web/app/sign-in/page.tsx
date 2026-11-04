@@ -8,13 +8,17 @@ export const metadata: Metadata = {
   title: "Sign in",
 };
 
-/** Render the provider-token exchange used to establish the secure session. */
+/** Offer provider login while retaining explicitly enabled synthetic access. */
 export default async function SignInPage({
   searchParams,
 }: {
-  searchParams: Promise<{ returnTo?: string | string[] }>;
+  searchParams: Promise<{
+    returnTo?: string | string[];
+    error?: string | string[];
+  }>;
 }) {
-  const returnTo = safeReturnTo((await searchParams).returnTo);
+  const parameters = await searchParams;
+  const returnTo = safeReturnTo(parameters.returnTo);
   const localLogin =
     process.env.LOCAL_LOGIN_ENABLED === "true" &&
     process.env.NODE_ENV === "development";
@@ -29,10 +33,20 @@ export default async function SignInPage({
       <p className="mt-4 max-w-xl text-base leading-7 text-slate-600">
         {localLogin
           ? "Local synthetic demonstration only. Choose one of the two seeded accounts; these tenants are isolated and contain no real participant data."
-          : "Use an internal-user access token issued by the configured identity provider. The token is exchanged for a secure, HTTP-only browser session."}
+          : "Sign in through your organization’s identity provider to access your workspace."}
       </p>
       <div className="mt-8">
-        <SignInForm localLogin={localLogin} returnTo={returnTo} />
+        <SignInForm
+          localLogin={localLogin}
+          tokenLogin={
+            process.env.ENABLE_TOKEN_SIGN_IN === "true" &&
+            process.env.NODE_ENV !== "production"
+          }
+          returnTo={returnTo}
+          providerError={
+            typeof parameters.error === "string" ? parameters.error : undefined
+          }
+        />
       </div>
     </main>
   );

@@ -75,7 +75,11 @@ def issuance_digests(
             code="synthetic_recipient_required",
             detail="Local delivery requires a synthetic address.",
         )
-    canonical = {"role_id": str(role_id), "request": request.model_dump(mode="json")}
+    # Preserve pre-provider request digests for queued jobs already on disk.
+    canonical = {
+        "role_id": str(role_id),
+        "request": request.model_dump(mode="json", exclude={"request_id"}),
+    }
     return (
         sha256(idempotency_key.encode("ascii")).hexdigest(),
         sha256(json.dumps(canonical, sort_keys=True, separators=(",", ":")).encode()).hexdigest(),

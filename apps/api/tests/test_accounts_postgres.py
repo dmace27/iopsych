@@ -73,8 +73,7 @@ def account_test_url(raw: str) -> URL:
     if (
         url.drivername != "postgresql+psycopg"
         or url.host != "127.0.0.1"
-        or url.port != 5594
-        or url.database != "iopsych_access"
+        or (url.port, url.database) not in {(5594, "iopsych_access"), (5606, "iopsych_reconcile")}
         or url.query
     ):
         raise ValueError(
@@ -170,7 +169,7 @@ def test_populated_full_migration_chain_and_guard(monkeypatch: pytest.MonkeyPatc
         with engine.connect() as connection:
             assert (
                 connection.scalar(text("SELECT version_num FROM alembic_version"))
-                == "20261104_0010"
+                == "20261104_0012"
             )
     finally:
         engine.dispose()

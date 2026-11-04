@@ -5,12 +5,13 @@ from typing import Annotated
 
 from fastapi import Depends, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.auth.context import AuthorizationContext, OrganizationScope
 from app.auth.errors import authentication_required, authentication_unavailable, permission_denied
 from app.auth.tokens import TokenValidationError, TokenVerifier
-from app.database.models import InternalUserRole
+from app.database.models import InternalUserRole, User
 from app.database.repositories import OrganizationDataAccess
 from app.database.session import (
     REQUEST_SESSION_STATE_ATTRIBUTE,
@@ -50,8 +51,12 @@ def authenticate_internal_user(
         # Never disclose whether signature, expiry, subject, or tenant failed.
         raise authentication_required() from exc
 
-    organization_access = OrganizationDataAccess(session, identity.organization_id)
-    user = organization_access.get_user_by_auth_subject(identity.subject)
+    # One globally unique provider subject belongs to exactly one organization.
+    # HMAC development tokens additionally retain their explicit tenant check.
+    statement = select(User).where(User.auth_subject == identity.subject)
+    if identity.organization_id is not None:
+        statement = statement.where(User.organization_id == identity.organization_id)
+    user = session.scalar(statement)
     if user is None or not user.is_active:
         raise authentication_required()
 

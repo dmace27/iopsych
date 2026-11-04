@@ -26,6 +26,7 @@ function signInRequest(token: unknown): Request {
 
 describe("internal browser session", () => {
   beforeEach(() => {
+    vi.stubEnv("ENABLE_TOKEN_SIGN_IN", "true");
     cookieMocks.cookies.mockReset();
     cookieMocks.delete.mockReset();
     cookieMocks.set.mockReset();
@@ -38,6 +39,7 @@ describe("internal browser session", () => {
 
   afterEach(() => {
     vi.unstubAllGlobals();
+    vi.unstubAllEnvs();
   });
 
   it("rejects cross-site sign-in and sign-out requests", async () => {
@@ -75,6 +77,14 @@ describe("internal browser session", () => {
     expect(missing.status).toBe(400);
     expect(oversized.status).toBe(400);
     expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it("disables manual token exchange by default before contacting the API", async () => {
+    vi.stubEnv("ENABLE_TOKEN_SIGN_IN", "");
+    const response = await POST(signInRequest("provider-token"));
+    expect(response.status).toBe(404);
+    expect(fetch).not.toHaveBeenCalled();
+    expect(cookieMocks.set).not.toHaveBeenCalled();
   });
 
   it("validates the token and stores it with strict cookie protections", async () => {
@@ -162,12 +172,21 @@ describe("internal browser session", () => {
       maxAge: 0,
     });
     expect(cookieMocks.delete).not.toHaveBeenCalled();
+    expect(cookieMocks.set).toHaveBeenCalledWith("iopsych_login", "", {
+      httpOnly: true,
+      path: "/",
+      sameSite: "lax",
+      secure: false,
+      expires: new Date(0),
+      maxAge: 0,
+    });
     expect(response.status).toBe(204);
   });
 });
 
 it("preserves API throttling and never creates a session on a rate-limit failure", async () => {
   cookieMocks.set.mockClear();
+  vi.stubEnv("ENABLE_TOKEN_SIGN_IN", "true");
   vi.stubGlobal(
     "fetch",
     vi
@@ -188,6 +207,7 @@ it("preserves API throttling and never creates a session on a rate-limit failure
     ).toBe("60");
   } finally {
     vi.unstubAllGlobals();
+    vi.unstubAllEnvs();
   }
 });
 
@@ -196,6 +216,7 @@ describe.each([
   ["development", "iopsych_internal_token", false],
 ] as const)("%s session cookie lifecycle", (environment, name, secure) => {
   beforeEach(() => {
+    vi.stubEnv("ENABLE_TOKEN_SIGN_IN", "true");
     vi.resetModules();
     vi.stubEnv("NODE_ENV", environment);
     cookieMocks.set.mockReset();
@@ -245,6 +266,12 @@ describe.each([
       maxAge: 0,
     });
     expect(cookieMocks.delete).not.toHaveBeenCalled();
+    expect(cookieMocks.set).toHaveBeenNthCalledWith(
+      3,
+      environment === "production" ? "__Host-iopsych_login" : "iopsych_login",
+      "",
+      { ...options, sameSite: "lax", expires: new Date(0), maxAge: 0 },
+    );
   });
 
   it.each([

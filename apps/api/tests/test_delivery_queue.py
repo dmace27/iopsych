@@ -132,7 +132,12 @@ def queue_factory(
         if not raw:
             pytest.skip("Set isolated TEST_DELIVERY_POSTGRES_URL for PostgreSQL evidence")
         url = make_url(raw)
-        assert url.host == "127.0.0.1" and url.port == 5586 and url.database == "iopsych_delivery"
+        assert (
+            url.host == "127.0.0.1"
+            and (url.port, url.database)
+            in {(5586, "iopsych_delivery"), (5606, "iopsych_reconcile")}
+            and not url.query
+        )
         admin = create_engine(url)
         with admin.begin() as connection:
             connection.execute(CreateSchema(schema))
@@ -540,6 +545,7 @@ def test_api_pending_response_compatible_and_replayed(
         "sent_at",
         "revoked_at",
         "created_at",
+        "delivery_state",
     }
     assert captured == []
 
@@ -653,12 +659,32 @@ def test_pending_credentials_block_migration_downgrade(
     with queue_factory() as session:
         identifier = issue(session).id
         url = session.get_bind().engine.url.render_as_string(hide_password=False)
-    with pytest.raises(RuntimeError, match="Cancel or expire"):
+    # Exercise the retained queue migration guard directly: the newer notice
+    # migration also correctly blocks a full downgrade once notice evidence exists.
+    import runpy
+    from pathlib import Path
+
+    from alembic.migration import MigrationContext
+    from alembic.operations import Operations
+
+    migration = runpy.run_path(
+        str(Path(__file__).parents[1] / "alembic/versions/20261104_0009_invitation_deliveries.py")
+    )
+    with queue_factory() as probe:
+        engine = probe.get_bind()
+        assert isinstance(engine, Engine)
+    with (
+        engine.begin() as connection,
+        Operations.context(MigrationContext.configure(connection)),
+        pytest.raises(RuntimeError, match="Cancel or expire"),
+    ):
+        migration["downgrade"]()
+    with pytest.raises(RuntimeError, match="notice evidence"):
         command.downgrade(alembic_config(url), "20261104_0008")
     with queue_factory() as session:
         service(session).revoke(ALPHA_ROLE_ID, identifier)
-    command.downgrade(alembic_config(url), "20261104_0008")
-    command.upgrade(alembic_config(url), "head")
+    with pytest.raises(RuntimeError, match="notice evidence"):
+        command.downgrade(alembic_config(url), "20261104_0008")
 
 
 def test_invalid_worker_batch_and_adapter(queue_factory: sessionmaker[Session]) -> None:

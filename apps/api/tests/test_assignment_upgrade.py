@@ -27,11 +27,19 @@ from app.assignments.registry import (
 from app.database.seed import ALPHA_PROFILE_ID, seed_database
 from iopsych_contracts import RoleConstructRating as RatingContract
 from iopsych_contracts.assessment import AssessmentResponseSet, score_assessment
-from iopsych_contracts.matching import MatchingRoleProfile, match_role_profile
+from iopsych_contracts.matching import (
+    MatchingAlgorithmVersion,
+    MatchingRoleProfile,
+    match_role_profile,
+)
 from tests.test_database_migrations import alembic_config
 from tests.test_reports import responses
 
-APPROVED_UPGRADE_DATABASES = {(5550, "iopsych_6c"), (5571, "iopsych_regression")}
+APPROVED_UPGRADE_DATABASES = {
+    (5550, "iopsych_6c"),
+    (5571, "iopsych_regression"),
+    (5606, "iopsych_reconcile"),
+}
 
 
 def validated_upgrade_url(database_url: str) -> URL:
@@ -135,6 +143,7 @@ def test_populated_upgrade_preserves_assignments_and_original_interpretation(
                 ),
             ),
             scores,
+            algorithm_version=MatchingAlgorithmVersion.V1,
         ).model_dump(mode="json")
     invites = metadata.tables["assessment_invites"]
     consents = metadata.tables["candidate_consents"]

@@ -1,6 +1,7 @@
 """Retained v1 readers; adding a release must never replace a historical entry."""
 
 import json
+from functools import partial
 from hashlib import sha256
 from pathlib import Path
 from types import MappingProxyType
@@ -16,7 +17,12 @@ from iopsych_contracts.assessment import (
     AssessmentScoreResult,
     score_assessment,
 )
-from iopsych_contracts.matching import MatchingResult, MatchingRoleProfile, match_role_profile
+from iopsych_contracts.matching import (
+    MatchingAlgorithmVersion,
+    MatchingResult,
+    MatchingRoleProfile,
+    match_role_profile,
+)
 
 LEGACY_DEFINITION_PATH = Path(__file__).parent / "definitions/legacy-v1.json"
 LEGACY_SHA256 = "021233ca4dab9c86b87aeabca88f503bf7c70fd0b0d324c64e788b620aeb6e3c"
@@ -24,8 +30,15 @@ LEGACY_SHA256 = "021233ca4dab9c86b87aeabca88f503bf7c70fd0b0d324c64e788b620aeb6e3
 REVIEWED_DEFINITIONS: frozenset[tuple[str, str, str]] = frozenset()
 RETIRED_DEFINITIONS: frozenset[tuple[str, str, str]] = frozenset()
 SCORERS = MappingProxyType({"1.0.0": score_assessment})
-MATCHERS = MappingProxyType({"1.0.0": match_role_profile})
-REPORT_READERS = MappingProxyType({"1.0.0": MatchingResult.model_validate})
+MATCHERS = MappingProxyType(
+    {
+        version.value: partial(match_role_profile, algorithm_version=version)
+        for version in MatchingAlgorithmVersion
+    }
+)
+REPORT_READERS = MappingProxyType(
+    {version.value: MatchingResult.model_validate for version in MatchingAlgorithmVersion}
+)
 
 
 def definition_hash(payload: dict[str, Any]) -> str:
@@ -144,7 +157,11 @@ def read_scores(payload: dict[str, Any]) -> AssessmentScoreResult:
 
 
 def match_assignment(
-    assignment: AssignmentSnapshot, role: MatchingRoleProfile, scores: AssessmentScoreResult
+    assignment: AssignmentSnapshot,
+    role: MatchingRoleProfile,
+    scores: AssessmentScoreResult,
+    *,
+    algorithm: str | None = None,
 ) -> MatchingResult:
     definition = assignment.definition
     if (
@@ -156,7 +173,12 @@ def match_assignment(
             code="unsupported_assessment_version",
             detail="Stored scores do not match the assigned assessment.",
         )
-    return MATCHERS[assignment.matching_algorithm_version](role, scores)
+    selected_algorithm = assignment.matching_algorithm_version if algorithm is None else algorithm
+    if selected_algorithm not in MATCHERS:
+        raise resource_conflict(
+            code="unsupported_report_version", detail="The report algorithm is unavailable."
+        )
+    return MATCHERS[selected_algorithm](role, scores)
 
 
 def read_report(algorithm: str, payload: object) -> MatchingResult:

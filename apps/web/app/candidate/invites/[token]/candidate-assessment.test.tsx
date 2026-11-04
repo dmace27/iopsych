@@ -536,6 +536,14 @@ describe("CandidateAssessment", () => {
     const skip = await screen.findByRole("checkbox", {
       name: "Prefer not to answer this block",
     });
+    // Let the initial screen-focus effect finish before taking keyboard focus.
+    await waitFor(() => {
+      expect(
+        screen.getByRole("heading", {
+          name: /which statements are most and least like you/i,
+        }),
+      ).toHaveFocus();
+    });
     skip.focus();
     await user.keyboard(" ");
     const continueButton = screen.getByRole("button", {

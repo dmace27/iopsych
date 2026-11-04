@@ -1,8 +1,10 @@
 """Environment-backed policy and candidate-facing consent copy."""
 
 from pathlib import Path
+from typing import Literal
 from urllib.parse import urlsplit
 
+from cryptography.fernet import Fernet
 from pydantic import Field, SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -21,6 +23,7 @@ class InvitationSettings(BaseSettings):
         env_file_encoding="utf-8",
         env_prefix="INVITE_",
         extra="ignore",
+        hide_input_in_errors=True,
     )
 
     allow_synthetic_definitions: bool = False
@@ -28,6 +31,14 @@ class InvitationSettings(BaseSettings):
     local_queue_key: SecretStr | None = None
     local_queue_key_id: str = Field(default="local-v1", pattern=r"^[A-Za-z0-9_-]{1,64}$")
 
+    delivery_provider: Literal["disabled", "resend"] = "disabled"
+    delivery_api_key: SecretStr | None = None
+    delivery_encryption_key: SecretStr | None = None
+    delivery_previous_encryption_key: SecretStr | None = None
+    delivery_from_email: str = "invitations@example.invalid"
+    delivery_timeout_seconds: float = Field(default=10, ge=1, le=30)
+    delivery_batch_size: int = Field(default=50, ge=1, le=200)
+    webhook_signing_secret: SecretStr | None = None
     token_signing_secret: SecretStr | None = None
     candidate_base_url: str = "http://localhost:3000/candidate/invites"
     default_expiry_hours: int = Field(default=168, ge=1, le=720)
@@ -50,6 +61,30 @@ class InvitationSettings(BaseSettings):
     )
     privacy_contact_email: str = "privacy@example.invalid"
     accommodation_contact_email: str = "accommodations@example.invalid"
+
+    @field_validator("delivery_api_key", "webhook_signing_secret")
+    @classmethod
+    def normalize_optional_credential(cls, value: SecretStr | None) -> SecretStr | None:
+        """Treat blank secret-manager placeholders as unconfigured, never as sending keys."""
+        if value is None or not value.get_secret_value().strip():
+            return None
+        return SecretStr(value.get_secret_value().strip())
+
+    @field_validator("delivery_encryption_key", "delivery_previous_encryption_key")
+    @classmethod
+    def validate_encryption_key(cls, value: SecretStr | None) -> SecretStr | None:
+        """Require independent URL-safe base64-encoded 256-bit encryption keys."""
+        if value is not None:
+            Fernet(value.get_secret_value().encode())
+        return value
+
+    @field_validator("delivery_from_email")
+    @classmethod
+    def validate_sender(cls, value: str) -> str:
+        """Accept a single mailbox, preventing header injection and sender lists."""
+        from app.invitations.schemas import InvitationCreateRequest
+
+        return InvitationCreateRequest.normalize_email(value.strip())
 
     @field_validator("token_signing_secret")
     @classmethod
@@ -110,6 +145,8 @@ class InvitationSettings(BaseSettings):
     def validate_expiry_policy(self) -> "InvitationSettings":
         """Ensure the default never silently exceeds the configured maximum."""
 
+        if self.local_queue_enabled and self.delivery_provider == "resend":
+            raise ValueError("local queue and Resend are separate delivery modes")
         if self.default_expiry_hours > self.maximum_expiry_hours:
             raise ValueError("default invite expiry cannot exceed maximum expiry")
         return self

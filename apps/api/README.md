@@ -13,13 +13,17 @@ through Alembic. From the repository root, use `npm run db:migrate`,
 the two synthetic seed organizations cannot read one another's users, roles,
 profiles, or audit data through the organization-scoped access layer.
 
-Internal API routes accept provider-issued HS256 bearer JWTs. The token must
-contain `sub`, `organization_id`, `iss`, `aud`, and `exp` claims; the configured
-issuer, audience, and secret are documented in `.env.example`. Roles always come
-from the current database user rather than token claims, and organization
-lookups use the verified token tenant plus the scoped repository. Sensitive
-endpoints marked with `@audited(...)` append an immutable audit event for
-successful, rejected, and failed authenticated requests.
+Internal API routes accept Auth0 RS256 API access tokens when
+`AUTH_PROVIDER=auth0`. Signature verification uses the configured issuer's JWKS,
+with exact issuer/audience and required expiry, issue-time and subject checks.
+Database account state assigns the organization and permissions on every
+request; disabled accounts are rejected immediately. The first pilot supports
+one organization per globally unique provider subject. Administrator account
+provisioning and changes use `/v1/users` and are audited and tenant-scoped. See
+[identity setup and operations](../../docs/identity.md) for Auth0 configuration,
+one-time administrator bootstrap, browser account management and revocation
+limits. `AUTH_PROVIDER=hmac` retains the old HS256/organization-claim contract
+only for explicit development/test configurations.
 
 ## Role and profile lifecycle
 
@@ -61,13 +65,24 @@ profile in the authenticated organization. Candidate links expire, can be
 revoked immediately, and are rate-limited independently from internal-user
 actions.
 
-Invite tokens contain 32 random bytes plus an HMAC signature. Only a SHA-256
-fingerprint is stored; neither API responses nor audit metadata include the raw
-token, and the Uvicorn access logger redacts candidate token path segments.
-Email is rendered through a narrow delivery interface that accepts no assessment
-questions, responses, or scores. The default adapter fails closed without
-logging the link, so a hosted deployment must install a transactional email
-adapter explicitly.
+Invite tokens contain 32 random bytes plus an HMAC signature. The invitation row
+stores only a SHA-256 token hash. Creation requires a UUID `request_id`;
+identical retries return the same invitation. The invitation, encrypted delivery
+payload and issuance audit commit together before the worker can contact Resend.
+`sent_at=null` on creation means queued, not delivered. Use the authenticated
+`GET /v1/roles/{role_id}/invites/{invite_id}/delivery` route to inspect safe
+progress, `/reissue` to explicitly replace an unused link with a new request ID,
+and `/revoke` to cancel access/pending delivery.
+
+The configured Resend adapter uses bounded HTTPS requests and stable provider
+idempotency keys. Run `npm run invitations:deliver` from a deployment scheduler.
+Retries preserve the original encrypted message and stop within 23 hours or
+invitation expiry. Signed Resend callbacks at `/v1/webhooks/resend` update
+delivery state, deduplicate events and handle bounces/complaints. Raw tokens and
+queue payloads never appear in API responses/audits. Confirmed/terminal
+outcomes, revocation and anonymization clear pending ciphertext. Email rendering
+accepts no assessment questions, responses or scores. See
+[delivery configuration, encryption, recovery and staging acceptance](../../docs/invitation-delivery.md).
 
 Consent is an explicit `consent` or `decline` decision tied to a versioned
 notice. A decision is terminal for its invitation, repeated identical requests

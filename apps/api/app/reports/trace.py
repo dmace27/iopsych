@@ -65,12 +65,13 @@ def build_trace(
         if definition_hash(definition_json) != LEGACY_SHA256:
             raise ValueError("Definition content mismatch")
         if assignment_json is not None:
+            # Assignment provenance remains frozen when a separate report uses
+            # a newer matching algorithm over the same definition and scores.
             if not isinstance(assignment_json, dict):
                 raise ValueError("Assignment shape mismatch")
             if (
                 assignment_json.get("definition") != definition_json
                 or assignment_json.get("definition_sha256") != LEGACY_SHA256
-                or assignment_json.get("matching_algorithm_version") != algorithm_version
             ):
                 raise ValueError("Assignment mismatch")
             read_assignment(assignment_json)

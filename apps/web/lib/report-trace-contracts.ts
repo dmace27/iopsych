@@ -29,7 +29,7 @@ const ConstructTraceSchema = z.strictObject({
     CandidateConfidenceRulesSchema.shape.low,
   ]),
   question_selection: z.strictObject({
-    algorithm_version: z.literal("1.0.0"),
+    algorithm_version: z.enum(["1.0.0", "2.0.0"]),
     construct_key: ConstructKeySchema,
     classification: AlignmentClassificationSchema,
     primary_question_id: z.string().min(1),
@@ -44,7 +44,7 @@ export const ReportTraceV1Schema = z
     assessment_id: z.uuid(),
     role_profile_id: z.uuid(),
     role_profile_version: z.int().positive(),
-    algorithm_version: z.literal("1.0.0"),
+    algorithm_version: z.enum(["1.0.0", "2.0.0"]),
     assessment_definition_id: z.string().min(1),
     assessment_definition_version: z.string().min(1),
     scoring_version: z.string().min(1),
@@ -62,7 +62,10 @@ export const ReportTraceV1Schema = z
     trace.constructs.forEach((construct, index) => {
       if (
         construct.construct_key !== CONSTRUCT_KEYS[index] ||
-        construct.question_selection.construct_key !== construct.construct_key
+        construct.question_selection.construct_key !==
+          construct.construct_key ||
+        construct.question_selection.algorithm_version !==
+          trace.algorithm_version
       )
         fail();
       if (

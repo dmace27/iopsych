@@ -5,7 +5,11 @@ import { fileURLToPath } from "node:url";
 import { format } from "prettier";
 
 import { JSON_SCHEMA_DOCUMENTS } from "../src/json-schemas";
-import { APPROVED_INTERVIEW_QUESTION_LIBRARY_V1 } from "../src/matching";
+import { CONSTRUCT_DEFINITIONS, CONTRACT_VERSION } from "../src/constructs";
+import {
+  APPROVED_INTERVIEW_QUESTION_LIBRARY_V1,
+  MATCHING_ALGORITHM_VERSION,
+} from "../src/matching";
 import { PILOT_ASSESSMENT_DEFINITION_V1 } from "../src/pilot-assessment";
 
 const packageRoot = path.resolve(
@@ -37,5 +41,21 @@ await writeFile(
   await format(JSON.stringify(APPROVED_INTERVIEW_QUESTION_LIBRARY_V1), {
     parser: "json",
   }),
+  "utf8",
+);
+
+// Keep the original v1 metadata immutable for historical interpretation.
+const currentDefinitionDirectory = path.join(packageRoot, "definitions", "v2");
+await mkdir(currentDefinitionDirectory, { recursive: true });
+await writeFile(
+  path.join(currentDefinitionDirectory, "constructs.json"),
+  await format(
+    JSON.stringify({
+      contract_version: CONTRACT_VERSION,
+      matching_algorithm_version: MATCHING_ALGORITHM_VERSION,
+      constructs: CONSTRUCT_DEFINITIONS,
+    }),
+    { parser: "json" },
+  ),
   "utf8",
 );

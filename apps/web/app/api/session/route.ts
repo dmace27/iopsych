@@ -1,4 +1,5 @@
 import { cookies } from "next/headers";
+import { LOGIN_COOKIE, LOGIN_COOKIE_OPTIONS } from "../../../lib/login-cookie";
 
 import {
   INTERNAL_SESSION_COOKIE,
@@ -46,6 +47,15 @@ export async function POST(request: Request): Promise<Response> {
     );
   }
 
+  if (process.env.ENABLE_TOKEN_SIGN_IN !== "true") {
+    return problem(
+      404,
+      "route_not_found",
+      "Route not found",
+      "Use provider sign-in.",
+    );
+  }
+
   const payload: unknown = await request.json().catch(() => null);
   const token =
     typeof payload === "object" &&
@@ -67,6 +77,7 @@ export async function POST(request: Request): Promise<Response> {
   try {
     upstream = await fetch(internalApiUrl("/v1/auth/me"), {
       cache: "no-store",
+      signal: AbortSignal.timeout(5000),
       headers: {
         Accept: "application/json",
         Authorization: `Bearer ${token}`,
@@ -133,8 +144,14 @@ export async function DELETE(request: Request): Promise<Response> {
     );
   }
 
-  (await cookies()).set(INTERNAL_SESSION_COOKIE, "", {
+  const store = await cookies();
+  store.set(INTERNAL_SESSION_COOKIE, "", {
     ...SESSION_COOKIE_OPTIONS,
+    expires: new Date(0),
+    maxAge: 0,
+  });
+  store.set(LOGIN_COOKIE, "", {
+    ...LOGIN_COOKIE_OPTIONS,
     expires: new Date(0),
     maxAge: 0,
   });

@@ -6,6 +6,7 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field
 
 from iopsych_contracts.constructs import AlignmentClassification, ConstructKey
+from iopsych_contracts.matching import MatchingAlgorithmVersion
 from iopsych_contracts.scoring_config import (
     HighConfidenceRule,
     LowConfidenceRule,
@@ -31,7 +32,7 @@ class ItemTrace(TraceModel):
 
 
 class QuestionSelection(TraceModel):
-    algorithm_version: Literal["1.0.0"]
+    algorithm_version: MatchingAlgorithmVersion
     construct_key: ConstructKey
     classification: AlignmentClassification
     primary_question_id: str
@@ -52,7 +53,7 @@ class ReportTraceV1(TraceModel):
     assessment_id: UUID
     role_profile_id: UUID
     role_profile_version: Annotated[int, Field(strict=True, gt=0)]
-    algorithm_version: Literal["1.0.0"]
+    algorithm_version: MatchingAlgorithmVersion
     assessment_definition_id: str
     assessment_definition_version: str
     scoring_version: str

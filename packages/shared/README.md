@@ -4,7 +4,7 @@ Version 1 domain contracts for the IOPsych web and API workspaces. The package
 exposes equivalent Zod/TypeScript and Pydantic representations, generated JSON
 Schema documents, and one synthetic fixture suite exercised by both languages.
 The canonical construct metadata is checked in at
-`definitions/v1/constructs.json`; parity tests prevent either runtime from
+`definitions/v2/constructs.json`; parity tests prevent either runtime from
 drifting from it.
 
 ## Contract surface
@@ -27,12 +27,14 @@ required by `mvp-spec.md` before an application publishes it to candidates.
 Assessment definition lifecycle status does not affect pure scoring, because
 responses tied to a retired version must remain reproducible.
 
-The `structure` definition records `inverse_role_rating`, following the explicit
-formula and package 3A acceptance text in `mvp-spec.md` section 7. The matching
-engine therefore uses `6 - role_rating` as the structure comparison target and
-includes that target in every explanation. The prose immediately following the
-formula is internally inconsistent and should still be reconciled by the domain
-owner before pilot use.
+The current `structure` definition records `role_rating`. Matching algorithm
+`2.0.0` compares available role structure directly with candidate preference:
+5/5 and 1/1 align; opposite extremes flag an interview topic. Algorithm `1.0.0`
+retains its inverse target for explicit historical replay. Both readers retain
+stored explanations and reject targets inconsistent with the algorithm version.
+The original `definitions/v1/constructs.json` is preserved. See the
+[product decision](../../docs/decisions/structure-comparison.md) and the
+remaining deployment and real-pilot review requirements recorded there.
 
 ## Usage
 
@@ -61,6 +63,12 @@ Match only against a role snapshot whose approval state is supplied explicitly:
 import { matchRoleProfile } from "@iopsych/shared";
 
 const result = matchRoleProfile(roleProfile, assessmentScoreResult);
+// Explicit historical replay, never a replacement for reading a saved report:
+const historical = matchRoleProfile(
+  roleProfile,
+  assessmentScoreResult,
+  "1.0.0",
+);
 ```
 
 `matchRoleProfile` returns six independent construct items in canonical order.

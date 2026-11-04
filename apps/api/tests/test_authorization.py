@@ -211,6 +211,7 @@ async def test_current_user_uses_database_identity_and_emits_success_audit(
     assert response.json() == {
         "id": str(ALPHA_USER_ID),
         "organization_id": str(ALPHA_ORGANIZATION_ID),
+        "organization_name": "Alpha Labs (Synthetic)",
         "email": "recruiter@alpha.example.invalid",
         "name": "Alpha Recruiter",
         "role": "recruiter",

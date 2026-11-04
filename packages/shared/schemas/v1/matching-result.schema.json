@@ -4,7 +4,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "type": "object",
   "properties": {
-    "algorithm_version": { "type": "string", "const": "1.0.0" },
+    "algorithm_version": { "type": "string", "enum": ["1.0.0", "2.0.0"] },
     "role_profile_approved": { "type": "boolean" },
     "assessment_definition_id": { "type": "string", "minLength": 1 },
     "assessment_definition_version": {
@@ -209,5 +209,89 @@
     "scoring_version",
     "items"
   ],
-  "additionalProperties": false
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "if": { "properties": { "algorithm_version": { "const": "1.0.0" } } },
+      "then": {
+        "properties": {
+          "items": {
+            "items": {
+              "if": {
+                "properties": { "construct_key": { "const": "structure" } }
+              },
+              "then": {
+                "properties": {
+                  "explanation": {
+                    "properties": {
+                      "role": {
+                        "properties": {
+                          "comparison_target": {
+                            "const": "inverse_role_rating"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "else": {
+                "properties": {
+                  "explanation": {
+                    "properties": {
+                      "role": {
+                        "properties": {
+                          "comparison_target": { "const": "role_rating" }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "algorithm_version": { "const": "2.0.0" } } },
+      "then": {
+        "properties": {
+          "items": {
+            "items": {
+              "if": {
+                "properties": { "construct_key": { "const": "structure" } }
+              },
+              "then": {
+                "properties": {
+                  "explanation": {
+                    "properties": {
+                      "role": {
+                        "properties": {
+                          "comparison_target": { "const": "role_rating" }
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "else": {
+                "properties": {
+                  "explanation": {
+                    "properties": {
+                      "role": {
+                        "properties": {
+                          "comparison_target": { "const": "role_rating" }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
 }

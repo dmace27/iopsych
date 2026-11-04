@@ -22,7 +22,9 @@ from app.invitations.schemas import (
     CandidateInviteResponse,
     ConsentRequest,
     InvitationCreateRequest,
+    InvitationDeliveryResponse,
     InvitationListResponse,
+    InvitationReissueRequest,
     InvitationResponse,
 )
 from app.invitations.service import CandidateInvitationService, InternalInvitationService
@@ -112,14 +114,14 @@ async def list_invitations(
     status_code=status.HTTP_201_CREATED,
 )
 @audited("assessment_invite.created", "assessment_invite")
-async def create_invitation(
+def create_invitation(
     role_id: UUID,
     payload: InvitationCreateRequest,
     request: Request,
     context: InviteContext,
     session: DatabaseSession,
 ) -> InvitationResponse:
-    """Email a signed, expiring invitation for an approved profile."""
+    """Queue a signed invitation; creation never claims provider delivery."""
 
     _enforce_rate_limit(request, f"invite-create:{context.user_id}", internal=True)
     invite = _internal_service(request, session, context, issuance=True).create(
@@ -138,7 +140,7 @@ async def create_invitation(
     "assessment_invite",
     entity_id_path_parameter="invite_id",
 )
-async def revoke_invitation(
+def revoke_invitation(
     role_id: UUID,
     invite_id: UUID,
     request: Request,
@@ -153,11 +155,51 @@ async def revoke_invitation(
 
 
 @router.get(
+    "/v1/roles/{role_id}/invites/{invite_id}/delivery", response_model=InvitationDeliveryResponse
+)
+@audited(
+    "assessment_invite.delivery_read", "assessment_invite", entity_id_path_parameter="invite_id"
+)
+def read_invitation_delivery(
+    role_id: UUID,
+    invite_id: UUID,
+    request: Request,
+    context: InviteContext,
+    session: DatabaseSession,
+) -> InvitationDeliveryResponse:
+    """Expose a safe operational status for recruiter retry/reissue workflows."""
+    return InvitationDeliveryResponse.model_validate(
+        _internal_service(request, session, context).delivery_state(role_id, invite_id)
+    )
+
+
+@router.post(
+    "/v1/roles/{role_id}/invites/{invite_id}/reissue",
+    response_model=InvitationResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+@audited("assessment_invite.reissued", "assessment_invite")
+def reissue_invitation(
+    role_id: UUID,
+    invite_id: UUID,
+    payload: InvitationReissueRequest,
+    request: Request,
+    context: InviteContext,
+    session: DatabaseSession,
+) -> InvitationResponse:
+    """Revoke the old link and atomically queue a replacement with a new request ID."""
+    _enforce_rate_limit(request, f"invite-reissue:{context.user_id}", internal=True)
+    invite = _internal_service(request, session, context).reissue(role_id, invite_id, payload)
+    set_audit_entity(request, invite.id)
+    return InvitationResponse.model_validate(invite)
+
+
+@router.get(
     "/v1/candidate/invites/{token}",
     response_model=CandidateInviteResponse,
     response_model_exclude_unset=True,
 )
-async def read_candidate_invitation(
+def read_candidate_invitation(
     token: str,
     request: Request,
     session: DatabaseSession,
@@ -173,7 +215,7 @@ async def read_candidate_invitation(
     response_model=CandidateInviteResponse,
     response_model_exclude_unset=True,
 )
-async def record_candidate_consent(
+def record_candidate_consent(
     token: str,
     payload: ConsentRequest,
     request: Request,

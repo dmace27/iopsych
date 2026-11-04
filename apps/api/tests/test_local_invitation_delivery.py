@@ -12,9 +12,9 @@ import httpx
 import pytest
 
 from app.invitations.delivery import (
-    InvitationDeliveryAdapter,
     InvitationDeliveryError,
     InvitationEmail,
+    LocalInvitationDeliveryAdapter,
 )
 from app.invitations.local_delivery import LocalSmtpInvitationDelivery
 
@@ -95,7 +95,7 @@ def test_rendering_envelope_timeout_and_no_credentials() -> None:
     with patch("smtplib.SMTP") as smtp:
         client = smtp.return_value
         client.send_message.return_value = {}
-        adapter: InvitationDeliveryAdapter = LocalSmtpInvitationDelivery(enabled=True)
+        adapter: LocalInvitationDeliveryAdapter = LocalSmtpInvitationDelivery(enabled=True)
         adapter.send(MESSAGE)
     smtp.assert_called_once_with(timeout=3.0, local_hostname="[127.0.0.1]")
     client.connect.assert_called_once_with("127.0.0.1", 1139)

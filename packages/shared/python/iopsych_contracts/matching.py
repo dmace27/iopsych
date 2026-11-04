@@ -27,7 +27,35 @@ from .constructs import (
 from .role_extraction import RoleConstructRating
 from .scoring_config import Version
 
-MATCHING_ALGORITHM_VERSION: Final = "1.0.0"
+
+class MatchingAlgorithmVersion(StrEnum):
+    """Supported immutable algorithms for generation, reading, and explicit replay."""
+
+    V1 = "1.0.0"
+    V2 = "2.0.0"
+
+
+MATCHING_ALGORITHM_VERSION: Final = MatchingAlgorithmVersion.V2
+
+_STRUCTURE_TARGETS: Final[Mapping[MatchingAlgorithmVersion, ComparisonTarget]] = MappingProxyType(
+    {
+        MatchingAlgorithmVersion.V1: ComparisonTarget.INVERSE_ROLE_RATING,
+        MatchingAlgorithmVersion.V2: ComparisonTarget.ROLE_RATING,
+    }
+)
+
+
+def comparison_target(
+    construct_key: ConstructKey,
+    algorithm_version: MatchingAlgorithmVersion = MATCHING_ALGORITHM_VERSION,
+) -> ComparisonTarget:
+    """Select a versioned policy without reinterpreting an older algorithm."""
+
+    structure_target = _STRUCTURE_TARGETS[MatchingAlgorithmVersion(algorithm_version)]
+    if construct_key is ConstructKey.STRUCTURE:
+        return structure_target
+    return CONSTRUCT_DEFINITIONS_BY_KEY[construct_key].comparison_target
+
 
 NonEmptyString = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
 QuestionIdentifier = Annotated[
@@ -209,7 +237,7 @@ class MatchingResult(BaseModel):
 
     model_config = ConfigDict(extra="forbid", frozen=True)
 
-    algorithm_version: Literal["1.0.0"]
+    algorithm_version: MatchingAlgorithmVersion
     role_profile_approved: bool
     assessment_definition_id: str
     assessment_definition_version: Version
@@ -226,6 +254,12 @@ class MatchingResult(BaseModel):
         keys = [item.construct_key for item in self.items]
         if len(set(keys)) != len(keys) or set(keys) != set(CONSTRUCT_KEYS):
             raise ValueError("items must contain each version 1 construct exactly once")
+        if any(
+            item.explanation.role.comparison_target
+            is not comparison_target(item.construct_key, self.algorithm_version)
+            for item in self.items
+        ):
+            raise ValueError("comparison target must match the stored algorithm version")
         return self
 
 
@@ -449,11 +483,14 @@ _CONFIDENCE_ORDER: Final[Mapping[ConfidenceLevel, int]] = MappingProxyType(
 )
 
 
-def comparison_rating(construct_key: ConstructKey, role_rating: int) -> int:
-    """Return the inspectable role target, applying structure's inverse rule."""
+def comparison_rating(
+    construct_key: ConstructKey,
+    role_rating: int,
+    algorithm_version: MatchingAlgorithmVersion = MATCHING_ALGORITHM_VERSION,
+) -> int:
+    """Derive the target using the selected algorithm, including legacy v1 replay."""
 
-    definition = CONSTRUCT_DEFINITIONS_BY_KEY[construct_key]
-    if definition.comparison_target is ComparisonTarget.INVERSE_ROLE_RATING:
+    if comparison_target(construct_key, algorithm_version) is ComparisonTarget.INVERSE_ROLE_RATING:
         return 6 - role_rating
     return role_rating
 
@@ -534,6 +571,7 @@ def match_construct(
     candidate: CandidateConstructScore,
     *,
     role_profile_approved: bool,
+    algorithm_version: MatchingAlgorithmVersion = MATCHING_ALGORITHM_VERSION,
 ) -> AlignmentItem:
     """Compare one construct without I/O, randomness, mutation, or hidden weighting."""
 
@@ -546,8 +584,8 @@ def match_construct(
             ),
         )
 
-    definition = CONSTRUCT_DEFINITIONS_BY_KEY[role.key]
-    target_rating = comparison_rating(role.key, role.rating)
+    target = comparison_target(role.key, algorithm_version)
+    target_rating = comparison_rating(role.key, role.rating, algorithm_version)
     difference = abs(target_rating - candidate.rating)
     confidence = lower_confidence(role.confidence, candidate.confidence)
     classification, rule, description, uncertainty = _classify(
@@ -555,6 +593,11 @@ def match_construct(
         confidence=confidence,
         difference=difference,
     )
+    if role.key is ConstructKey.STRUCTURE and algorithm_version == MatchingAlgorithmVersion.V2:
+        description = (
+            "Available role structure is compared directly with the candidate's preference. "
+            + description
+        )
 
     return AlignmentItem(
         construct_key=role.key,
@@ -566,7 +609,7 @@ def match_construct(
                 confidence=role.confidence,
                 rationale=role.rationale,
                 evidence=tuple(role.evidence),
-                comparison_target=definition.comparison_target,
+                comparison_target=target,
                 comparison_rating=target_rating,
             ),
             candidate_response=CandidateResponseSummary(
@@ -591,6 +634,8 @@ def match_construct(
 def match_role_profile(
     role_profile: MatchingRoleProfile,
     candidate_scores: AssessmentScoreResult,
+    *,
+    algorithm_version: MatchingAlgorithmVersion = MATCHING_ALGORITHM_VERSION,
 ) -> MatchingResult:
     """Compare all six constructs in canonical order and retain input versions."""
 
@@ -601,12 +646,13 @@ def match_role_profile(
             roles_by_key[key],
             candidates_by_key[key],
             role_profile_approved=role_profile.approved,
+            algorithm_version=algorithm_version,
         )
         for key in CONSTRUCT_KEYS
     )
 
     return MatchingResult(
-        algorithm_version=MATCHING_ALGORITHM_VERSION,
+        algorithm_version=algorithm_version,
         role_profile_approved=role_profile.approved,
         assessment_definition_id=candidate_scores.assessment_definition_id,
         assessment_definition_version=candidate_scores.assessment_definition_version,

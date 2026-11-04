@@ -143,7 +143,7 @@ def test_trace_rejects_inconsistent_evidence_without_source_mutation(mutation: s
     elif mutation == "assignment_definition":
         payload["assignment_json"]["definition"]["title"] = "Different title"
     elif mutation == "assignment_algorithm":
-        payload["assignment_json"]["matching_algorithm_version"] = "2.0.0"
+        payload["assignment_json"]["matching_algorithm_version"] = "99.0.0"
     elif mutation == "foreign_item":
         payload["responses_json"]["responses"][0]["most_like_item_id"] = "b2-ambiguity"
     elif mutation == "same_item":
@@ -452,7 +452,11 @@ def test_all_inclusive_threshold_boundaries(raw: int, expected_rating: int) -> N
     from app.assignments.registry import legacy_definition
     from iopsych_contracts import RoleConstructRating
     from iopsych_contracts.assessment import AssessmentResponseSet, score_assessment
-    from iopsych_contracts.matching import MatchingRoleProfile, match_role_profile
+    from iopsych_contracts.matching import (
+        MatchingAlgorithmVersion,
+        MatchingRoleProfile,
+        match_role_profile,
+    )
 
     payload = source()
     definition = legacy_definition()
@@ -487,7 +491,7 @@ def test_all_inclusive_threshold_boundaries(raw: int, expected_rating: int) -> N
             for key in CONSTRUCT_KEYS
         ),
     )
-    result = match_role_profile(role, scores)
+    result = match_role_profile(role, scores, algorithm_version=MatchingAlgorithmVersion.V1)
     payload["scores_json"] = scores.model_dump(mode="json")
     payload["result_json"] = result.model_dump(mode="json")
     trace = build_trace(**payload)

@@ -64,6 +64,7 @@ export async function POST(request: Request): Promise<Response> {
     const upstream = await fetch(upstreamUrl, {
       method: "POST",
       cache: "no-store",
+      signal: AbortSignal.timeout(5000),
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
     });

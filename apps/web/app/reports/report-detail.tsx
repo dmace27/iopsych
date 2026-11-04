@@ -172,6 +172,11 @@ export function ReportDetail({
                     response is compared with {role.comparison_rating}. This
                     historical result is preserved as originally generated.
                   </p>
+                ) : item.construct_key === "structure" ? (
+                  <p className="mt-4 text-sm leading-6 text-slate-700">
+                    Available role structure is compared directly with the
+                    candidate’s preference for predictable direction.
+                  </p>
                 ) : null}
                 <p className="mt-4 text-sm leading-6 text-slate-700">
                   <strong>Stored interpretation: </strong>

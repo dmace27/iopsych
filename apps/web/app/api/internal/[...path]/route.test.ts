@@ -520,3 +520,41 @@ it("allows only exact GET trace paths", async () => {
     vi.unstubAllGlobals();
   }
 });
+
+it("forwards account management and clears an expired browser credential", async () => {
+  const clear = vi.fn();
+  headerMocks.cookies.mockResolvedValue({
+    get: () => ({ value: "expired" }),
+    delete: clear,
+  });
+  vi.stubGlobal(
+    "fetch",
+    vi.fn().mockResolvedValue(new Response(null, { status: 401 })),
+  );
+  try {
+    const response = await GET(
+      new Request("http://web.test/api/internal/users"),
+      context("users"),
+    );
+    expect(response.status).toBe(401);
+    expect(clear).toHaveBeenCalledWith("iopsych_internal_token");
+    for (const [method, path, handler] of [
+      ["POST", ["users"], POST],
+      ["PATCH", ["users", "user-id"], PATCH],
+    ] as const) {
+      expect(
+        (
+          await handler(
+            new Request("http://web.test/api/internal/users", {
+              method,
+              headers: { Origin: "http://web.test" },
+            }),
+            context(...path),
+          )
+        ).status,
+      ).toBe(401);
+    }
+  } finally {
+    vi.unstubAllGlobals();
+  }
+});
