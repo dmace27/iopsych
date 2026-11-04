@@ -11,6 +11,7 @@ describe("safeReturnTo", () => {
     "/roles",
     `/roles/${id}`,
     `/roles/${id}/reports`,
+    `/roles/${id}/invites`,
     `/reports/${id}`,
     "/privacy",
   ])("preserves %s", (path) => {
@@ -42,6 +43,8 @@ describe("safeReturnTo", () => {
     "/reports",
     "/roles/not-a-uuid",
     `/roles/${id}/profiles`,
+    `/roles/${id}/invites?token=secret`,
+    `/roles/${id}/invites/secret`,
     `/reports/${id}/extra`,
     "/privacy/",
     "/api/session",
