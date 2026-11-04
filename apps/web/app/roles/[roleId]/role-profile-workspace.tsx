@@ -276,7 +276,7 @@ export function RoleProfileWorkspace({ roleId }: { roleId: string }) {
               Signed in as
             </span>
             <span className="text-slate-600">{state.user.name}</span>
-            <span className="block text-xs capitalize text-slate-500">
+            <span className="block text-xs capitalize text-slate-600">
               {state.user.role.replace("_", " ")}
             </span>
           </div>
@@ -347,7 +347,7 @@ export function RoleProfileWorkspace({ roleId }: { roleId: string }) {
                         </span>
                         <StatusBadge status={profile.status} />
                       </span>
-                      <span className="mt-1 block text-xs text-slate-500">
+                      <span className="mt-1 block text-xs text-slate-600">
                         {formatDate(profile.created_at)}
                       </span>
                     </button>
@@ -355,7 +355,7 @@ export function RoleProfileWorkspace({ roleId }: { roleId: string }) {
                 ))}
               </ol>
             )}
-            <div className="mt-5 border-t border-slate-200 pt-4 text-xs leading-5 text-slate-500">
+            <div className="mt-5 border-t border-slate-200 pt-4 text-xs leading-5 text-slate-600">
               Editing a draft creates a new version. Historical ratings are
               never overwritten.
             </div>
@@ -407,7 +407,7 @@ export function RoleProfileWorkspace({ roleId }: { roleId: string }) {
                   reviews and approves it.
                 </p>
                 <button
-                  className="mt-4 action-primary min-h-11 rounded-md bg-teal-700 px-5 py-2.5 text-sm font-semibold text-white hover:bg-teal-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-700 focus-visible:ring-offset-2 disabled:cursor-wait disabled:opacity-70"
+                  className="mt-4 action-primary min-h-11 rounded-md bg-[var(--accent,#0f766e)] px-5 py-2.5 text-sm font-semibold text-white hover:bg-teal-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-700 focus-visible:ring-offset-2 disabled:cursor-wait disabled:opacity-70"
                   disabled={extracting}
                   onClick={() => void handleExtraction()}
                   type="button"
@@ -426,7 +426,7 @@ export function RoleProfileWorkspace({ roleId }: { roleId: string }) {
                 ) : null}
               </section>
 
-              <details className="surface rounded-lg border border-slate-200 bg-white p-4">
+              <details className="border-t border-slate-200 pt-3">
                 <summary className="min-h-11 cursor-pointer content-center py-2 font-semibold text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-700">
                   Create a manual draft instead
                 </summary>
@@ -516,7 +516,7 @@ export function RoleProfileWorkspace({ roleId }: { roleId: string }) {
                 role. Approval freezes this version for downstream use.
               </p>
               <button
-                className="action-primary mt-4 min-h-11 rounded-md bg-teal-700 px-5 py-2.5 text-sm font-semibold text-white hover:bg-teal-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-700 focus-visible:ring-offset-2"
+                className="action-primary mt-4 min-h-11 rounded-md bg-[var(--accent,#0f766e)] px-5 py-2.5 text-sm font-semibold text-white hover:bg-teal-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-700 focus-visible:ring-offset-2"
                 disabled={approving}
                 onClick={() => void handleApproval(selectedProfile)}
                 type="button"
@@ -670,7 +670,7 @@ function ProfileEditor({
                   ))}
                 </div>
                 <span
-                  className="mt-1 flex justify-between text-xs text-slate-500"
+                  className="mt-1 flex justify-between text-xs text-slate-600"
                   id={`${fieldPrefix}-scale-help`}
                 >
                   <span>Low</span>
@@ -710,7 +710,7 @@ function ProfileEditor({
             </label>
             <label className="mt-5 field-label block text-sm font-semibold text-slate-800">
               Job-description evidence
-              <span className="mt-1 block text-xs font-normal text-slate-500">
+              <span className="mt-1 block text-xs font-normal text-slate-600">
                 Enter one exact excerpt per line.
               </span>
               <textarea
@@ -736,14 +736,14 @@ function ProfileEditor({
           {saveError}
         </p>
       ) : null}
-      <div className="surface flex flex-col gap-3 border-t border-slate-200 bg-white p-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-3 border-t border-slate-200 pt-4 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-sm text-slate-600">
           {mode === "create"
             ? `Creates draft version ${nextVersion ?? 1}.`
             : `Saves as version ${(profile?.version ?? 0) + 1}; version ${profile?.version} remains unchanged.`}
         </p>
         <button
-          className="action-primary min-h-11 shrink-0 rounded-md bg-teal-700 px-5 py-2.5 text-sm font-semibold text-white hover:bg-teal-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-700 focus-visible:ring-offset-2"
+          className="action-primary min-h-11 shrink-0 rounded-md bg-[var(--accent,#0f766e)] px-5 py-2.5 text-sm font-semibold text-white hover:bg-teal-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-700 focus-visible:ring-offset-2"
           disabled={saving}
           type="submit"
         >

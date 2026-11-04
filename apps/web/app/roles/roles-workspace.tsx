@@ -114,7 +114,7 @@ export function RolesWorkspace() {
             ref={createButton}
             aria-expanded={showCreate}
             aria-controls="create-role-form"
-            className="action-primary inline-flex min-h-11 items-center justify-center rounded-md bg-teal-700 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-teal-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-700 focus-visible:ring-offset-2"
+            className="action-primary inline-flex min-h-11 items-center justify-center rounded-md bg-[var(--accent,#0f766e)] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-teal-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-700 focus-visible:ring-offset-2"
             onClick={() => setShowCreate((visible) => !visible)}
             type="button"
           >
@@ -182,7 +182,7 @@ export function RolesWorkspace() {
             <div className="hidden sm:block" />
             <label className="field-label block text-sm font-semibold text-slate-800 sm:col-span-2">
               Job description
-              <span className="mt-1 block text-xs font-normal leading-5 text-slate-500">
+              <span className="mt-1 block text-xs font-normal leading-5 text-slate-600">
                 This source text anchors every profile evidence excerpt.
               </span>
               <textarea
@@ -203,7 +203,7 @@ export function RolesWorkspace() {
             ) : null}
             <div className="flex flex-wrap gap-3 sm:col-span-2">
               <button
-                className="action-primary min-h-11 rounded-md bg-teal-700 px-5 py-2.5 text-sm font-semibold text-white hover:bg-teal-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-700 focus-visible:ring-offset-2"
+                className="action-primary min-h-11 rounded-md bg-[var(--accent,#0f766e)] px-5 py-2.5 text-sm font-semibold text-white hover:bg-teal-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-700 focus-visible:ring-offset-2"
                 disabled={submitting}
                 type="submit"
               >
@@ -234,7 +234,7 @@ export function RolesWorkspace() {
             Organization roles
           </h2>
           {state.status === "ready" ? (
-            <span className="text-sm text-slate-500">
+            <span className="text-sm text-slate-600">
               {state.roles.length} {state.roles.length === 1 ? "role" : "roles"}
             </span>
           ) : null}
