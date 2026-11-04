@@ -4,18 +4,19 @@ import os
 from collections.abc import Generator
 from copy import deepcopy
 from datetime import UTC, datetime, timedelta
+from ipaddress import ip_address
 from pathlib import Path
 from typing import Any
 from uuid import uuid4
 
 import pytest
-from alembic import command
 from sqlalchemy import MetaData, create_engine, select, text
-from sqlalchemy.engine import make_url
-from sqlalchemy.exc import DBAPIError
+from sqlalchemy.engine import URL, make_url
+from sqlalchemy.exc import ArgumentError, DBAPIError
 from sqlalchemy.orm import Session
 from sqlalchemy.schema import CreateSchema, DropSchema
 
+from alembic import command
 from app.assignments.registry import (
     definition_response,
     legacy_definition,
@@ -31,6 +32,32 @@ from iopsych_contracts.matching import MatchingRoleProfile, match_role_profile
 from tests.test_database_migrations import alembic_config
 from tests.test_reports import responses
 
+APPROVED_UPGRADE_DATABASES = {(5550, "iopsych_6c"), (5571, "iopsych_regression")}
+
+
+def validated_upgrade_url(database_url: str) -> URL:
+    """Accept only explicit synthetic loopback targets, before creating an engine."""
+    message = (
+        "Upgrade tests require postgresql+psycopg on numeric loopback, "
+        "port/database 5550/iopsych_6c or 5571/iopsych_regression, with no URL query"
+    )
+    try:
+        url = make_url(database_url)
+        if (
+            url.drivername != "postgresql+psycopg"
+            or not url.host
+            or "%" in url.host
+            or not ip_address(url.host).is_loopback
+            or (url.port, url.database) not in APPROVED_UPGRADE_DATABASES
+            or "?" in database_url
+            or "#" in database_url
+            or url.query
+        ):
+            raise ValueError(message)
+    except (ArgumentError, ValueError, TypeError):
+        raise ValueError(message) from None
+    return url
+
 
 @pytest.fixture(params=["sqlite", "postgresql"])
 def upgrade_url(request: pytest.FixtureRequest, tmp_path: Path) -> Generator[str]:
@@ -40,10 +67,7 @@ def upgrade_url(request: pytest.FixtureRequest, tmp_path: Path) -> Generator[str
     database_url = os.environ.get("TEST_POSTGRES_URL", "")
     if not database_url:
         pytest.skip("Isolated PostgreSQL requires explicit TEST_POSTGRES_URL")
-    url = make_url(database_url)
-    # This slice must never connect to existing app ports/databases.
-    if url.port != 5550 or url.database != "iopsych_6c":
-        pytest.fail("6C upgrade tests require port 5550 / database iopsych_6c")
+    url = validated_upgrade_url(database_url)
     schema = f"assignment_upgrade_{uuid4().hex}"
     admin = create_engine(url)
     with admin.begin() as connection:
