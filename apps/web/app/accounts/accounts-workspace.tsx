@@ -151,7 +151,7 @@ export function AccountsWorkspace() {
       <h1
         ref={heading}
         tabIndex={-1}
-        className="workspace-title text-2xl font-semibold text-slate-950"
+        className="workspace-title text-2xl font-semibold text-slate-950 focus-visible:outline-2 focus-visible:outline-teal-700"
       >
         Accounts
       </h1>
@@ -167,7 +167,10 @@ export function AccountsWorkspace() {
         {error ? <p role="alert">{error.message}</p> : null}
         {notice ? <p role="status">{notice}</p> : null}
         {expired ? (
-          <Link className="underline" href={signInHref("/accounts")}>
+          <Link
+            className="inline-flex min-h-11 items-center text-teal-700 underline focus-visible:outline-2 focus-visible:outline-teal-700"
+            href={signInHref("/accounts")}
+          >
             Sign in to continue
           </Link>
         ) : null}

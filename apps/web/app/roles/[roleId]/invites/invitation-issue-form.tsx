@@ -156,6 +156,7 @@ export function InvitationIssueForm({
       {error ? <div role="alert">{error}</div> : null}
       {unauthorized ? (
         <Link
+          className="inline-flex min-h-11 items-center text-teal-700 underline focus-visible:outline-2 focus-visible:outline-teal-700"
           href={`/sign-in?returnTo=${encodeURIComponent(`/roles/${roleId}/invites`)}`}
         >
           Sign in to issue invitations
