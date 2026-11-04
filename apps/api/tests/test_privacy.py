@@ -469,3 +469,71 @@ def test_privacy_settings_and_scheduler_entrypoint_are_safe(
 
         main()
     assert capsys.readouterr().out == "Retention complete: 2 assessments anonymized\n"
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("frozen", [False, True])
+async def test_export_notice_capability_preserves_old_and_new_clients(
+    privacy_client: AsyncClient,
+    privacy_factory: sessionmaker[Session],
+    frozen: bool,
+) -> None:
+    """Only exact opt-in exposes validated evidence, including legacy nulls."""
+    from app.invitations.schemas import ConsentRequest
+    from iopsych_contracts.assessment import AssessmentResponseSet
+    from tests.test_notice_snapshot_api import candidate, legacy
+    from tests.test_reports import responses
+
+    if frozen:
+        with privacy_factory() as session:
+            invite, token = legacy(session)
+            service = candidate(session, 37)
+            notice = service.read(token)
+            service.record_consent(
+                token,
+                ConsentRequest(decision="consent", presented_notice_sha256=notice.notice_sha256),
+            )
+            assessment_id = service.submit(token, AssessmentResponseSet.model_validate(responses()))
+            snapshot = invite.notice_snapshot_json
+    else:
+        assessment_id, _ = candidate_record(privacy_factory)
+        snapshot = None
+    path = f"/v1/candidates/{assessment_id}/export"
+    auth = headers(ADMIN_SUBJECT, ALPHA_ORGANIZATION_ID)
+    old_keys = {"id", "decision", "notice_version", "recorded_at"}
+    new_keys = {
+        "notice_snapshot",
+        "notice_sha256",
+        "notice_snapshot_origin",
+        "notice_snapshot_recorded_at",
+        "presented_notice_sha256",
+        "notice_history",
+    }
+    for capability in (None, "0", "true", "01", "1, 1", "1"):
+        request_headers = dict(auth)
+        if capability is not None:
+            request_headers["X-IOPsych-Notice-Snapshot"] = capability
+        response = await privacy_client.post(path, headers=request_headers)
+        assert response.status_code == 200
+        assert response.headers["cache-control"] == "no-store"
+        assert "attachment" in response.headers["content-disposition"]
+        body = response.json()
+        assert body["schema_version"] == "1.0"
+        assert set(body["consent"]) == (old_keys | new_keys if capability == "1" else old_keys)
+        if capability == "1":
+            assert body["consent"]["notice_snapshot"] == snapshot
+            assert body["consent"]["notice_history"] == (
+                "digest_recorded" if frozen else "legacy_unknown"
+            )
+    with privacy_factory() as session:
+        assert (
+            session.scalar(
+                select(func.count())
+                .select_from(AuditEvent)
+                .where(
+                    AuditEvent.entity_id == assessment_id,
+                    AuditEvent.event_type == "candidate_data.exported",
+                )
+            )
+            == 6
+        )

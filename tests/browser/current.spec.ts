@@ -1,3 +1,4 @@
+import { exchangeSession, syntheticSignIn } from "./auth";
 import { test, expect, type Page } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 
@@ -13,11 +14,7 @@ test.beforeEach(async ({ context }) => {
 });
 
 async function signIn(page: Page, identity = "RECRUITER") {
-  await page.goto("/sign-in");
-  await page
-    .getByLabel("Internal access token")
-    .fill(process.env[`BROWSER_E2E_${identity}`]!);
-  await page.getByRole("button", { name: "Continue to roles" }).click();
+  await syntheticSignIn(page, identity);
   await expect(
     page.getByRole("heading", { name: "Organization roles" }),
   ).toBeVisible();
@@ -128,10 +125,12 @@ test("account navigation: identity, invitation return path and sign-out boundary
       async () => (await fetch("/api/internal/roles")).status,
     ),
   ).toBe(401);
-  await page
-    .getByLabel("Internal access token")
-    .fill(process.env.BROWSER_E2E_RECRUITER!);
-  await page.getByRole("button", { name: "Continue to roles" }).click();
+  // The sign-out URL above carries the safe return path. Synthetic exchange
+  // only establishes the cookie; provider callback navigation has separate tests.
+  expect(await exchangeSession(page, process.env.BROWSER_E2E_RECRUITER!)).toBe(
+    200,
+  );
+  await page.goto(invitations);
   await expect(page).toHaveURL(new RegExp(`${invitations}$`));
   await expect(nav.getByRole("button", { name: "Sign out" })).toBeVisible();
   await nav.getByRole("link", { name: "Roles", exact: true }).click();

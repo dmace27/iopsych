@@ -13,6 +13,9 @@ interface RouteContext {
 const INVITATION_ISSUANCE_ROUTE =
   /^POST \/roles\/[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\/invites$/i;
 
+const CANDIDATE_EXPORT_ROUTE =
+  /^POST \/candidates\/[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\/export$/i;
+
 const ALLOWED_INTERNAL_ROUTES = [
   INVITATION_ISSUANCE_ROUTE,
   /^GET \/accounts\/users$/,
@@ -117,6 +120,12 @@ async function proxyInternalApi(
     Accept: "application/json",
     Authorization: `Bearer ${token}`,
   });
+  if (
+    request.headers.get("X-IOPsych-Notice-Snapshot") === "1" &&
+    CANDIDATE_EXPORT_ROUTE.test(`${request.method} /${path.join("/")}`)
+  ) {
+    headers.set("X-IOPsych-Notice-Snapshot", "1");
+  }
   const contentType = request.headers.get("content-type");
   if (contentType && body.byteLength > 0) {
     headers.set("Content-Type", contentType);

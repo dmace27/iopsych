@@ -47,6 +47,7 @@ def _service(
 @candidate_router.post(
     "/{assessment_id}/export",
     response_model=CandidateDataExportResponse,
+    response_model_exclude_unset=True,
 )
 @audited("candidate_data.exported", "assessment", entity_id_path_parameter="assessment_id")
 def export_candidate_data(
@@ -62,7 +63,23 @@ def export_candidate_data(
     response.headers["Content-Disposition"] = (
         f'attachment; filename="candidate-data-{assessment_id}.json"'
     )
-    return _service(request, session, context).export(assessment_id)
+    exported = _service(request, session, context).export(assessment_id)
+    if request.headers.get("X-IOPsych-Notice-Snapshot") == "1":
+        return CandidateDataExportResponse.model_validate(exported.model_dump())
+    return CandidateDataExportResponse.model_validate(
+        exported.model_dump(
+            exclude={
+                "consent": {
+                    "notice_snapshot",
+                    "notice_sha256",
+                    "notice_snapshot_origin",
+                    "notice_snapshot_recorded_at",
+                    "presented_notice_sha256",
+                    "notice_history",
+                }
+            }
+        )
+    )
 
 
 @candidate_router.delete(

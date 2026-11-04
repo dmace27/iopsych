@@ -1,3 +1,4 @@
+import { exchangeSession, syntheticSignIn } from "./auth";
 import { test, expect, type Page, type Locator } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 
@@ -23,16 +24,7 @@ async function tabTo(page: Page, target: Locator) {
 }
 
 async function signIn(page: Page) {
-  await page.goto("/sign-in");
-  const input = page.getByLabel("Internal access token");
-  await tabTo(page, input);
-  // insertText avoids credentials appearing in a keyboard event diagnostic.
-  await page.keyboard.insertText(process.env.BROWSER_E2E_RECRUITER!);
-  await page.keyboard.press("Tab");
-  await expect(
-    page.getByRole("button", { name: "Continue to roles" }),
-  ).toBeFocused();
-  await page.keyboard.press("Enter");
+  await syntheticSignIn(page);
   await expect(
     page.getByRole("heading", { name: "Organization roles" }),
   ).toBeVisible();
@@ -207,7 +199,7 @@ for (const screen of screens) {
   }
 }
 
-test("sign-in: skip link, empty validation, rejected credential and keyboard recovery", async ({
+test("sign-in: keyboard skip link, empty and rejected session exchange, recovery", async ({
   page,
 }) => {
   await page.goto("/sign-in");
@@ -216,21 +208,15 @@ test("sign-in: skip link, empty validation, rejected credential and keyboard rec
   await expect(skip).toBeFocused();
   await expect(skip).toBeInViewport();
   await page.keyboard.press("Enter");
-  const input = page.getByLabel("Internal access token");
-  await tabTo(page, input);
-  await page.keyboard.press("Tab");
-  await page.keyboard.press("Enter");
-  await expect(input).toBeFocused();
-  await page.keyboard.insertText("synthetic-invalid-token");
-  await page.keyboard.press("Tab");
-  await page.keyboard.press("Enter");
-  await expect(page.getByRole("alert")).toBeVisible();
+  await expect(page).toHaveURL(/#main-content$/);
+  await expect(
+    page.getByRole("heading", { name: "Sign in to Role studio" }),
+  ).toBeInViewport();
+  expect(await exchangeSession(page, "")).toBe(400);
+  expect(await exchangeSession(page, "synthetic-invalid-token")).toBe(401);
+  expect(await page.context().cookies()).toEqual([]);
   await scan(page);
-  await tabTo(page, input);
-  await page.keyboard.press("ControlOrMeta+A");
-  await page.keyboard.insertText(process.env.BROWSER_E2E_RECRUITER!);
-  await page.keyboard.press("Tab");
-  await page.keyboard.press("Enter");
+  await syntheticSignIn(page);
   await expect(
     page.getByRole("heading", { name: "Organization roles" }),
   ).toBeVisible();

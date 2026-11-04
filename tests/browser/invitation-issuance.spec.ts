@@ -1,3 +1,4 @@
+import { syntheticSignIn } from "./auth";
 import { randomUUID } from "node:crypto";
 import { test, expect, type Page, type Locator } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
@@ -24,11 +25,7 @@ test.beforeEach(async ({ context }) => {
 });
 
 async function signIn(page: Page, identity = "RECRUITER") {
-  await page.goto("/sign-in");
-  await page
-    .getByLabel("Internal access token")
-    .fill(process.env[`BROWSER_E2E_${identity}`]!);
-  await page.getByRole("button", { name: "Continue to roles" }).click();
+  await syntheticSignIn(page, identity);
   await expect(
     page.getByRole("heading", { name: "Organization roles" }),
   ).toBeVisible();
