@@ -57,6 +57,39 @@ Synthetic data and controlled local mail only. No push, public deployment, purch
 
 ## First wave
 
+### 22:37 UTC integration checkpoint (supersedes earlier live rows)
+
+Integration HEAD before this record: `9609510`. Completed workers below have reported and been released; no full package acceptance is inferred.
+
+| Slice | Integrated revision | Review / independently executed coordinator evidence | Remaining |
+| --- | --- | --- | --- |
+| 6A boundary repair | `a0d551b` | 104 launcher tests, 52 route tests, five live Next cases passed; hostile Host never reaches upstream or sets cookie | Combined regression and clean setup evidence reconciliation |
+| 6C backend / frontend | `6a8fd01` / `3ee3411` | Backend 53 passed/one PostgreSQL skip in coordinator focused run; frontend 37 passed | Worker reported real PostgreSQL upgrade coverage; independent combined PG run active; retained-content correction and browser integration pending |
+| 8A local capture adapter | `806016b` | 47 tests passed/one Mailpit skip; worker actual Mailpit test separately passed | Explicit injection only; lifecycle/provider/outbox still pending |
+| Dependency remediation | `7bc15f3` | Independent npm audit reports zero vulnerabilities; reviewed narrow manifest/lock changes | Combined build/browser/container checks active |
+| Security CI | `360c5dc` | Four scanner regression tests passed; independent fail-closed jobs reviewed | Worker zero Python/history/source findings; integrated-revision/hosted checks pending |
+| 11B extraction bounds | `3078d9e` | 65 focused tests passed | Hard cancellation, distributed admission, hosted/provider gates remain |
+| 11B readiness/upload bounds | `91bd92f` | 17 focused tests passed, one deprecation warning | DB deadlines/schema readiness and hosted validation remain |
+| 12B profile contrast | `9609510` | Two class changes reviewed; worker computed contrast 7.56:1, component tests passed | Actual browser axe rerun active, no manual acceptance |
+| Trace/privacy contract preparation | `66bde97` / `f662043` | Reviewed exact additive trace envelope and privacy locking proposal | Engineering slices dispatched; interpretation/privacy policy approvals remain pending |
+| Independent integration review | `4c7caf3` | Two reproduced recovery defects accepted | Decline cleanup integrated; clear-at-review reset still being fixed |
+
+New downstream worktrees start at `4c7caf3` (integrity/profile fixes started at `360c5dc`). Their seven new rendered sessions plus two correction sessions all display Fast; no unsupported sessions. Browser worker remains Fast. At dispatch checkpoint ten sessions were live; profile worker has since completed/released, leaving nine useful tasks. Memory free 32%; hold further heavy builds until current builds settle, rather than spawn duplicate regressions.
+
+| Active task | Dispatch | Ownership / runtime |
+| --- | --- | --- |
+| 6C retained-content integrity | `ctx_929fe435c930` | Registry and focused tests only; 3124/8124/5564 |
+| 12A production browser expansion/rerun | `ctx_6f6fb5f60c61` | Browser fixtures/runner/tests; 3116/8116/5556, mail 1136/8136 |
+| 9C historical trace backend | `ctx_055f6c35334f` | Report trace module/schema/route/service, canonical fixtures; 3126/8126/5566 |
+| 9C historical trace frontend | `ctx_22fa434f26b8` | Trace parser/client, internal GET proxy, report drawer; 3127/8127/5567 |
+| 10A export/anonymization serialization | `ctx_b2a989cc4f5f` | Privacy service and new PostgreSQL interleaving tests; 3128/8128/5568 |
+| 9A recovery correction | `ctx_d12515fe37f3` | Candidate component/tests only; 3129/8129/5569 |
+| 7A production sign-out correction | `ctx_a4744da9078a` | Session route/tests and cookie helper if required; 3130/8130 |
+| Combined regression | `ctx_38a566c6a71b` | Read-only application, one broad check/build/PG run at frozen revision; 3131/8131/5571 |
+| Updated packaging verification | `ctx_04786040c8c9` | Read-only deployment/application, new isolated container project; 3132/8132/5572 |
+
+9C engineering contract is approved exactly as proposed in the trace document; backend owns language-neutral fixtures and sends them to UI before final integration. Existing report responses remain unchanged; no new interpretation is approved. Privacy slice preserves existing export/deletion policy and schema, adding serialization only. Browser found a real production sign-out failure (204 followed by authenticated 200); dedicated correction is active, not waived. Combined regression and packaging checks are delegated independently while coordinator remains sole integrator. User decisions requested for provider defaults and product scope are unanswered at this checkpoint.
+
 All three child worktrees started at committed integration revision `a8de73c`. Branches have prefix `AbhiNutakki/`; worktrees are under `/Users/abhiramnutakki/orca/workspaces/iopsych/`.
 
 | Package/task | Branch | Task / active dispatch | Ownership | Ports / DB | State / evidence |
