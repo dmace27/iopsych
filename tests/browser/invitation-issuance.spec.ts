@@ -323,7 +323,9 @@ test("issuance: revoke preserves keyboard focus and explicit new issuance uses a
     await dialog.accept();
   });
   await page.keyboard.press("Enter");
-  await expect(first.getByText("Stored status: Revoked")).toBeVisible();
+  await expect(
+    first.getByText("Stored invitation state: Revoked"),
+  ).toBeVisible();
   await expect(first).toBeFocused();
   await form(page)
     .getByRole("button", { name: "Start new invitation" })
@@ -339,7 +341,7 @@ test("issuance: revoke preserves keyboard focus and explicit new issuance uses a
   expect(keys[0]).not.toBe(keys[1]);
   await expect(row(page, email)).toHaveCount(2);
   await expect(
-    row(page, email).filter({ hasText: "Stored status: Revoked" }),
+    row(page, email).filter({ hasText: "Stored invitation state: Revoked" }),
   ).toHaveCount(1);
   await page.reload();
   await expect(row(page, email)).toHaveCount(2);

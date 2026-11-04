@@ -64,13 +64,33 @@ and fresh database migrations through 0010. Chromium was `156.0.8078.4`, axe was
 `aria-prohibited-attr` (1 node on each preview width). They remain manual-review
 items, not accessibility passes. The runner exited 0, stopped its servers and
 removed its own PostgreSQL/mailbox containers and network; runtime ownership was
-released to the coordinator. No full suite was run.
+released to the coordinator.
+
+The coordinator then requested verification with the new delivery fields and
+recovery form. Runtime ownership was reclaimed for those targeted checks:
+
+| Application revision              | Result                               | Detail                                                                                                                                      |
+| --------------------------------- | ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| `cc00aaf` plus initial spec       | 6 passed, 0 skipped, 6.0s            | Original integrated form/proxy baseline above.                                                                                              |
+| `7b8a931`                         | 5 passed, 1 failed, 0 skipped, 10.4s | New delivery UI renamed the revoke label from `Stored status` to `Stored invitation state`; two test assertions still used the former copy. |
+| `29fe93e` plus updated assertions | **6 passed, 0 skipped, 6.4s**        | Includes integrated delivery API/UI and recovery commit `3111919`; same six requested cases, no application fix made by this worker.        |
+
+The final run again built production assets and migrated a fresh database. Its
+four axe scans reported zero violations, with the same incomplete rule IDs;
+preview `color-contrast` counts were 269 at each width after adding delivery
+rows, manager denial remained 4, and preview `aria-prohibited-attr` remained 1.
+Browser/axe versions were unchanged. Final cleanup exited 0 and removed the
+owned stack; ports 3116/8116/5556/1136/8136 are released. No full suite was run.
 
 Scoped Prettier and `git diff --check` passed. Standalone strict TypeScript
 passed with
 `tsc --noEmit --strict --target es2022 --module nodenext --moduleResolution nodenext --skipLibCheck tests/browser/invitation-issuance.spec.ts`.
 The build's generated `next-env.d.ts` path changes were restored; no application
 edit remains.
+
+The recovery-form revision was exercised by the six normal/denied/invalid
+journeys above; terminal conflict and uncertain-retry browser scenarios remain
+outside this slice's tested cases.
 
 The synchronous local-mail fixture does not establish queued delivery,
 exactly-once delivery, receipt, retry/replay semantics or real-provider
