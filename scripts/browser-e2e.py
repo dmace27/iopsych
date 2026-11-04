@@ -110,6 +110,7 @@ def main():
         AUTH_JWT_ISSUER="https://auth.example.invalid",
         AUTH_JWT_AUDIENCE="iopsych-api",
         INVITE_TOKEN_SIGNING_SECRET=secrets.token_urlsafe(48),
+        INVITE_ALLOW_SYNTHETIC_DEFINITIONS="true",
         INVITE_CANDIDATE_BASE_URL=f"{WEB}/candidate/invites",
         ROLE_EXTRACTION_PROVIDER="disabled",
         ROLE_EXTRACTION_API_KEY="",
@@ -149,6 +150,7 @@ def main():
         from fixtures import LocalMailboxDelivery, seed_browser_admin, synthetic_credentials
         from sqlalchemy import create_engine
 
+        from app.assignments.registry import new_assignment
         from app.database.models import AssessmentInvite, AssessmentInviteStatus
         from app.database.seed import ALPHA_PROFILE_ID, seed_database
         from app.database.session import create_session_factory
@@ -172,6 +174,7 @@ def main():
                         token_hash=token.token_hash,
                         expires_at=expires,
                         status=AssessmentInviteStatus.ACTIVE,
+                        assignment_json=new_assignment(allow_synthetic=True),
                     )
                 )
             session.commit()
