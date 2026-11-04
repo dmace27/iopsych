@@ -11,6 +11,7 @@ import pytest
 import sqlalchemy
 from sqlalchemy.orm import sessionmaker
 
+from app.auth.errors import AccessProblemError
 from app.invitations import local_worker_cli as cli
 from app.invitations import worker
 
@@ -19,7 +20,7 @@ URL = f"postgresql+psycopg://synthetic:unused@127.0.0.1:5605/{DATABASE}"
 
 
 @pytest.fixture(autouse=True)
-def isolated_environment(monkeypatch):
+def isolated_environment(monkeypatch: pytest.MonkeyPatch) -> None:
     for key in tuple(os.environ):
         if key.startswith(("PG", "INVITE_", "AUTH_", "DATABASE", "LOCAL_DELIVERY_")):
             monkeypatch.delenv(key)
@@ -33,11 +34,11 @@ def isolated_environment(monkeypatch):
     monkeypatch.setenv("INVITE_LOCAL_QUEUE_KEY", base64.urlsafe_b64encode(b"c" * 32).decode())
 
 
-def arguments(action="cleanup", *extra):
+def arguments(action: str = "cleanup", *extra: str) -> list[str]:
     return [action, "--once", "--ack-database", DATABASE, *extra]
 
 
-def assert_counts(capsys, attempted=0, cleaned=0):
+def assert_counts(capsys: pytest.CaptureFixture[str], attempted: int = 0, cleaned: int = 0) -> None:
     captured = capsys.readouterr()
     assert captured.err == ""
     assert json.loads(captured.out) == {"attempted": attempted, "cleaned": cleaned}
@@ -65,7 +66,9 @@ def assert_counts(capsys, attempted=0, cleaned=0):
         "not-a-url-secret",
     ],
 )
-def test_invalid_targets_never_create_engine(monkeypatch, capsys, url):
+def test_invalid_targets_never_create_engine(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str], url: str
+) -> None:
     engine = Mock(side_effect=AssertionError("must not connect"))
     monkeypatch.setattr(sqlalchemy, "create_engine", engine)
     monkeypatch.setenv("LOCAL_DELIVERY_DATABASE_URL", url)
@@ -91,7 +94,9 @@ def test_invalid_targets_never_create_engine(monkeypatch, capsys, url):
         ("LOCAL_DELIVERY_DATABASE_URL", None),
     ],
 )
-def test_environment_guards(monkeypatch, capsys, key, value):
+def test_environment_guards(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str], key: str, value: str | None
+) -> None:
     execute = Mock()
     monkeypatch.setattr(cli, "_execute", execute)
     if value is None:
@@ -106,7 +111,9 @@ def test_environment_guards(monkeypatch, capsys, key, value):
 @pytest.mark.parametrize(
     "extra", [["--limit", "0"], ["--limit", "101"], ["--limit", "secret"], ["--unknown", "private"]]
 )
-def test_bad_arguments_are_private(monkeypatch, capsys, extra):
+def test_bad_arguments_are_private(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str], extra: list[str]
+) -> None:
     execute = Mock()
     monkeypatch.setattr(cli, "_execute", execute)
     assert cli.main(arguments("cleanup", *extra)) == 2
@@ -114,7 +121,7 @@ def test_bad_arguments_are_private(monkeypatch, capsys, extra):
     assert_counts(capsys)
 
 
-def test_once_and_acknowledgement_required(capsys):
+def test_once_and_acknowledgement_required(capsys: pytest.CaptureFixture[str]) -> None:
     assert cli.main(["cleanup", "--ack-database", DATABASE]) == 2
     assert_counts(capsys)
     assert cli.main(["cleanup", "--once"]) == 2
@@ -123,7 +130,12 @@ def test_once_and_acknowledgement_required(capsys):
 
 @pytest.mark.parametrize("limit", [1, 25, 100])
 @pytest.mark.parametrize("keys_present", [False, True])
-def test_cleanup_delegates_without_any_keys(monkeypatch, capsys, limit, keys_present):
+def test_cleanup_delegates_without_any_keys(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    limit: int,
+    keys_present: bool,
+) -> None:
     for key in ("AUTH_JWT_SECRET", "INVITE_TOKEN_SIGNING_SECRET", "INVITE_LOCAL_QUEUE_KEY"):
         if keys_present:
             monkeypatch.setenv(key, "malformed-key-ignored")
@@ -145,7 +157,9 @@ def test_cleanup_delegates_without_any_keys(monkeypatch, capsys, limit, keys_pre
     assert_counts(capsys, cleaned=limit)
 
 
-def test_drain_delegates_once(monkeypatch, capsys):
+def test_drain_delegates_once(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
     engine = Mock()
     worker_class = Mock()
     worker_class.return_value.drain.return_value = 2
@@ -163,7 +177,9 @@ def test_drain_delegates_once(monkeypatch, capsys):
 
 
 @pytest.mark.parametrize("port", ["3000", "8000", "8001", "5432", "25", "65536"])
-def test_protected_smtp_never_connects(monkeypatch, capsys, port):
+def test_protected_smtp_never_connects(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str], port: str
+) -> None:
     build = Mock()
     monkeypatch.setattr(sqlalchemy, "create_engine", build)
     assert cli.main(arguments("drain", "--smtp-port", port)) == 1
@@ -182,7 +198,9 @@ def test_protected_smtp_never_connects(monkeypatch, capsys, port):
         "http://127.0.0.1:3105/invites#private",
     ],
 )
-def test_candidate_target_guard(monkeypatch, capsys, candidate):
+def test_candidate_target_guard(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str], candidate: str
+) -> None:
     monkeypatch.setenv("INVITE_CANDIDATE_BASE_URL", candidate)
     build = Mock()
     monkeypatch.setattr(sqlalchemy, "create_engine", build)
@@ -191,11 +209,13 @@ def test_candidate_target_guard(monkeypatch, capsys, candidate):
     assert_counts(capsys)
 
 
-def test_errors_and_logs_are_suppressed_and_engine_disposed(monkeypatch, capsys):
+def test_errors_and_logs_are_suppressed_and_engine_disposed(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
     engine = Mock()
     monkeypatch.setattr(sqlalchemy, "create_engine", Mock(return_value=engine))
 
-    def fail(*args, **kwargs):
+    def fail(*args: object, **kwargs: object) -> None:
         logging.critical("private-token-and-email")
         raise RuntimeError("private-token-and-email")
 
@@ -207,17 +227,19 @@ def test_errors_and_logs_are_suppressed_and_engine_disposed(monkeypatch, capsys)
     assert_counts(capsys)
 
 
-def test_existing_sqlite_worker_guard():
+def test_existing_sqlite_worker_guard() -> None:
     engine = sqlalchemy.create_engine("sqlite+pysqlite:///:memory:")
     try:
-        with pytest.raises(Exception) as caught:
+        with pytest.raises(AccessProblemError) as caught:
             worker.cleanup_deliveries(sessionmaker(bind=engine), limit=1)
         assert caught.value.code == "local_queue_requires_postgresql"
     finally:
         engine.dispose()
 
 
-def test_import_does_not_construct_engine_or_change_logging(monkeypatch, capsys):
+def test_import_does_not_construct_engine_or_change_logging(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
     build = Mock(side_effect=AssertionError)
     monkeypatch.setattr(sqlalchemy, "create_engine", build)
     previous = logging.root.manager.disable
@@ -227,7 +249,9 @@ def test_import_does_not_construct_engine_or_change_logging(monkeypatch, capsys)
     assert capsys.readouterr() == ("", "")
 
 
-def test_connection_failure_is_redacted(monkeypatch, capsys):
+def test_connection_failure_is_redacted(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
     monkeypatch.setattr(
         sqlalchemy, "create_engine", Mock(side_effect=RuntimeError("private-database-url"))
     )
@@ -236,7 +260,7 @@ def test_connection_failure_is_redacted(monkeypatch, capsys):
 
 
 @pytest.mark.parametrize("host", ["127.0.0.1", "[::1]"])
-def test_numeric_loopback_database_targets(monkeypatch, host):
+def test_numeric_loopback_database_targets(monkeypatch: pytest.MonkeyPatch, host: str) -> None:
     monkeypatch.setenv("LOCAL_DELIVERY_DATABASE_URL", URL.replace("127.0.0.1", host))
     assert cli._target(DATABASE).host == host.strip("[]")
 
@@ -249,7 +273,9 @@ def test_numeric_loopback_database_targets(monkeypatch, host):
         ["--smtp-port", "1145", "--smtp-host", "localhost"],
     ],
 )
-def test_drain_requires_explicit_local_smtp(monkeypatch, capsys, extra):
+def test_drain_requires_explicit_local_smtp(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str], extra: list[str]
+) -> None:
     build = Mock()
     monkeypatch.setattr(sqlalchemy, "create_engine", build)
     assert cli.main(arguments("drain", *extra)) == 1
@@ -257,7 +283,9 @@ def test_drain_requires_explicit_local_smtp(monkeypatch, capsys, extra):
     assert_counts(capsys)
 
 
-def test_drain_rejects_lost_key_before_engine(monkeypatch, capsys):
+def test_drain_rejects_lost_key_before_engine(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
     monkeypatch.delenv("INVITE_LOCAL_QUEUE_KEY")
     build = Mock()
     monkeypatch.setattr(sqlalchemy, "create_engine", build)
