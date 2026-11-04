@@ -107,7 +107,10 @@ it.each([401, 403, 404, 409, 422, 429])(
     api.reissueInvitation
       .mockRejectedValueOnce(new Error("Connection lost"))
       .mockRejectedValueOnce(
-        new ApiClientError("Rejected retry", { status, code: "retry_rejected" }),
+        new ApiClientError("Rejected retry", {
+          status,
+          code: "retry_rejected",
+        }),
       )
       .mockResolvedValueOnce({ ...invitation, id: "replacement" });
     vi.spyOn(window, "confirm").mockReturnValue(true);
@@ -125,7 +128,9 @@ it.each([401, 403, 404, 409, 422, 429])(
     );
     await userEvent.click(screen.getByText("Check provider delivery"));
     await userEvent.click(await screen.findByText("Reissue invitation"));
-    await userEvent.click(await screen.findByText("Retry same reissue request"));
+    await userEvent.click(
+      await screen.findByText("Retry same reissue request"),
+    );
     expect(screen.getByText(/Replacement outcome is unknown/)).toBeVisible();
     expect(screen.getByText("Check provider delivery")).toBeDisabled();
     expect(onBusyChange).not.toHaveBeenCalledWith(false);
