@@ -3,7 +3,10 @@
 from __future__ import annotations
 
 import json
+import time
+from contextvars import ContextVar
 from dataclasses import asdict, dataclass
+from http.client import HTTPException
 from json import JSONDecodeError
 from typing import TYPE_CHECKING, Any, Protocol
 from urllib.error import HTTPError, URLError
@@ -11,6 +14,9 @@ from urllib.request import Request, urlopen
 
 from app.extraction.config import RoleExtractionSettings
 from iopsych_contracts import CONSTRUCT_DEFINITIONS, RoleExtraction
+
+# Internal synchronous execution context; the injectable provider protocol stays unchanged.
+_extraction_deadline: ContextVar[float | None] = ContextVar("extraction_deadline", default=None)
 
 
 @dataclass(frozen=True)
@@ -64,13 +70,21 @@ class OpenAIStructuredRoleExtractionProvider:
         self._api_key = settings.api_key.get_secret_value()
         self._model = settings.model
         self._timeout = settings.timeout_seconds
+        self._budget = settings.total_budget_seconds
+        self._max_response_bytes = settings.max_response_bytes
+        self._max_output_bytes = settings.max_output_bytes
+        self._max_output_tokens = settings.max_output_tokens
 
     def extract(self, role: RoleExtractionInput) -> object:
         """Request schema-constrained output and decode the returned JSON document."""
 
+        deadline = _extraction_deadline.get()
+        if deadline is None:
+            deadline = time.monotonic() + self._budget
         request_body = {
             "model": self._model,
             "store": False,
+            "max_output_tokens": self._max_output_tokens,
             "instructions": _SYSTEM_INSTRUCTIONS,
             "input": json.dumps(asdict(role), ensure_ascii=True),
             "text": {
@@ -92,29 +106,41 @@ class OpenAIStructuredRoleExtractionProvider:
             method="POST",
         )
         try:
-            with urlopen(request, timeout=self._timeout) as response:
-                response_payload = json.loads(response.read())
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                raise RoleExtractionProviderError("extraction budget exhausted", retryable=False)
+            # urllib timeout limits blocking socket operations, not total wall time.
+            with urlopen(request, timeout=min(self._timeout, remaining)) as response:
+                body = response.read(self._max_response_bytes + 1)
+            if time.monotonic() >= deadline:
+                raise RoleExtractionProviderError("extraction budget exhausted", retryable=False)
+            if len(body) > self._max_response_bytes:
+                raise RoleExtractionProviderError("provider response too large", retryable=False)
+            response_payload = json.loads(body)
         except HTTPError as exc:
+            exc.close()
             raise RoleExtractionProviderError(
                 "the extraction provider rejected the request",
                 retryable=exc.code in {408, 409, 429} or exc.code >= 500,
-            ) from exc
-        except (URLError, TimeoutError) as exc:
+            ) from None
+        except (URLError, OSError, HTTPException):
             raise RoleExtractionProviderError(
                 "the extraction provider could not be reached", retryable=True
-            ) from exc
-        except (JSONDecodeError, UnicodeDecodeError) as exc:
+            ) from None
+        except (JSONDecodeError, UnicodeDecodeError, RecursionError):
             raise RoleExtractionProviderError(
                 "the extraction provider returned an invalid response", retryable=True
-            ) from exc
+            ) from None
 
         output_text = _extract_output_text(response_payload)
         try:
+            if len(output_text.encode("utf-8")) > self._max_output_bytes:
+                raise RoleExtractionProviderError("provider output too large", retryable=False)
             return json.loads(output_text, object_pairs_hook=_reject_duplicate_members)
-        except (JSONDecodeError, ValueError) as exc:
+        except (ValueError, RecursionError):
             raise RoleExtractionProviderError(
                 "the extraction provider returned invalid structured output", retryable=True
-            ) from exc
+            ) from None
 
 
 def build_role_extraction_provider(

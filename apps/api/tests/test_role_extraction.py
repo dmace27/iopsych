@@ -92,8 +92,8 @@ class FakeHttpResponse:
     def __exit__(self, *args: object) -> None:
         del args
 
-    def read(self) -> bytes:
-        return self.body
+    def read(self, size: int = -1) -> bytes:
+        return self.body if size < 0 else self.body[:size]
 
 
 @pytest.fixture

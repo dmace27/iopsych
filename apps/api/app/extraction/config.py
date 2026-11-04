@@ -26,6 +26,11 @@ class RoleExtractionSettings(BaseSettings):
     timeout_seconds: float = Field(default=30.0, gt=0, le=120)
     max_attempts: int = Field(default=3, ge=1, le=5)
     retry_base_delay_seconds: float = Field(default=0.2, ge=0, le=5)
+    total_budget_seconds: float = Field(default=45.0, gt=0, le=120)
+    max_response_bytes: int = Field(default=1_048_576, ge=1, le=8_388_608)
+    max_output_bytes: int = Field(default=65_536, ge=1, le=1_048_576)
+    max_output_tokens: int = Field(default=8192, ge=16, le=32768)
+    max_concurrent_requests: int = Field(default=4, ge=1, le=32)
 
     @field_validator("api_key")
     @classmethod
