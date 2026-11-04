@@ -20,6 +20,7 @@ import {
   type CandidateInvite,
 } from "../../../../lib/candidate-contracts";
 import { CandidateAssessment } from "./candidate-assessment";
+import { ApiClientError } from "../../../../lib/api-client";
 
 const INVITATION_ID = "11111111-1111-4111-8111-111111111111";
 
@@ -106,6 +107,135 @@ describe("CandidateAssessment", () => {
     await screen.findByText("You declined the assessment");
     expect(apiMocks.getCandidateDefinition).not.toHaveBeenCalled();
   });
+
+  it.each(["consent", "decline"] as const)(
+    "requires manual reload and a fresh %s choice after a notice conflict",
+    async (decision) => {
+      const user = userEvent.setup();
+      const original = candidateInvite({
+        notice_sha256: "a".repeat(64),
+        notice_history: "not_recorded",
+      });
+      const refreshed = candidateInvite({
+        notice_sha256: "b".repeat(64),
+        consent_notice: {
+          ...original.consent_notice,
+          retention: "The frozen retention notice.",
+        },
+      });
+      apiMocks.getCandidateInvite
+        .mockResolvedValueOnce(original)
+        .mockResolvedValueOnce(refreshed);
+      apiMocks.recordCandidateConsent
+        .mockRejectedValueOnce(
+          new ApiClientError("Review required", {
+            status: 409,
+            code: "notice_review_required",
+          }),
+        )
+        .mockResolvedValueOnce(
+          candidateInvite({
+            decision,
+            can_start_assessment: decision === "consent",
+            status: decision === "consent" ? "consented" : "declined",
+          }),
+        );
+      render(<CandidateAssessment token="signed-token" />);
+      const choiceName =
+        decision === "consent" ? "I consent and want to begin" : "I decline";
+      await user.click(await screen.findByRole("button", { name: choiceName }));
+      expect(apiMocks.recordCandidateConsent).toHaveBeenLastCalledWith(
+        "signed-token",
+        decision,
+        original.notice_sha256,
+      );
+      expect(await screen.findByRole("alert")).toHaveTextContent(
+        "Your choice was not recorded",
+      );
+      expect(apiMocks.getCandidateInvite).toHaveBeenCalledTimes(1);
+      expect(apiMocks.getCandidateDefinition).not.toHaveBeenCalled();
+      expect(
+        screen.queryByRole("button", { name: choiceName }),
+      ).not.toBeInTheDocument();
+      await user.click(screen.getByRole("button", { name: "Reload notice" }));
+      expect(
+        await screen.findByText("The frozen retention notice."),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("heading", { name: "Your choice and your data" }),
+      ).toHaveFocus();
+      expect(apiMocks.recordCandidateConsent).toHaveBeenCalledTimes(1);
+      expect(apiMocks.getCandidateDefinition).not.toHaveBeenCalled();
+      expect(localStorage.length).toBe(0);
+      await user.click(screen.getByRole("button", { name: choiceName }));
+      expect(apiMocks.recordCandidateConsent).toHaveBeenCalledTimes(2);
+      expect(apiMocks.recordCandidateConsent).toHaveBeenLastCalledWith(
+        "signed-token",
+        decision,
+        refreshed.notice_sha256,
+      );
+      if (decision === "consent") await screen.findByText("Block 1 of 6");
+      else
+        await screen.findByRole("heading", {
+          name: "You declined the assessment",
+        });
+    },
+  );
+
+  it("keeps questions and decisions unavailable when notice reload fails", async () => {
+    apiMocks.getCandidateInvite
+      .mockResolvedValueOnce(candidateInvite({ notice_sha256: "a".repeat(64) }))
+      .mockRejectedValueOnce(new Error("Reload unavailable"));
+    apiMocks.recordCandidateConsent.mockRejectedValueOnce(
+      new ApiClientError("Review required", {
+        status: 409,
+        code: "notice_review_required",
+      }),
+    );
+    const user = userEvent.setup();
+    render(<CandidateAssessment token="signed-token" />);
+    await user.click(await screen.findByRole("button", { name: "I decline" }));
+    await user.click(
+      await screen.findByRole("button", { name: "Reload notice" }),
+    );
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Reload unavailable",
+    );
+    expect(apiMocks.recordCandidateConsent).toHaveBeenCalledTimes(1);
+    expect(apiMocks.getCandidateDefinition).not.toHaveBeenCalled();
+    expect(
+      screen.queryByRole("button", { name: "I decline" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it.each([
+    [
+      "legacy_unknown",
+      "The notice associated with your earlier choice was not recorded.",
+    ],
+    [
+      "legacy_unverified",
+      "Your choice was recorded without a notice digest from the client.",
+    ],
+  ] as const)(
+    "describes %s history factually",
+    async (notice_history, message) => {
+      apiMocks.getCandidateInvite.mockResolvedValue(
+        candidateInvite({
+          decision: "decline",
+          status: "declined",
+          notice_sha256: null,
+          notice_history,
+        }),
+      );
+      render(<CandidateAssessment token="signed-token" />);
+      expect(
+        await screen.findByText(message, { exact: false }),
+      ).toBeInTheDocument();
+      expect(apiMocks.recordCandidateConsent).not.toHaveBeenCalled();
+      expect(apiMocks.getCandidateDefinition).not.toHaveBeenCalled();
+    },
+  );
 
   it("fails closed on unavailable assignments and retries without using bundled questions", async () => {
     apiMocks.getCandidateInvite.mockResolvedValue(
@@ -251,6 +381,7 @@ describe("CandidateAssessment", () => {
     expect(apiMocks.recordCandidateConsent).toHaveBeenCalledWith(
       "signed-token",
       "consent",
+      undefined,
     );
 
     // A native radio group has one keyboard tab stop. For each block, choose

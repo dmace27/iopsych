@@ -36,6 +36,18 @@ export const CandidateInviteSchema = z.strictObject({
   expires_at: z.string().min(1),
   status: CandidateInviteStatusSchema,
   consent_notice: ConsentNoticeSchema,
+  notice_sha256: z
+    .string()
+    .regex(/^[a-f0-9]{64}$/)
+    .nullish(),
+  notice_history: z
+    .enum([
+      "not_recorded",
+      "digest_recorded",
+      "legacy_unverified",
+      "legacy_unknown",
+    ])
+    .nullish(),
   decision: ConsentDecisionSchema.nullable(),
   decision_recorded_at: z.string().min(1).nullable(),
   can_start_assessment: z.boolean(),

@@ -112,6 +112,92 @@ describe("candidate API client", () => {
     );
   });
 
+  it.each([
+    null,
+    "not_recorded",
+    "digest_recorded",
+    "legacy_unverified",
+    "legacy_unknown",
+  ])(
+    "accepts additive nullable notice metadata with history %s",
+    async (notice_history) => {
+      const payload = { ...response, notice_sha256: null, notice_history };
+      vi.mocked(fetch).mockResolvedValue(Response.json(payload));
+      await expect(getCandidateInvite("token")).resolves.toEqual(payload);
+    },
+  );
+
+  it.each(["A".repeat(64), "a".repeat(63), "g".repeat(64)])(
+    "rejects malformed advertised notice digests %s",
+    async (notice_sha256) => {
+      vi.mocked(fetch).mockImplementation(async () =>
+        Response.json({ ...response, notice_sha256 }),
+      );
+      await expect(getCandidateInvite("token")).rejects.toMatchObject({
+        code: "invalid_api_response",
+      });
+    },
+  );
+
+  it("rejects unknown notice histories", async () => {
+    vi.mocked(fetch).mockResolvedValue(
+      Response.json({ ...response, notice_history: "verified_read" }),
+    );
+    await expect(getCandidateInvite("token")).rejects.toMatchObject({
+      code: "invalid_api_response",
+    });
+  });
+
+  it.each(["consent", "decline"] as const)(
+    "echoes the advertised digest for %s",
+    async (decision) => {
+      const notice_sha256 = "a".repeat(64);
+      vi.mocked(fetch).mockImplementation(async () =>
+        Response.json({ ...response, notice_sha256 }),
+      );
+      const invite = await getCandidateInvite("token");
+      await recordCandidateConsent("token", decision, invite.notice_sha256);
+      expect(fetch).toHaveBeenLastCalledWith(
+        "/api/candidate/invites/token/consent",
+        expect.objectContaining({
+          body: JSON.stringify({
+            decision,
+            presented_notice_sha256: notice_sha256,
+          }),
+        }),
+      );
+    },
+  );
+
+  it("omits a null digest for legacy compatibility", async () => {
+    vi.mocked(fetch).mockResolvedValue(Response.json(response));
+    await recordCandidateConsent("token", "decline", null);
+    expect(fetch).toHaveBeenLastCalledWith(
+      "/api/candidate/invites/token/consent",
+      expect.objectContaining({
+        body: JSON.stringify({ decision: "decline" }),
+      }),
+    );
+  });
+
+  it("preserves the notice-review conflict without retrying", async () => {
+    vi.mocked(fetch).mockResolvedValue(
+      Response.json(
+        {
+          type: "about:blank",
+          title: "Review required",
+          status: 409,
+          code: "notice_review_required",
+        },
+        { status: 409 },
+      ),
+    );
+    await expect(
+      recordCandidateConsent("token", "consent", "a".repeat(64)),
+    ).rejects.toMatchObject({ code: "notice_review_required", status: 409 });
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+
   it("normalizes problem responses and invalid successful payloads", async () => {
     vi.mocked(fetch)
       .mockResolvedValueOnce(

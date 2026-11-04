@@ -9,6 +9,7 @@ import {
   type AssessmentResponseSet,
 } from "@iopsych/shared";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { ApiClientError } from "../../../../lib/api-client";
 
 import {
   getCandidateInvite,
@@ -150,6 +151,7 @@ function InvitationAssessment({ token }: CandidateAssessmentProps) {
   const submissionPending = useRef(false);
   const activeInvitation = useRef(false);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [noticeReviewRequired, setNoticeReviewRequired] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
   const [saveStatus, setSaveStatus] = useState("Not saved yet");
   const [retry, setRetry] = useState(0);
@@ -301,10 +303,20 @@ function InvitationAssessment({ token }: CandidateAssessmentProps) {
   }, [currentBlockIndex, currentView, state.status]);
 
   async function decide(decision: ConsentDecision) {
+    if (
+      state.status !== "ready" ||
+      state.view !== "consent" ||
+      submittingConsent
+    )
+      return;
     setSubmittingConsent(true);
     setActionError(null);
     try {
-      const invite = await recordCandidateConsent(token, decision);
+      const invite = await recordCandidateConsent(
+        token,
+        decision,
+        state.invite.notice_sha256,
+      );
       if (!activeInvitation.current) return;
       if (decision === "consent") {
         if (invite.decision !== "consent" || !invite.can_start_assessment) {
@@ -333,6 +345,23 @@ function InvitationAssessment({ token }: CandidateAssessmentProps) {
       }
     } catch (error) {
       if (!activeInvitation.current) return;
+      if (
+        error instanceof ApiClientError &&
+        error.status === 409 &&
+        error.code === "notice_review_required"
+      ) {
+        setNoticeReviewRequired(true);
+        setState({
+          message:
+            "Reload the notice and review it before making a new choice. Your choice was not recorded.",
+          status: "error",
+        });
+        setActionError(
+          "Review the reloaded notice before making a new choice.",
+        );
+        setSubmittingConsent(false);
+        return;
+      }
       if (decision === "consent")
         setState({ message: inviteErrorMessage(error), status: "error" });
       setActionError(inviteErrorMessage(error));
@@ -488,11 +517,12 @@ function InvitationAssessment({ token }: CandidateAssessmentProps) {
           <button
             type="button"
             onClick={() => {
+              setNoticeReviewRequired(false);
               setState({ status: "loading" });
               setRetry((value) => value + 1);
             }}
           >
-            Try again
+            {noticeReviewRequired ? "Reload notice" : "Try again"}
           </button>
         </section>
       </main>
@@ -1006,6 +1036,17 @@ function CandidateFrame({
         </p>
       </div>
       {children}
+      {invite.notice_history === "legacy_unknown" && (
+        <p className="mt-6 text-sm text-slate-700">
+          The notice associated with your earlier choice was not recorded.
+        </p>
+      )}
+      {invite.notice_history === "legacy_unverified" && (
+        <p className="mt-6 text-sm text-slate-700">
+          Your choice was recorded without a notice digest from the client. The
+          record does not verify which notice was presented.
+        </p>
+      )}
       <footer className="mt-8 flex flex-col justify-between gap-3 border-t border-slate-300 pt-6 text-sm text-slate-600 sm:flex-row">
         <span>Work-preference pilot · Human reviewed</span>
         <a

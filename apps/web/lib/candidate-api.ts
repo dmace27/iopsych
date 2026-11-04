@@ -74,9 +74,15 @@ export function getCandidateInvite(token: string): Promise<CandidateInvite> {
 export function recordCandidateConsent(
   token: string,
   decision: ConsentDecision,
+  presentedNoticeSha256?: string | null,
 ): Promise<CandidateInvite> {
   return candidateRequest(token, CandidateInviteSchema, "/consent", {
-    body: JSON.stringify({ decision }),
+    body: JSON.stringify({
+      decision,
+      ...(presentedNoticeSha256 == null
+        ? {}
+        : { presented_notice_sha256: presentedNoticeSha256 }),
+    }),
     method: "POST",
   });
 }
