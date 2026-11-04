@@ -17,6 +17,7 @@ from app.auth.errors import (
     access_problem_handler,
     request_validation_problem_handler,
 )
+from app.auth.local_login import router as local_login_router
 from app.auth.tokens import HmacJwtVerifier, TokenVerifier
 from app.database.models import InternalUserRole
 from app.database.session import create_database_engine, create_session_factory
@@ -95,6 +96,7 @@ def create_app(
         description="API foundation for the consented, human-reviewed IOPsych pilot.",
         version="0.1.0",
     )
+    application.state.authentication_settings = settings
     application.state.session_factory = resolved_session_factory
     application.state.token_verifier = resolved_verifier
     application.state.invitation_settings = invite_settings
@@ -115,6 +117,7 @@ def create_app(
     application.add_exception_handler(RequestValidationError, request_validation_problem_handler)
     application.add_middleware(AuditMiddleware, session_factory=resolved_session_factory)
     application.add_middleware(SecurityMiddleware)
+    application.include_router(local_login_router)
     application.include_router(roles_router)
     application.include_router(invitations_router)
     application.include_router(reports_router)

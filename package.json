@@ -23,7 +23,7 @@
     "setup": "bash scripts/bootstrap.sh",
     "api:install": "bash scripts/install-api.sh",
     "dev": "concurrently --kill-others-on-fail --names web,api --prefix-colors cyan,magenta \"npm:dev:web\" \"npm:dev:api\"",
-    "dev:web": "npm run dev --workspace @iopsych/web",
+    "dev:web": "bash scripts/run-web.sh",
     "dev:api": "bash scripts/run-api.sh",
     "db:up": "docker compose up -d --wait postgres",
     "db:down": "docker compose down",

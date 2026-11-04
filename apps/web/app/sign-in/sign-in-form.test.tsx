@@ -52,6 +52,30 @@ describe("SignInForm", () => {
     });
   });
 
+  it("signs in with a selected synthetic account without a token input", async () => {
+    vi.mocked(fetch).mockResolvedValue(Response.json({ status: "ok" }));
+    const user = userEvent.setup();
+    render(<SignInForm localLogin />);
+    expect(
+      screen.queryByLabelText(/internal access token/i),
+    ).not.toBeInTheDocument();
+    await user.selectOptions(
+      screen.getByLabelText(/synthetic local account/i),
+      "beacon",
+    );
+    await user.click(screen.getByRole("button", { name: "Continue to roles" }));
+    expect(fetch).toHaveBeenCalledWith(
+      "/api/session/local",
+      expect.objectContaining({
+        body: JSON.stringify({ identity: "beacon" }),
+        method: "POST",
+      }),
+    );
+    await waitFor(() =>
+      expect(navigationMocks.replace).toHaveBeenCalledWith("/roles"),
+    );
+  });
+
   it("announces a rejected credential and restores the interactive form", async () => {
     vi.mocked(fetch).mockResolvedValue(
       new Response(JSON.stringify({ detail: "The token is invalid." }), {

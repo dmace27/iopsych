@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 /** Exchange a short-lived provider token for the server-managed session cookie. */
-export function SignInForm() {
+export function SignInForm({ localLogin = false }: { localLogin?: boolean }) {
   const router = useRouter();
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -17,11 +17,16 @@ export function SignInForm() {
     const token = String(data.get("token") ?? "").trim();
 
     try {
-      const response = await fetch("/api/session", {
-        body: JSON.stringify({ token }),
-        headers: { "Content-Type": "application/json" },
-        method: "POST",
-      });
+      const response = await fetch(
+        localLogin ? "/api/session/local" : "/api/session",
+        {
+          body: JSON.stringify(
+            localLogin ? { identity: data.get("identity") } : { token },
+          ),
+          headers: { "Content-Type": "application/json" },
+          method: "POST",
+        },
+      );
       if (!response.ok) {
         const payload: unknown = await response.json().catch(() => null);
         const detail =
@@ -50,21 +55,39 @@ export function SignInForm() {
       className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8"
       onSubmit={handleSubmit}
     >
-      <label className="block text-sm font-bold text-slate-800">
-        Internal access token
-        <span className="mt-1 block text-xs font-normal leading-5 text-slate-500">
-          Tokens are validated by the API before a session is created.
-        </span>
-        <input
-          autoComplete="off"
-          className="field-control mt-2"
-          disabled={submitting}
-          name="token"
-          required
-          spellCheck={false}
-          type="password"
-        />
-      </label>
+      {localLogin ? (
+        <label className="block text-sm font-bold text-slate-800">
+          Synthetic local account
+          <select
+            className="field-control mt-2"
+            name="identity"
+            disabled={submitting}
+          >
+            <option value="alpha">
+              Alpha Recruiter — synthetic tenant Alpha
+            </option>
+            <option value="beacon">
+              Beacon Manager — synthetic tenant Beacon
+            </option>
+          </select>
+        </label>
+      ) : (
+        <label className="block text-sm font-bold text-slate-800">
+          Internal access token
+          <span className="mt-1 block text-xs font-normal leading-5 text-slate-500">
+            Tokens are validated by the API before a session is created.
+          </span>
+          <input
+            autoComplete="off"
+            className="field-control mt-2"
+            disabled={submitting}
+            name="token"
+            required
+            spellCheck={false}
+            type="password"
+          />
+        </label>
+      )}
       {error ? (
         <p
           className="mt-4 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-900"

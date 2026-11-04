@@ -9,5 +9,4 @@ python_bin="${PYTHON_BIN:-python3}"
 "${python_bin}" -c 'import sys; assert (3, 12) <= sys.version_info[:2] < (3, 15), "Python 3.12-3.14 is required"'
 
 "${python_bin}" -m venv .venv
-.venv/bin/python -m pip install --upgrade pip
-.venv/bin/python -m pip install --upgrade --upgrade-strategy eager -r apps/api/requirements-dev.txt
+.venv/bin/python -m pip install -r apps/api/requirements-dev.txt

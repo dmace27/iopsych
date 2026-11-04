@@ -19,8 +19,13 @@ the integration verification use PostgreSQL 16.
 
 ## First-time setup
 
+The commands below use a dedicated Compose project `iopsych-6a`, database
+`iopsych_6a`, and loopback ports 5541 (PostgreSQL), 8101 (API), and 3101 (web).
+They do not use or reset an existing database on port 5432. Run from the
+repository root:
+
 ```bash
-npm run setup
+PYTHON_BIN=python3.12 npm run setup
 cp apps/web/.env.example apps/web/.env.local
 cp apps/api/.env.example apps/api/.env
 npm run db:up
@@ -29,37 +34,64 @@ npm run db:seed
 npm run db:verify
 ```
 
-`npm run setup` installs the npm workspaces, creates `.venv`, and installs the
-API and test dependencies. Set `PYTHON_BIN` if `python3` is not the desired
-interpreter:
+`setup` runs `npm ci` against the committed lockfile, creates `.venv`, and
+installs pinned direct API/test dependencies. The equivalent saved setup is
+`npm ci && PYTHON_BIN=python3.12 npm run api:install`. Python transitive
+requirements are not yet locked. Node 22 is the baseline; Node 24 is also
+supported by the declared engines. Never source a dotenv file as shell code. The
+API launcher parses it as data and preserves exported environment overrides.
 
-```bash
-PYTHON_BIN=python3.12 npm run setup
-```
+## Run locally and sign in with synthetic data
 
-## Run locally
-
-Start both development servers:
+For this local-only demonstration, set `AUTH_LOCAL_LOGIN_ENABLED=true` in
+`apps/api/.env` and `LOCAL_LOGIN_ENABLED=true` in `apps/web/.env.local`. Keep
+`AUTH_ENVIRONMENT=development`, the loopback API host, and the matching
+`AUTH_LOCAL_WEB_ORIGIN=http://127.0.0.1:3101`. The template signing key is
+local-only; replace it with a random key in your ignored file if sharing the
+machine. Never use these settings or the template keys in a hosted environment.
 
 ```bash
 npm run dev
 ```
 
-The web app is available at <http://localhost:3000> and the API at
-<http://localhost:8000>. Their machine-readable health endpoints are:
+Open <http://127.0.0.1:3101/sign-in>, choose **Alpha Recruiter** or **Beacon
+Manager**, and select **Continue to roles**. The server exchanges that fixed
+synthetic identity for a 15-minute HTTP-only, SameSite=Strict cookie; no JWT
+editing or token pasting is needed. Each identity sees its own seeded tenant.
+The API rejects arbitrary identities and mismatched seed records. Local login is
+disabled by default, requires explicit development mode, and rejects nonloopback
+hosts/peers/origins. Do not expose either development server through a tunnel or
+reverse proxy. This is not provider authentication or pilot approval.
+Invitations remain fail-closed without a delivery adapter; this setup sends no
+email and does not call extraction providers.
 
-- Web: <http://localhost:3000/api/health>
-- API: <http://localhost:8000/health>
+With both apps running, verify the actual cookie session, tenant isolation, and
+sign-out without printing credentials:
 
-Run either app independently with `npm run dev:web` or `npm run dev:api`.
+```bash
+.venv/bin/python scripts/verify-local-login.py
+```
 
-The internal web workspace forwards requests through a same-origin server route,
-so bearer credentials are never persisted in browser JavaScript or shared
-through a process-wide fallback. Open <http://localhost:3000/sign-in> and submit
-a valid identity-provider token. The server validates it with FastAPI before
-creating an HTTP-only, `SameSite=Strict` session cookie. Mutating browser
-requests are also restricted to the same origin. The web server reads the
-FastAPI origin from `API_BASE_URL`, documented in `apps/web/.env.example`.
+Set `LOCAL_WEB_ORIGIN` and `LOCAL_API_ORIGIN` for this verifier if you changed
+ports. It only accepts loopback HTTP origins.
+
+Health endpoints: <http://127.0.0.1:3101/api/health> and
+<http://127.0.0.1:8101/health>. Run apps separately with `npm run dev:web` or
+`npm run dev:api`. Exported `API_HOST`, `API_PORT`, `LOG_LEVEL`, `WEB_HOST`, and
+`WEB_PORT` override defaults; update `API_BASE_URL` in the web dotenv file and
+`AUTH_LOCAL_WEB_ORIGIN` in the API dotenv file to match any port changes. For a
+different database port, export `POSTGRES_PORT` when running Compose and update
+`DATABASE_URL` to match before migration, seed, or verification.
+
+```bash
+# Actual launcher regression binds API 8101: stop the dev API first.
+.venv/bin/python -m pytest apps/api/tests/test_launcher.py --no-cov
+```
+
+If Docker is unavailable, start Docker Desktop and retry `npm run db:up`. If a
+reserved port is occupied, select a free port explicitly; do not stop an
+unrelated service. `db:verify` must report two isolated organizations before
+using synthetic login. A missing seed/policy produces an error on sign-in.
 
 ## Database commands
 

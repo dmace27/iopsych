@@ -24,6 +24,10 @@ class AuthenticationSettings(BaseSettings):
         extra="ignore",
     )
 
+    local_login_enabled: bool = False
+    environment: str = "production"
+    local_web_origin: str = "http://127.0.0.1:3101"
+
     jwt_secret: SecretStr | None = None
     jwt_issuer: str = "https://auth.example.invalid"
     jwt_audience: str = "iopsych-api"
