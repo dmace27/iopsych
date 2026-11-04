@@ -18,6 +18,30 @@ Future launches must inherit the verified Fast default and have their own live s
 
 ## Current scheduling and critical path
 
+### Latest checkpoint: 22:46 UTC
+
+This checkpoint supersedes earlier live-worker counts and ownership tables. Integration `c78a70c` includes 6C integrity repair `beec1c4`, expanded browser suite `7d89b17`/`8caf297`, secure sign-out `fb7a404`, candidate recovery `a8feb7f`, safe upgrade target guard `6619167`, and export/anonymization locking `c78a70c`. Completed workers were released after processing reports. Main remains `f5224c9`; no pushes/deployments/real mail occurred.
+
+- Coordinator independently reran registry 37, sign-out 20, candidate/storage 29 and upgrade-guard 37 tests, all passing. Privacy locking has worker evidence of seven actual PostgreSQL/privacy tests, zero skips; independent PostgreSQL rerun is active.
+- Frozen broad check at `4c7caf3`: formatting/lint/types/schema parity/build passed; web 174, shared TypeScript 99, Python contracts 93 passed. API 319 passed, one SMTP skip, one setup error caused by the old fixed upgrade allocation; command failed, not accepted. The SMTP case subsequently passed against controlled Mailpit. Upgrade guard is now corrected; incremental actual PostgreSQL verification is assigned separately. Report integrated `d498b80`.
+- Clean-export container builds at `4c7caf3` passed non-root/runtime/asset checks, empty and seven-state populated 0007→0008 upgrades, shutdown and persistence; report `e760e4a`. This is neither hosted deployment nor rollback acceptance. Later readiness/telemetry changes require updated verification.
+- Browser owner reports ten production Chromium cases passing with zero skips at child revision `0dbb95e` (integration `fb7a404` plus pinned synthetic fixture). Sign-out and profile contrast regressions now pass. Clear-at-review coverage and newer integration rerun continue; the earlier red run remains preserved, not rewritten as green.
+- Engineering contracts approved for DB timeout/pool/schema readiness and safe generated correlation/allowlisted telemetry; no provider or privacy policy approval inferred. User provider/scope decisions remain unanswered. Four newest session screens and all continuing sessions show Fast; no unsupported mode sessions.
+
+| Current task | Dispatch | Ownership / allocation |
+| --- | --- | --- |
+| Trace backend | `ctx_055f6c35334f` | Report trace backend and canonical fixtures; 3126/8126/5566 |
+| Trace frontend | `ctx_22fa434f26b8` | Report drawer/parser/client/internal trace proxy; 3127/8127/5567 |
+| Browser integration | `ctx_737f67ec8e78` | Runner/fixtures/tests; released allocation 3116/8116/5556/1136/8136 transferred exclusively |
+| DB deadlines/schema readiness | `ctx_e8c966f977cf` | Database config/session, runtime health/tests; 3133/8133/5573 |
+| Safe telemetry | `ctx_1d11c9ac4d02` | Runtime telemetry, main middleware wiring, security error header/tests; 3134/8134/5574 |
+| Session navigation | `ctx_d6296cd28ef2` | Header/sign-in/safe-return helper; no provider selection; 3135/8135/5575 |
+| Boundary review | `ctx_55f2cb0845c4` | Read-only runtime/historical-boundary review; 3136/8166/5576 (8136 belongs to browser mail) |
+| Incremental PostgreSQL verification | `ctx_ccb66e632c3c` | Read-only focused upgrades/concurrency/privacy checks; fresh 5571/iopsych_regression and 5568/iopsych_privacy_lock |
+| Bounded invite discovery | `ctx_6b93f9587b5a` | Invitation router/schema/new discovery module/tests; 3138/8138/5578 |
+
+Eight tasks were ready and discovery was starting at the last fleet snapshot; all nine session screens show Fast. New work starts from `c78a70c`; DB/telemetry/browser started at `8caf297`. Memory free 48% at latest capacity check. Invite discovery is an approved additive GET-only bounded list preserving current issuance/revoke/candidate responses and current admin/recruiter permissions; no outbox/provider claims. No second worker owns its files. Next eligible work: integrate trace backend before frontend, attach exact fixtures, review readiness/telemetry, then fresh combined regression at a frozen integrated revision. Broader accounts, durable delivery, privacy policy/drafts, scientific changes, hosted/manual/pilot gates remain open.
+
 Capacity check at 22:31 UTC: 24 GiB RAM, memory-pressure tool reports 54% free; earlier disk check 655 GiB available. `gpt-6-astra` verified by actual worker tool execution. Seven workers are executing and five additional disjoint slices are launching; recheck actual readiness and memory before further expansion.
 
 Engineering critical path: decision record → approved assignment/version contract (6C) → invitation delivery API (8A) and candidate progress (9A/9B) → privacy lifecycle (10A) → full browser integration (12A). Parallel identity path: identity/membership decisions plus 6A → 7A → 7B/7C → 8B, converging at 12A. Hosting/operations path: 11A preparation → configured hosting/runtime (11B/11C) → 10C restore/retention → 12C rehearsal. Actual product/scientific/provider decisions and external review are gates, not elapsed engineering estimates.
