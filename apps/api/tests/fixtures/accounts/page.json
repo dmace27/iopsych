@@ -1,0 +1,13 @@
+{
+  "items": [
+    {
+      "id": "10000000-0000-4000-8000-000000000099",
+      "email": "admin@alpha.example.invalid",
+      "name": "Alpha Admin",
+      "role": "admin",
+      "is_active": true,
+      "version": 1
+    }
+  ],
+  "next_cursor": null
+}

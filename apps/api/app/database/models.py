@@ -10,6 +10,7 @@ from uuid import UUID
 from sqlalchemy import (
     DDL,
     JSON,
+    Boolean,
     CheckConstraint,
     Enum,
     ForeignKey,
@@ -21,6 +22,7 @@ from sqlalchemy import (
     UniqueConstraint,
     Uuid,
     event,
+    true,
 )
 from sqlalchemy.engine import Connection
 from sqlalchemy.orm import Mapped, Mapper, mapped_column
@@ -103,6 +105,7 @@ class User(UuidPrimaryKeyMixin, CreatedAtMixin, Base):
         UniqueConstraint("organization_id", "email", name="uq_users_organization_email"),
         UniqueConstraint("auth_subject", name="uq_users_auth_subject"),
         Index("ix_users_organization_id", "organization_id"),
+        CheckConstraint("version >= 1", name="ck_users_version_positive"),
     )
 
     organization_id: Mapped[UUID] = mapped_column(
@@ -118,6 +121,11 @@ class User(UuidPrimaryKeyMixin, CreatedAtMixin, Base):
     role: Mapped[InternalUserRole] = mapped_column(
         enum_type(InternalUserRole, "internal_user_role", 32), nullable=False
     )
+
+    is_active: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=True, server_default=true()
+    )
+    version: Mapped[int] = mapped_column(Integer, nullable=False, default=1, server_default="1")
 
 
 class Role(UuidPrimaryKeyMixin, CreatedAtMixin, Base):

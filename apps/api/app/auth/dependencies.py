@@ -52,7 +52,7 @@ def authenticate_internal_user(
 
     organization_access = OrganizationDataAccess(session, identity.organization_id)
     user = organization_access.get_user_by_auth_subject(identity.subject)
-    if user is None:
+    if user is None or not user.is_active:
         raise authentication_required()
 
     context = AuthorizationContext(
