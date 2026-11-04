@@ -352,6 +352,12 @@ describe("internal API proxy", () => {
       new Request("http://web.test/api/internal/privacy/status"),
       context("privacy", "status"),
     );
+    await GET(
+      new Request(
+        "http://web.test/api/internal/privacy/assessments?role_id=role-id&limit=20&cursor=opaque",
+      ),
+      context("privacy", "assessments"),
+    );
     await POST(
       new Request(
         "http://web.test/api/internal/candidates/assessment-id/export",
@@ -377,6 +383,7 @@ describe("internal API proxy", () => {
     expect(vi.mocked(fetch).mock.calls.map(([url]) => String(url))).toEqual([
       "http://localhost:8000/v1/privacy/audit-events?entity_id=assessment-id",
       "http://localhost:8000/v1/privacy/status",
+      "http://localhost:8000/v1/privacy/assessments?role_id=role-id&limit=20&cursor=opaque",
       "http://localhost:8000/v1/candidates/assessment-id/export",
       "http://localhost:8000/v1/candidates/assessment-id",
       "http://localhost:8000/v1/privacy/retention/run",
@@ -390,7 +397,15 @@ describe("internal API proxy", () => {
       context("privacy", "status"),
     );
     expect(rejected.status).toBe(404);
-    expect(fetch).toHaveBeenCalledTimes(5);
+    const rejectedDiscovery = await POST(
+      new Request("http://web.test/api/internal/privacy/assessments", {
+        headers: origin,
+        method: "POST",
+      }),
+      context("privacy", "assessments"),
+    );
+    expect(rejectedDiscovery.status).toBe(404);
+    expect(fetch).toHaveBeenCalledTimes(6);
   });
 });
 

@@ -26,7 +26,7 @@ const ALLOWED_INTERNAL_ROUTES = [
   /^GET \/reports\/[^/]+\/trace$/,
   /^POST \/candidates\/[^/]+\/export$/,
   /^DELETE \/candidates\/[^/]+$/,
-  /^GET \/privacy\/(?:status|audit-events)$/,
+  /^GET \/privacy\/(?:status|audit-events|assessments)$/,
   /^POST \/privacy\/retention\/run$/,
 ];
 
