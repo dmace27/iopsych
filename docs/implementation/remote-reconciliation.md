@@ -59,3 +59,10 @@ notice conflict cleanup is completed in the subsequent compatibility commit.
 Auth web provenance is `0588b71` / `edd94ba` / `dea70a5`; backend v2 provenance is
 `927910e` / `3782861`. Functional notice, privacy, CLI, defensive and browser/export
 checkpoints are recorded in the branch history. Service policy is STANDARD only.
+
+Final functional checkpoint: `ff4b170` (guard commit `cdeb0b1`). Targeted final
+trace/report checks pass **41/41**, including mixed algorithm rejection; final
+Python Ruff lint passes. Working tree was clean at handoff. Coordinator followups
+for CLI typing/coverage (`4e6fd9d`, `0792224`) are not duplicated here and should
+be integrated before the frozen final aggregate gate. PostgreSQL container
+`iopsych-reconcile-pg` remains available on 5606 for authorized synthetic checks.

@@ -43,5 +43,11 @@
     "port": 5606,
     "database": "iopsych_reconcile"
   },
-  "remote_head_database_upgrade": "unsupported; separate bridge required"
+  "remote_head_database_upgrade": "unsupported; separate bridge required",
+  "final_functional_head": "ff4b170",
+  "targeted_final": {
+    "provider_postgres_passed": 5,
+    "trace_report_passed": 41,
+    "python_ruff": "passed"
+  }
 }
