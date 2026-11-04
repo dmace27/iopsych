@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from enum import StrEnum
-from typing import Any
+from typing import Any, cast
 from uuid import UUID
 
 from sqlalchemy import (
@@ -24,12 +24,30 @@ from sqlalchemy import (
     event,
     true,
 )
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.engine import Connection
 from sqlalchemy.orm import Mapped, Mapper, mapped_column
 
 from app.database.base import Base, CreatedAtMixin, UtcDateTime, UuidPrimaryKeyMixin
 from app.invitations.recovery import DeliveryState
 from iopsych_contracts import ConfidenceLevel, ConstructKey
+
+_NOTICE_COLUMNS = (
+    "notice_snapshot_json",
+    "notice_sha256",
+    "notice_snapshot_origin",
+    "notice_snapshot_recorded_at",
+)
+_NOTICE_COMPLETE = (
+    "("
+    + " AND ".join(f"{name} IS NULL" for name in _NOTICE_COLUMNS)
+    + ") OR ("
+    + (" AND ".join(f"{name} IS NOT NULL" for name in _NOTICE_COLUMNS))
+    + ")"
+)
+_NOTICE_HEX = "notice_sha256"
+for _digit in "0123456789abcdef":
+    _NOTICE_HEX = f"replace({_NOTICE_HEX}, '{_digit}', '')"
 
 
 class InternalUserRole(StrEnum):
@@ -208,6 +226,15 @@ class AssessmentInvite(UuidPrimaryKeyMixin, CreatedAtMixin, Base):
         Index("ix_assessment_invites_profile_id", "role_profile_id"),
         Index("ix_assessment_invites_expires_at", "expires_at"),
         UniqueConstraint("token_hash", name="uq_assessment_invites_token_hash"),
+        CheckConstraint(_NOTICE_COMPLETE, name="ck_notice_snapshot_complete"),
+        CheckConstraint(
+            "notice_snapshot_origin IN ('issued', 'first_presented', 'legacy_decision')",
+            name="ck_notice_snapshot_origin",
+        ),
+        CheckConstraint(
+            f"length(notice_sha256) = 64 AND {_NOTICE_HEX} = ''",
+            name="ck_notice_snapshot_digest",
+        ),
     )
 
     role_profile_id: Mapped[UUID] = mapped_column(
@@ -216,6 +243,14 @@ class AssessmentInvite(UuidPrimaryKeyMixin, CreatedAtMixin, Base):
         nullable=False,
     )
     assignment_json: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
+    notice_snapshot_json: Mapped[dict[str, Any] | None] = mapped_column(
+        JSON(none_as_null=True).with_variant(JSONB(none_as_null=True), "postgresql"), nullable=True
+    )
+    notice_sha256: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    notice_snapshot_origin: Mapped[str | None] = mapped_column(String(24), nullable=True)
+    notice_snapshot_recorded_at: Mapped[datetime | None] = mapped_column(
+        UtcDateTime(), nullable=True
+    )
     email: Mapped[str] = mapped_column(String(320), nullable=False)
     token_hash: Mapped[str] = mapped_column(String(64), nullable=False)
     expires_at: Mapped[datetime] = mapped_column(UtcDateTime(), nullable=False)
@@ -343,6 +378,7 @@ class CandidateConsent(UuidPrimaryKeyMixin, CreatedAtMixin, Base):
         enum_type(ConsentDecision, "consent_decision", 16), nullable=False
     )
     notice_version: Mapped[str] = mapped_column(String(80), nullable=False)
+    presented_notice_sha256: Mapped[str | None] = mapped_column(String(64), nullable=True)
 
 
 class Assessment(UuidPrimaryKeyMixin, CreatedAtMixin, Base):
@@ -522,4 +558,38 @@ for assignment_dialect, assignment_ddl in (
         AssessmentInvite.__table__,
         "after_create",
         DDL(assignment_ddl).execute_if(dialect=assignment_dialect),  # type: ignore[no-untyped-call]
+    )
+
+
+_NOTICE_PRESENT = " OR ".join(f"OLD.{name} IS NOT NULL" for name in _NOTICE_COLUMNS)
+_NOTICE_CHANGED_PG = " OR ".join(
+    f"OLD.{name}::text IS DISTINCT FROM NEW.{name}::text" for name in _NOTICE_COLUMNS
+)
+_NOTICE_CHANGED_SQLITE = " OR ".join(f"OLD.{name} IS NOT NEW.{name}" for name in _NOTICE_COLUMNS)
+_NOTICE_DECIDED = "EXISTS (SELECT 1 FROM candidate_consents WHERE invite_id = OLD.id)"
+for notice_dialect, notice_ddl in (
+    (
+        "sqlite",
+        "CREATE TRIGGER trg_assessment_invites_notice_immutable BEFORE UPDATE "
+        f"ON assessment_invites WHEN ({_NOTICE_PRESENT} OR {_NOTICE_DECIDED}) "
+        f"AND ({_NOTICE_CHANGED_SQLITE}) BEGIN "
+        "SELECT RAISE(ABORT, 'notice snapshots are immutable'); END",
+    ),
+    (
+        "postgresql",
+        "CREATE OR REPLACE FUNCTION reject_notice_snapshot_mutation() RETURNS trigger "
+        f"LANGUAGE plpgsql AS $$ BEGIN IF ({_NOTICE_PRESENT} OR {_NOTICE_DECIDED}) "
+        f"AND ({_NOTICE_CHANGED_PG}) THEN "
+        "RAISE EXCEPTION 'notice snapshots are immutable'; END IF; RETURN NEW; END; $$",
+    ),
+    (
+        "postgresql",
+        "CREATE TRIGGER trg_assessment_invites_notice_immutable BEFORE UPDATE "
+        "ON assessment_invites FOR EACH ROW EXECUTE FUNCTION reject_notice_snapshot_mutation()",
+    ),
+):
+    event.listen(
+        AssessmentInvite.__table__,
+        "after_create",
+        cast(Any, DDL)(notice_ddl).execute_if(dialect=notice_dialect),
     )

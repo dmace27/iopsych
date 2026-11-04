@@ -7,6 +7,7 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.database.models import AssessmentInviteStatus, ConsentDecision
+from app.invitations.schemas import NoticeHistory
 
 
 class ExportOrganization(BaseModel):
@@ -36,6 +37,12 @@ class ExportConsent(BaseModel):
     decision: ConsentDecision
     notice_version: str
     recorded_at: datetime
+    notice_snapshot: dict[str, Any] | None = None
+    notice_sha256: str | None = None
+    notice_snapshot_origin: Literal["issued", "first_presented", "legacy_decision"] | None = None
+    notice_snapshot_recorded_at: datetime | None = None
+    presented_notice_sha256: str | None = None
+    notice_history: NoticeHistory = "legacy_unknown"
 
 
 class ExportAssessment(BaseModel):
