@@ -5,6 +5,8 @@ import importlib
 import json
 import logging
 import os
+import runpy
+import sys
 from unittest.mock import Mock
 
 import pytest
@@ -125,6 +127,27 @@ def test_once_and_acknowledgement_required(capsys: pytest.CaptureFixture[str]) -
     assert cli.main(["cleanup", "--ack-database", DATABASE]) == 2
     assert_counts(capsys)
     assert cli.main(["cleanup", "--once"]) == 2
+    assert_counts(capsys)
+
+
+def test_cleanup_rejects_smtp_configuration(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    engine = Mock(side_effect=AssertionError("must not connect"))
+    monkeypatch.setattr(sqlalchemy, "create_engine", engine)
+    assert cli.main(arguments("cleanup", "--smtp-port", "1149")) == 1
+    engine.assert_not_called()
+    assert_counts(capsys)
+
+
+def test_module_entrypoint_preserves_safe_failure(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.setattr(sys, "argv", ["local_worker_cli", "cleanup"])
+    monkeypatch.delitem(sys.modules, "app.invitations.local_worker_cli")
+    with pytest.raises(SystemExit) as failure:
+        runpy.run_module("app.invitations.local_worker_cli", run_name="__main__")
+    assert failure.value.code == 2
     assert_counts(capsys)
 
 
