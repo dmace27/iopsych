@@ -71,7 +71,7 @@ class PrivacyService:
     ) -> CandidateDataExportResponse:
         """Return every retained candidate datum in a portable JSON envelope."""
 
-        record = self._get_record(assessment_id)
+        record = self._get_record(assessment_id, lock=True)
         if record.assessment.anonymized_at is not None:
             raise resource_unavailable(
                 code="candidate_data_anonymized",
@@ -146,7 +146,7 @@ class PrivacyService:
                 )
                 for event in events
             ],
-        )
+        ).model_copy(deep=True)
 
     def anonymize(
         self,
@@ -323,7 +323,9 @@ class PrivacyService:
                 Role.organization_id == self._context.organization.organization_id
             )
         if lock:
-            statement = statement.with_for_update(of=Assessment)
+            statement = statement.with_for_update(of=Assessment).execution_options(
+                populate_existing=True
+            )
         row = self._session.execute(statement).one_or_none()
         if row is None:
             raise organization_resource_not_found()
