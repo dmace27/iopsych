@@ -43,13 +43,15 @@ All new worktrees below are based on integration `c20b3ed`; names have `AbhiNuta
 | 12A browser expansion | `iopsych-12a-expand` | `ctx_6f6fb5f60c61` | Browser tests/fixtures, isolated runner; 3116/8116/5556, mail 1136/8136 |
 | 11B readiness/body bounds | `iopsych-11b-bounds` | `ctx_c990f981efd6` | API main/runtime modules and focused tests; 3117/8117/5557 |
 | Security CI/scans | `iopsych-security-ci` | `ctx_e23a7b33b738` | Security workflow/scanner configuration only; 3118/8118/5558 reserved |
-| 11B extraction bounds | `iopsych-extraction-bounds` | Launch pending verification | Extraction config/provider/service and tests; 3119/8119/5559 |
-| 8A local delivery adapter | `iopsych-local-delivery` | Launch pending verification | New loopback-only SMTP adapter/tests, no main/issuance edits; 3120/8120/5560, mail 1139/8139 |
-| 10A privacy contract | `iopsych-privacy-contract` | Launch pending verification | Read-only code; lifecycle contract document only; 3121/8121/5561 reserved |
-| 9C traceability contract | `iopsych-report-traceability` | Launch pending verification | Read-only code; trace contract document only; 3122/8122/5562 reserved |
-| Integration review | `iopsych-integration-review` | Launch pending verification | Read-only packaging/storage/isolation review and regression preparation; 3123/8123/5563 |
+| 11B extraction bounds | `iopsych-extraction-bounds` | `ctx_029b02659d84` | Extraction config/provider/service and tests; 3119/8119/5559 |
+| 8A local delivery adapter | `iopsych-local-delivery` | `ctx_e371becfa847` | New loopback-only SMTP adapter/tests, no main/issuance edits; 3120/8120/5560, mail 1139/8139 |
+| 10A privacy contract | `iopsych-privacy-contract` | `ctx_67da63415309` | Read-only code; lifecycle contract document only; 3121/8121/5561 reserved |
+| 9C traceability contract | `iopsych-report-traceability` | `ctx_bc1762186e0b` | Read-only code; trace contract document only; 3122/8122/5562 reserved |
+| Integration review | `iopsych-integration-review` | `ctx_5e5821213fd9` | Read-only packaging/storage/isolation review and regression preparation; 3123/8123/5563 |
 
 Fresh setup hooks run concurrently; workers must confirm success before checks. No worker owns another worker's database. Full suites are coordinator-scheduled at integration checkpoints, not run by all workers.
+
+22:33 UTC checkpoint: all **12 dispatched tasks ready/live**, all **12 rendered terminal screens verified `GPT-6-Astra medium fast`**; zero unsupported or setting-interrupted sessions. No coordinator toggle. Schedule commit `3cf79c2` broadcast to all 12 workers; subsequent worktrees start from updated integration HEAD. Readiness/body additive contract approved in `msg_0b1e5267bb0f`: unchanged `/health`, DB-only `/ready`, actual-byte request limit and upload deadline, no schema/hosted certification claim. Current Fast count supersedes the earlier seven-session checkpoint, not its evidence.
 
 Synthetic data and controlled local mail only. No push, public deployment, purchases, real email, production secrets or existing database resets. Preserve ports 3000, 8001 and 8000. Each worker uses a separate checkout and isolated database/schema. No scientific or external approval is inferred from implementation authority.
 
