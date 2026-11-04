@@ -240,7 +240,7 @@ export function exportCandidateData(
   return requestJson(
     `/candidates/${encodeURIComponent(assessmentId)}/export`,
     CandidateDataExportSchema,
-    { method: "POST" },
+    { method: "POST", headers: { "X-IOPsych-Notice-Snapshot": "1" } },
   );
 }
 

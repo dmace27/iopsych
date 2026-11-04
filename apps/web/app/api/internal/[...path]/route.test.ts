@@ -31,6 +31,39 @@ describe("internal API proxy", () => {
     else process.env.API_BASE_URL = ORIGINAL_API_BASE_URL;
   });
 
+  it.each([undefined, "0", "true", "01", "1, 1", "1"])(
+    "forwards export capability only for exact opt-in %s",
+    async (capability) => {
+      headerMocks.cookieGet.mockReturnValue({ value: "cookie-token" });
+      vi.mocked(fetch).mockImplementation(async () => Response.json({}));
+      const id = "11111111-1111-4111-8111-111111111111";
+      const headers = new Headers({ Origin: "http://web.test" });
+      if (capability !== undefined)
+        headers.set("X-IOPsych-Notice-Snapshot", capability);
+      for (const path of [
+        ["candidates", id, "export"],
+        ["candidates", "invalid-id", "export"],
+        ["roles"],
+        ["privacy", "retention", "run"],
+      ]) {
+        const response = await POST(
+          new Request(`http://web.test/api/internal/${path.join("/")}`, {
+            method: "POST",
+            headers,
+          }),
+          context(...path),
+        );
+        expect(response.status).toBe(200);
+        expect(response.headers.get("Cache-Control")).toBe("no-store");
+        const [, init] = vi.mocked(fetch).mock.calls.at(-1)!;
+        expect(init).toMatchObject({ method: "POST", cache: "no-store" });
+        expect(
+          new Headers(init?.headers).get("X-IOPsych-Notice-Snapshot"),
+        ).toBe(capability === "1" && path[1] === id ? "1" : null);
+      }
+    },
+  );
+
   it("rejects a cross-site state-changing request before reading credentials", async () => {
     const response = await POST(
       new Request("http://web.test/api/internal/roles", {

@@ -119,7 +119,13 @@ describe("notice export rolling compatibility", () => {
       ).toEqual(payload);
       expect(fetch).toHaveBeenLastCalledWith(
         `/api/internal/candidates/${id}/export`,
-        expect.objectContaining({ cache: "no-store" }),
+        expect.objectContaining({
+          cache: "no-store",
+          method: "POST",
+          headers: expect.objectContaining({
+            "X-IOPsych-Notice-Snapshot": "1",
+          }),
+        }),
       );
     },
   );
