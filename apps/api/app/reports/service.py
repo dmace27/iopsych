@@ -27,6 +27,8 @@ from app.database.models import (
 )
 from app.database.session import commit_or_flush
 from app.reports.schemas import ReportCreateRequest, ReportResponse, SubmittedAssessmentResponse
+from app.reports.trace import build_trace
+from app.reports.trace_schemas import ReportTraceV1
 from iopsych_contracts import RoleConstructRating as RatingContract
 from iopsych_contracts.matching import (
     MatchingRoleProfile,
@@ -182,6 +184,63 @@ class ReportService:
                 detail="Candidate data has been anonymized and is no longer reportable.",
             )
         return self._response(row[0], row[1])
+
+    def trace(self, report_id: UUID) -> ReportTraceV1:
+        """Hold the privacy deletion serialization lock through the request audit."""
+
+        assessment = self.session.scalar(
+            select(Assessment)
+            .join(AssessmentInvite, AssessmentInvite.id == Assessment.invite_id)
+            .join(RoleProfile, RoleProfile.id == AssessmentInvite.role_profile_id)
+            .join(Role, Role.id == RoleProfile.role_id)
+            .join(AlignmentReport, AlignmentReport.assessment_id == Assessment.id)
+            .where(
+                AlignmentReport.id == report_id,
+                Role.organization_id == self.context.organization.organization_id,
+            )
+            .with_for_update(of=Assessment)
+            .execution_options(populate_existing=True)
+        )
+        if assessment is None:
+            raise organization_resource_not_found()
+        row = self.session.execute(
+            select(AlignmentReport, RoleProfile)
+            .join(RoleProfile, RoleProfile.id == AlignmentReport.role_profile_id)
+            .join(Role, Role.id == RoleProfile.role_id)
+            .where(
+                AlignmentReport.id == report_id,
+                AlignmentReport.assessment_id == assessment.id,
+                Role.organization_id == self.context.organization.organization_id,
+            )
+            .with_for_update(of=AlignmentReport)
+            .execution_options(populate_existing=True)
+        ).one_or_none()
+        if row is None:
+            raise organization_resource_not_found()
+        if assessment.anonymized_at is not None:
+            raise resource_unavailable(
+                code="candidate_data_anonymized",
+                detail="Candidate data has been anonymized and is no longer reportable.",
+            )
+        report, profile = row
+        invite = self.session.get(AssessmentInvite, assessment.invite_id, populate_existing=True)
+        if invite is None or invite.role_profile_id != profile.id:
+            raise resource_conflict(
+                code="report_trace_inconsistent",
+                detail="Saved item-level evidence is inconsistent.",
+            )
+        return build_trace(
+            report_id=report.id,
+            assessment_id=assessment.id,
+            role_profile_id=profile.id,
+            role_profile_version=profile.version,
+            algorithm_version=report.algorithm_version,
+            result_json=report.result_json,
+            definition_json=assessment.definition_json,
+            responses_json=assessment.responses_json,
+            scores_json=assessment.scores_json,
+            assignment_json=invite.assignment_json,
+        )
 
     @staticmethod
     def _response(report: AlignmentReport, profile: RoleProfile) -> ReportResponse:

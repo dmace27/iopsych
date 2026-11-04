@@ -12,7 +12,7 @@ from app.assignments.registry import (
     read_report,
     read_scores,
 )
-from app.auth.errors import resource_conflict
+from app.auth.errors import AccessProblemError, resource_conflict
 from app.reports.trace_schemas import ConstructTrace, ItemTrace, QuestionSelection, ReportTraceV1
 from iopsych_contracts.assessment import AssessmentResponseSet
 from iopsych_contracts.constructs import CONSTRUCT_KEYS
@@ -45,11 +45,18 @@ def build_trace(
         raise resource_conflict(
             code="report_trace_unavailable", detail="Saved item-level evidence is unavailable."
         )
+    if not all(isinstance(value, dict) for value in (definition_json, responses_json, scores_json)):
+        raise resource_conflict(
+            code="report_trace_inconsistent", detail="Saved item-level evidence is inconsistent."
+        )
     definition = legacy_definition()
     if (
         definition_json.get("id") != definition.id
         or definition_json.get("version") != definition.version
-        or definition_json.get("scoring", {}).get("version") != definition.scoring.version
+        or (
+            isinstance(definition_json.get("scoring"), dict)
+            and definition_json["scoring"].get("version") != definition.scoring.version
+        )
     ):
         raise resource_conflict(
             code="unsupported_assessment_version", detail="The assessment version is unavailable."
@@ -58,6 +65,8 @@ def build_trace(
         if definition_hash(definition_json) != LEGACY_SHA256:
             raise ValueError("Definition content mismatch")
         if assignment_json is not None:
+            if not isinstance(assignment_json, dict):
+                raise ValueError("Assignment shape mismatch")
             if (
                 assignment_json.get("definition") != definition_json
                 or assignment_json.get("definition_sha256") != LEGACY_SHA256
@@ -73,7 +82,9 @@ def build_trace(
         if any(
             getattr(result, field) != getattr(scores, field)
             for field in (
-                "assessment_definition_id", "assessment_definition_version", "scoring_version"
+                "assessment_definition_id",
+                "assessment_definition_version",
+                "scoring_version",
             )
         ):
             raise ValueError("Report version mismatch")
@@ -89,7 +100,8 @@ def build_trace(
             ):
                 raise ValueError("Report summary mismatch")
             question_ids = (
-                saved.interview_questions.primary.id, saved.interview_questions.follow_up.id
+                saved.interview_questions.primary.id,
+                saved.interview_questions.follow_up.id,
             )
             if question_ids != _QUESTIONS_V1[key, saved.classification]:
                 raise ValueError("Question provenance mismatch")
@@ -109,35 +121,55 @@ def build_trace(
                     elif item.id == response.least_like_item_id:
                         choice = "least_like"
                         contribution = definition.scoring.choice_weights.least_like
-                    items.append(ItemTrace.model_validate({
-                        "block_id": block.id, "block_position": block.position,
-                        "item_id": item.id, "statement": item.statement,
-                        "choice": choice, "contribution": contribution,
-                        "most_like_item_id": response.most_like_item_id,
-                        "least_like_item_id": response.least_like_item_id,
-                    }))
+                    items.append(
+                        ItemTrace.model_validate(
+                            {
+                                "block_id": block.id,
+                                "block_position": block.position,
+                                "item_id": item.id,
+                                "statement": item.statement,
+                                "choice": choice,
+                                "contribution": contribution,
+                                "most_like_item_id": response.most_like_item_id,
+                                "least_like_item_id": response.least_like_item_id,
+                            }
+                        )
+                    )
             threshold = next(
-                band for band in definition.scoring.rating_thresholds
+                band
+                for band in definition.scoring.rating_thresholds
                 if band.minimum_raw_score <= score.raw_score <= band.maximum_raw_score
             )
             rule = getattr(definition.scoring.candidate_confidence, score.confidence.value)
-            constructs.append(ConstructTrace(
-                construct_key=key, items=tuple(items), rating_threshold=threshold,
-                confidence_rule=rule,
-                question_selection=QuestionSelection(
-                    algorithm_version=result.algorithm_version, construct_key=key,
-                    classification=saved.classification,
-                    primary_question_id=question_ids[0], follow_up_question_id=question_ids[1],
-                ),
-            ))
+            constructs.append(
+                ConstructTrace(
+                    construct_key=key,
+                    items=tuple(items),
+                    rating_threshold=threshold,
+                    confidence_rule=rule,
+                    question_selection=QuestionSelection(
+                        algorithm_version=result.algorithm_version,
+                        construct_key=key,
+                        classification=saved.classification,
+                        primary_question_id=question_ids[0],
+                        follow_up_question_id=question_ids[1],
+                    ),
+                )
+            )
         return ReportTraceV1(
-            report_id=report_id, assessment_id=assessment_id, role_profile_id=role_profile_id,
-            role_profile_version=role_profile_version, algorithm_version=result.algorithm_version,
-            assessment_definition_id=definition.id, assessment_definition_version=definition.version,
-            scoring_version=definition.scoring.version, definition_sha256=LEGACY_SHA256,
-            scoring=definition.scoring, constructs=tuple(constructs),
+            report_id=report_id,
+            assessment_id=assessment_id,
+            role_profile_id=role_profile_id,
+            role_profile_version=role_profile_version,
+            algorithm_version=result.algorithm_version,
+            assessment_definition_id=definition.id,
+            assessment_definition_version=definition.version,
+            scoring_version=definition.scoring.version,
+            definition_sha256=LEGACY_SHA256,
+            scoring=definition.scoring,
+            constructs=tuple(constructs),
         )
-    except (ValueError, KeyError, TypeError, StopIteration) as exc:
+    except (AccessProblemError, ValueError, KeyError, TypeError, StopIteration) as exc:
         raise resource_conflict(
             code="report_trace_inconsistent", detail="Saved item-level evidence is inconsistent."
         ) from exc

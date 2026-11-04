@@ -8,8 +8,8 @@ from pydantic import BaseModel, ConfigDict, Field
 from iopsych_contracts.constructs import AlignmentClassification, ConstructKey
 from iopsych_contracts.scoring_config import (
     HighConfidenceRule,
-    MediumConfidenceRule,
     LowConfidenceRule,
+    MediumConfidenceRule,
     RawScoreThreshold,
     ScoringConfig,
 )

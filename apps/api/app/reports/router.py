@@ -9,9 +9,11 @@ from sqlalchemy.orm import Session
 from app.audit import audited, set_audit_entity
 from app.auth.context import AuthorizationContext
 from app.auth.dependencies import get_database_session, require_roles
+from app.auth.errors import AccessProblemError
 from app.database.models import InternalUserRole
 from app.reports.schemas import ReportCreateRequest, ReportResponse, SubmittedAssessmentResponse
 from app.reports.service import ReportService
+from app.reports.trace_schemas import ReportTraceV1
 
 router = APIRouter(prefix="/v1/reports", tags=["reports"])
 ReportContext = Annotated[
@@ -53,6 +55,21 @@ def read_report(
 
     response.headers["Cache-Control"] = "no-store"
     return ReportService(session, context).read(report_id)
+
+
+@router.get("/{report_id}/trace", response_model=ReportTraceV1)
+@audited("alignment_report.trace_read", "alignment_report", entity_id_path_parameter="report_id")
+def read_report_trace(
+    report_id: UUID, context: ReportContext, session: DatabaseSession, response: Response
+) -> ReportTraceV1:
+    """Read exact retained item evidence for an existing historical report."""
+
+    response.headers["Cache-Control"] = "no-store"
+    try:
+        return ReportService(session, context).trace(report_id)
+    except AccessProblemError as exc:
+        exc.headers["Cache-Control"] = "no-store"
+        raise
 
 
 submission_router = APIRouter(tags=["reports"])
