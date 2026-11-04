@@ -163,7 +163,39 @@ All three child worktrees started at committed integration revision `a8de73c`. B
 
 Initial dispatches `ctx_8f1ba11ba1d4`, `ctx_30f32ea5ece7`, `ctx_c6e202ebf48d` failed before task delivery because of Codex's update prompt. Selected “Skip until next version” and retried the same tasks in the same terminals using supported `--retry-of`; no duplicate editors. Those retry turns started but the provider rejected the literal `gpt-6` model for the ChatGPT account. All three were explicitly stopped after inspecting the terminal error. The worker model menu lists GPT-6-Astra as available/default; subsequent starts use `gpt-6-astra`, with actual agent tool execution observed. Audit retry `ctx_e879905cb46c` failed before delivery with `terminal_handle_stale`, then its owned terminal was released through Orca and the same task retried. No task implementation occurred in rejected-model turns. Saved setup: `npm ci && PYTHON_BIN=python3.12 npm run api:install`.
 
-## Package ledger
+## Current package ledger
+
+Status at 23:04 UTC. “Integrated” refers to bounded engineering, never every original acceptance criterion. Earlier rows are preserved below solely as history. No gated package is newly accepted in full.
+
+| Package | Reviewed/integrated engineering | Remaining acceptance or active dependency |
+| --- | --- | --- |
+| 6A | Reproducible setup, safe dotenv/local login, independently repaired Host/bool boundaries | Latest combined setup regression; provider-independent synthetic path only |
+| 6B | Concrete recommendation/decision register | User/provider/product/privacy/I-O approvals unanswered |
+| 6C | Immutable historical assignments, retained-content validation, pinned candidate UI; actual populated PG tests | Issuance/review policy and scientific gates |
+| 7A | Safe sign-out, account context and bounded return paths | Selected provider login/callback/claim integration and separate identities |
+| 7B | Existing-user backend/UI in parallel against agreed contract; 0010 allocated after 0009 | Integrate/test access changes; provider provisioning/membership choice remains pending |
+| 7C | Metadata editing/archive `17790e6`, description lock `088be3a`, independent33 tests | Explicit manager handoff/notes choices and end-to-end journey |
+| 8A | Local SMTP, discovery, recovery policy/cipher, schema0009 `e32b152`; independent crypto/recovery checks | PG-only synthetic queue runtime/review active; provider, staging, bounce/uncertainty operational gates |
+| 8B | List/revoke UI and focus repair `0a676d6`, independent22 tests | Issuance form/reissue/delivery states and complete approval-to-invite journey |
+| 9A | Pinned recovery, denied/quota storage, clear/token-switch fixes; production browser evidence | Complete downstream journey and latest runtime checkpoint |
+| 9B | Existing interfaces preserved | Approved server resume/context promises and privacy lifecycle integration |
+| 9C | Frozen historical item traces API/UI, corruption/deletion checks, browser drawer | Scientific interpretation/threshold/content approval; no reinterpretation made |
+| 10A | Lifecycle inventory, export/anonymization locking, actual PG race evidence | Full categories, approved notices/retention/rights, draft/delivery integration |
+| 10B | Exact-reference discovery backend/UI/proxy, lifecycle reconciliation `58eaad8`, independent22 API/41 UI/proxy/18 repair tests | Verified-contact/rights workflow and related-event traversal; account provisioning dependency |
+| 10C | Bounded opt-in drain, independent23 tests; synthetic restore counterexample | Approved scheduler/policy/alerts and authoritative external deletion replay |
+| 11A | Packaging/build/migration/shutdown evidence; updated container checkpoint active | Hosting choice, hosted migration/rollback and runtime-final image evidence |
+| 11B | Body/time/readiness/DB/extraction limits and no-redirect credential boundary | Hosted validation/distributed limits/provider smoke |
+| 11C | Allowlisted correlation telemetry, migration logger fix, independent33 hermetic checks | Alert receivers, hosted backups/objectives/key isolation and restore/replay |
+| 12A | Production browser32/32 zero skips at frozen checkpoint; new regression/container/browser workers | Latest combined full gate; account/queue/new-feature and hosted coverage |
+| 12B | Matrix plus measured reflow/focus repairs; zero axe violations with incompletes preserved | Native checks on new fixes, manual screen-reader/device and intended-user evidence |
+| 12C | Runbooks and independently executed isolated restore rehearsal | Named operational owners/content/privacy sign-offs and full rehearsal |
+| 12D | Technical evidence accumulating | Controlled demo/handoff after technical gates; no public publication authorized |
+
+Six current dispatched tasks: `iopsych-delivery-recovery`, `iopsych-access-admin`, `iopsych-access-ui`, `iopsych-browser-maintenance`, `iopsych-regression-second`, `iopsych-package-current`. The last two start at frozen `58eaad8`; their reports must not claim incoming0010/runtime coverage. Regression owns5571/5573/8133/8113/1139/8139; packaging owns3157/8177/5597; browser alone owns3116 suite. Coordinator retains integration and migration-chain control. API mount belongs to coordinator; access backend owns only User model fields, queue owns InvitationDelivery model fields.
+
+Secret gate: independently confirmed the reported match is a documented container image tag, not a key. `7187e30` adds exactly three finding fingerprints (current file and two historical commits), not a broad path/rule suppression. Fresh tracked-source export and all-available-ref history scans then each returned zero findings. The working integration directory additionally contains generated test/build artifacts flagged by a directory scan; no claim is made that those untracked runtime artifacts were clean or deleted. Reviewer reports npm/pip-audit zero vulnerabilities including cryptography50.0.2; no hosted scan claim.
+
+## Historical package ledger (superseded)
 
 Historical expanded wave confirmed eight active workers, all with `turn_started` and requested/effective `gpt-6-astra`. These bounded slices below are now integrated and their workers released; the current dispatched-work table above governs active ownership. Four worktrees branched from `3602cb0`; runner branched from `8450a09`. Branch names below have `AbhiNutakki/` prefix.
 
