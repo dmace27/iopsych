@@ -45,7 +45,7 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 describe("report presentation", () => {
-  it("shows six independent cards, all outcome states, questions and version references", async () => {
+  it("shows six independent comparisons, all outcome states, questions and version references", async () => {
     const user = userEvent.setup();
     render(
       <ReportDetail
@@ -54,13 +54,50 @@ describe("report presentation", () => {
       />,
     );
     expect(screen.getAllByRole("article")).toHaveLength(6);
+    const sections = [
+      screen.getByRole("heading", {
+        name: "Report for synthetic@example.test",
+      }),
+      screen.getByRole("heading", { name: "Report summary" }),
+      screen.getByRole("heading", {
+        name: "Comparisons and supporting evidence",
+      }),
+      screen.getByRole("heading", { name: "Limitations and responsible use" }),
+      screen.getByRole("heading", { name: "Interview guide" }),
+    ];
+    for (let index = 1; index < sections.length; index++) {
+      expect(
+        sections[index - 1].compareDocumentPosition(sections[index]) &
+          Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
+    }
+    for (const [index, article] of screen.getAllByRole("article").entries()) {
+      const saved = reportFixture.result.items[index];
+      expect(article).toHaveTextContent(
+        saved.explanation.applied_rule.description,
+      );
+      if (saved.explanation.uncertainty)
+        expect(article).toHaveTextContent(saved.explanation.uncertainty);
+    }
     expect(screen.getByText("Insufficient evidence")).toBeVisible();
     expect(screen.getByText("Worth discussing")).toBeVisible();
     expect(screen.getByText("Potential friction")).toBeVisible();
     expect(screen.getByText(/Low confidence/)).toBeVisible();
-    expect(
-      screen.getByText(/Structure uses an inverse comparison: 6 − 4 = 2/),
-    ).toBeVisible();
+    if (reportFixture.result.algorithm_version === "1.0.0") {
+      expect(
+        screen.getByText(
+          /Algorithm v1 used an inverse structure comparison: 6 − 4 = 2/,
+        ),
+      ).toBeVisible();
+    } else {
+      expect(screen.getByText("Role structure available")).toBeVisible();
+      expect(
+        screen.getByText(/Available role structure is compared directly/),
+      ).toBeVisible();
+      expect(
+        screen.queryByText(/inverse structure comparison/),
+      ).not.toBeInTheDocument();
+    }
     expect(
       screen.getByRole("complementary", { name: "Responsible use" }),
     ).toHaveTextContent(reportFixture.usage_warning);
@@ -79,6 +116,30 @@ describe("report presentation", () => {
         reportFixture.result.items[0].interview_questions.primary.id,
         { exact: false },
       ),
+    ).toBeVisible();
+  });
+  it("preserves frozen v1 labels, inverse interpretation and saved questions", () => {
+    const { report } = traceFixture();
+    render(<ReportDetail report={report} />);
+    expect(screen.getByText("Saved matching algorithm 1.0.0")).toBeVisible();
+    expect(
+      screen.getByText(/Algorithm v1 used an inverse structure comparison/),
+    ).toBeVisible();
+    expect(
+      screen.getByText(
+        /This historical result is preserved as originally generated/,
+      ),
+    ).toBeVisible();
+    expect(
+      screen.queryByText("Role structure available"),
+    ).not.toBeInTheDocument();
+    const structure = screen.getByRole("article", { name: "Structure" });
+    expect(structure).toHaveTextContent("Role demand");
+    expect(structure).toHaveTextContent(
+      report.result.items[1].explanation.applied_rule.description,
+    );
+    expect(
+      screen.getByText(report.result.items[1].interview_questions.primary.text),
     ).toBeVisible();
   });
   it("opens inspectable evidence, closes with Escape and restores trigger focus", async () => {

@@ -1,6 +1,9 @@
 "use client";
 
-import { type AlignmentItem } from "@iopsych/shared";
+import {
+  CONSTRUCT_DEFINITIONS_BY_KEY,
+  type AlignmentItem,
+} from "@iopsych/shared";
 import { useEffect, useRef, useState } from "react";
 
 import { ApiClientError } from "../../lib/api-client";
@@ -25,6 +28,12 @@ const tones = {
   insufficient_evidence: "bg-slate-100 text-slate-800 border-slate-300",
 };
 
+function reportLabels(report: Report) {
+  return report.result.algorithm_version === "1.0.0"
+    ? V1_REPORT_LABELS
+    : CONSTRUCT_DEFINITIONS_BY_KEY;
+}
+
 /** Six independent, inspectable comparisons and their reviewed question guide. */
 export function ReportDetail({
   report,
@@ -37,6 +46,7 @@ export function ReportDetail({
     reportId: string;
     constructKey: AlignmentItem["construct_key"];
   } | null>(null);
+  const labels = reportLabels(report);
   const selectedEvidence =
     evidence?.reportId === report.id
       ? report.result.items.find(
@@ -44,15 +54,15 @@ export function ReportDetail({
         )
       : undefined;
   return (
-    <section aria-labelledby="report-heading" className="space-y-8">
-      <header>
-        <p className="text-xs font-bold uppercase tracking-widest text-teal-800">
+    <section aria-labelledby="report-heading" className="space-y-6">
+      <header className="border-b border-slate-200 pb-4">
+        <p className="text-sm font-medium text-slate-600">
           Interview preparation
         </p>
         <h2
           id="report-heading"
           tabIndex={-1}
-          className="mt-2 break-words text-2xl font-bold text-slate-950"
+          className="mt-1 break-words text-2xl font-semibold text-slate-950 focus-visible:outline-2 focus-visible:outline-teal-700"
         >
           {candidateEmail
             ? `Report for ${candidateEmail}`
@@ -62,119 +72,157 @@ export function ReportDetail({
           Approved profile version {report.role_profile_version} · Generated{" "}
           {formatDate(report.generated_at)} (UTC)
         </p>
+        <p className="mt-1 text-sm text-slate-600">
+          Saved matching algorithm {report.result.algorithm_version}
+        </p>
         <a
           href="#interview-guide"
-          className="mt-3 inline-block rounded font-semibold text-teal-800 underline focus-visible:ring-2 focus-visible:ring-teal-700"
+          className="mt-2 inline-flex min-h-11 items-center rounded text-sm font-semibold text-teal-800 underline focus-visible:ring-2 focus-visible:ring-teal-700"
         >
           Jump to interview guide
         </a>
       </header>
+      <section aria-labelledby="report-summary-heading">
+        <h3
+          id="report-summary-heading"
+          className="text-lg font-semibold text-slate-950"
+        >
+          Report summary
+        </h3>
+        <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-700">
+          Six separate working-preference comparisons with the approved role
+          profile. Read each interpretation alongside its evidence and
+          confidence; there is no overall score or candidate ranking.
+        </p>
+        <p className="mt-3 border-l-2 border-amber-400 pl-3 text-sm leading-6 text-amber-950">
+          {report.usage_warning}
+        </p>
+      </section>
+      <section
+        aria-labelledby="supporting-evidence-heading"
+        className="surface rounded-lg border border-slate-200 bg-white"
+      >
+        <h3
+          id="supporting-evidence-heading"
+          className="border-b border-slate-200 px-4 py-4 text-lg font-semibold"
+        >
+          Comparisons and supporting evidence
+        </h3>
+        <div className="divide-y divide-slate-200">
+          {report.result.items.map((item) => {
+            const definition = labels[item.construct_key];
+            const { role, candidate_response: candidate } = item.explanation;
+            return (
+              <article
+                key={item.construct_key}
+                aria-labelledby={`construct-${item.construct_key}`}
+                className="record-row px-4 py-4 sm:px-5"
+              >
+                <h4
+                  id={`construct-${item.construct_key}`}
+                  className="text-base font-semibold text-slate-950"
+                >
+                  {definition.label}
+                </h4>
+                <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-2">
+                  <p
+                    className={`inline-block rounded border px-2 py-1 text-xs font-semibold ${tones[item.classification]}`}
+                  >
+                    {classifications[item.classification]}
+                  </p>
+                  <p className="text-sm text-slate-600">
+                    {item.confidence.charAt(0).toUpperCase() +
+                      item.confidence.slice(1)}{" "}
+                    confidence
+                  </p>
+                </div>
+                <dl className="mt-4 grid gap-4 sm:grid-cols-2">
+                  <div>
+                    <dt className="text-sm font-semibold text-slate-600">
+                      {item.construct_key === "structure" &&
+                      report.result.algorithm_version !== "1.0.0"
+                        ? "Role structure available"
+                        : "Role demand"}
+                    </dt>
+                    <dd className="mt-1 text-base font-semibold text-slate-950">
+                      {role.rating}
+                      <span className="text-sm font-normal"> / 5</span>
+                    </dd>
+                    <dd className="mt-1 text-xs leading-5 text-slate-600">
+                      {definition.role_prompt}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-sm font-semibold text-slate-600">
+                      Candidate response
+                    </dt>
+                    <dd className="mt-1 text-base font-semibold text-slate-950">
+                      {candidate.rating}
+                      <span className="text-sm font-normal"> / 5</span>
+                    </dd>
+                    <dd className="mt-1 text-xs leading-5 text-slate-600">
+                      {definition.candidate_prompt}
+                    </dd>
+                  </div>
+                </dl>
+                {role.comparison_target === "inverse_role_rating" ? (
+                  <p className="mt-4 text-sm leading-6 text-slate-700">
+                    Algorithm v1 used an inverse structure comparison: 6 −{" "}
+                    {role.rating} = {role.comparison_rating}. The candidate
+                    response is compared with {role.comparison_rating}. This
+                    historical result is preserved as originally generated.
+                  </p>
+                ) : null}
+                <p className="mt-4 text-sm leading-6 text-slate-700">
+                  <strong>Stored interpretation: </strong>
+                  {item.explanation.applied_rule.description}
+                </p>
+                {item.explanation.uncertainty ? (
+                  <p className="mt-3 border-l-2 border-slate-300 pl-3 text-sm leading-6 text-slate-800">
+                    <strong>Uncertainty: </strong>
+                    {item.explanation.uncertainty}
+                  </p>
+                ) : null}
+                <button
+                  type="button"
+                  onClick={() =>
+                    setEvidence({
+                      reportId: report.id,
+                      constructKey: item.construct_key,
+                    })
+                  }
+                  className="action-secondary mt-3 min-h-11 rounded-md border border-slate-300 px-3 py-2 text-sm font-semibold text-teal-900 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-teal-700 focus-visible:ring-offset-2"
+                >
+                  View evidence for {definition.label}
+                </button>
+              </article>
+            );
+          })}
+        </div>
+      </section>
       <aside
         aria-label="Responsible use"
-        className="rounded-2xl border border-amber-200 bg-amber-50 p-5 text-amber-950"
+        className="border-l-2 border-amber-400 pl-4 text-amber-950"
       >
-        <h3 className="font-bold">Use this report to prepare a conversation</h3>
+        <h3 className="text-lg font-semibold">
+          Limitations and responsible use
+        </h3>
         <p className="mt-2 text-sm leading-6">{report.usage_warning}</p>
-        <p className="mt-2 text-sm leading-6">
+        <p className="mt-2 max-w-3xl text-sm leading-6">
           These are six separate working-preference signals, not a diagnosis or
           a prediction of performance. Discuss the evidence, role context, and
           uncertainty with the candidate. “Worth discussing” does not mean “not
           qualified.”
         </p>
       </aside>
-      <div className="grid gap-5 md:grid-cols-2">
-        {report.result.items.map((item) => {
-          const definition = V1_REPORT_LABELS[item.construct_key];
-          const { role, candidate_response: candidate } = item.explanation;
-          return (
-            <article
-              key={item.construct_key}
-              aria-labelledby={`construct-${item.construct_key}`}
-              className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"
-            >
-              <h3
-                id={`construct-${item.construct_key}`}
-                className="text-xl font-bold text-slate-950"
-              >
-                {definition.label}
-              </h3>
-              <p
-                className={`mt-3 inline-block rounded-full border px-3 py-1 text-sm font-semibold ${tones[item.classification]}`}
-              >
-                {classifications[item.classification]}
-              </p>
-              <p className="mt-3 text-sm font-semibold text-slate-700">
-                {item.confidence.charAt(0).toUpperCase() +
-                  item.confidence.slice(1)}{" "}
-                confidence
-              </p>
-              <dl className="mt-5 grid grid-cols-2 gap-4">
-                <div>
-                  <dt className="text-sm font-semibold text-slate-600">
-                    Role demand
-                  </dt>
-                  <dd className="mt-1 text-2xl font-bold text-slate-950">
-                    {role.rating}
-                    <span className="text-sm font-normal"> / 5</span>
-                  </dd>
-                  <dd className="mt-1 text-xs leading-5 text-slate-600">
-                    {definition.role_prompt}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-sm font-semibold text-slate-600">
-                    Candidate response
-                  </dt>
-                  <dd className="mt-1 text-2xl font-bold text-slate-950">
-                    {candidate.rating}
-                    <span className="text-sm font-normal"> / 5</span>
-                  </dd>
-                  <dd className="mt-1 text-xs leading-5 text-slate-600">
-                    {definition.candidate_prompt}
-                  </dd>
-                </div>
-              </dl>
-              {role.comparison_target === "inverse_role_rating" ? (
-                <p className="mt-4 text-sm leading-6 text-slate-700">
-                  Structure uses an inverse comparison: 6 − {role.rating} ={" "}
-                  {role.comparison_rating}. The candidate response is compared
-                  with {role.comparison_rating}, rather than the role demand
-                  shown above.
-                </p>
-              ) : null}
-              <p className="mt-4 text-sm leading-6 text-slate-700">
-                {item.explanation.applied_rule.description}
-              </p>
-              {item.explanation.uncertainty ? (
-                <p className="mt-3 rounded-lg bg-slate-100 p-3 text-sm leading-6 text-slate-800">
-                  <strong>Uncertainty: </strong>
-                  {item.explanation.uncertainty}
-                </p>
-              ) : null}
-              <button
-                type="button"
-                onClick={() =>
-                  setEvidence({
-                    reportId: report.id,
-                    constructKey: item.construct_key,
-                  })
-                }
-                className="mt-5 min-h-11 rounded-lg border border-teal-700 px-4 py-2 font-semibold text-teal-900 hover:bg-teal-50 focus-visible:ring-2 focus-visible:ring-teal-700 focus-visible:ring-offset-2"
-              >
-                View evidence for {definition.label}
-              </button>
-            </article>
-          );
-        })}
-      </div>
       <section
         id="interview-guide"
         aria-labelledby="interview-guide-heading"
-        className="rounded-2xl border border-slate-200 bg-white p-6"
+        className="surface rounded-lg border border-slate-200 bg-white p-4 sm:p-5"
       >
         <h3
           id="interview-guide-heading"
-          className="text-xl font-bold text-slate-950"
+          className="text-lg font-semibold text-slate-950"
         >
           Interview guide
         </h3>
@@ -190,7 +238,7 @@ export function ReportDetail({
               className="border-t border-slate-200 pt-5"
             >
               <h4 className="font-bold text-slate-950">
-                {V1_REPORT_LABELS[item.construct_key].label}
+                {labels[item.construct_key].label}
               </h4>
               <p className="mt-2 leading-7 text-slate-800">
                 {item.interview_questions.primary.text}
@@ -200,7 +248,7 @@ export function ReportDetail({
                 {item.interview_questions.follow_up.text}
               </p>
               <details className="mt-2 text-xs text-slate-600">
-                <summary className="cursor-pointer rounded focus-visible:ring-2 focus-visible:ring-teal-700">
+                <summary className="min-h-11 cursor-pointer content-center rounded focus-visible:ring-2 focus-visible:ring-teal-700">
                   Question references
                 </summary>
                 <p className="mt-2 break-all">
@@ -213,8 +261,8 @@ export function ReportDetail({
           ))}
         </ol>
       </section>
-      <details className="rounded-xl border border-slate-200 bg-white p-4 text-sm text-slate-600">
-        <summary className="cursor-pointer rounded font-semibold focus-visible:ring-2 focus-visible:ring-teal-700">
+      <details className="border-t border-slate-200 pt-2 text-sm text-slate-600">
+        <summary className="min-h-11 cursor-pointer content-center rounded font-semibold focus-visible:ring-2 focus-visible:ring-teal-700">
           Report versions and source references
         </summary>
         <dl className="mt-4 space-y-2 break-all">
@@ -284,7 +332,7 @@ function EvidenceDrawer({
     <dialog
       ref={ref}
       aria-labelledby="evidence-heading"
-      className="fixed inset-y-0 right-0 m-0 ml-auto h-dvh max-h-none w-full max-w-xl overflow-y-auto border-l border-slate-200 bg-white p-6 text-slate-800 shadow-xl backdrop:bg-slate-950/50 sm:p-8"
+      className="fixed inset-y-0 right-0 m-0 ml-auto h-dvh max-h-none w-full max-w-xl overflow-y-auto overscroll-contain border-l border-slate-200 bg-white p-4 text-slate-800 shadow-xl backdrop:bg-slate-950/40 sm:p-6"
       onCancel={(event) => {
         event.preventDefault();
         onDismiss();
@@ -292,12 +340,12 @@ function EvidenceDrawer({
     >
       <div className="flex items-start justify-between gap-4">
         <h2 id="evidence-heading" className="text-xl font-bold">
-          Evidence: {V1_REPORT_LABELS[item.construct_key].label}
+          Evidence: {reportLabels(report)[item.construct_key].label}
         </h2>
         <button
           type="button"
           onClick={onDismiss}
-          className="min-h-11 rounded-lg border border-slate-300 px-3 font-bold focus-visible:ring-2 focus-visible:ring-teal-700"
+          className="action-secondary min-h-11 shrink-0 rounded-md border border-slate-300 px-3 text-sm font-semibold focus-visible:ring-2 focus-visible:ring-teal-700"
         >
           Close evidence
         </button>
@@ -407,7 +455,7 @@ function TraceAttempt({
         </p>
         {error?.status === 401 ? (
           <a
-            className="font-bold underline"
+            className="inline-flex min-h-11 items-center rounded font-semibold underline focus-visible:ring-2 focus-visible:ring-teal-700"
             href={`/sign-in?returnTo=${encodeURIComponent(`/reports/${report.id}`)}`}
           >
             Sign in to view reports
@@ -424,7 +472,7 @@ function TraceAttempt({
               <p>The trace endpoint or saved evidence could not be found.</p>
             ) : null}
             <button
-              className="min-h-11 rounded border px-3 font-semibold"
+              className="action-secondary min-h-11 rounded border px-3 font-semibold focus-visible:ring-2 focus-visible:ring-teal-700"
               type="button"
               onClick={retry}
             >
@@ -459,7 +507,7 @@ function TraceAttempt({
       </p>
       <ol className="mt-4 space-y-4">
         {construct.items.map((row) => (
-          <li key={row.item_id} className="rounded border border-slate-200 p-3">
+          <li key={row.item_id} className="border-t border-slate-200 py-3">
             <p className="font-semibold">{row.statement}</p>
             <p>
               {choices[row.choice]} · Contribution:{" "}
