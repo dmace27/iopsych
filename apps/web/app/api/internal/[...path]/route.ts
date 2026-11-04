@@ -10,7 +10,11 @@ interface RouteContext {
   params: Promise<{ path: string[] }>;
 }
 
+const INVITATION_ISSUANCE_ROUTE =
+  /^POST \/roles\/[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\/invites$/i;
+
 const ALLOWED_INTERNAL_ROUTES = [
+  INVITATION_ISSUANCE_ROUTE,
   /^GET \/accounts\/users$/,
   /^PATCH \/accounts\/users\/[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
   /^GET \/auth\/me$/,
@@ -115,6 +119,22 @@ async function proxyInternalApi(
   if (contentType && body.byteLength > 0) {
     headers.set("Content-Type", contentType);
   }
+  if (INVITATION_ISSUANCE_ROUTE.test(`${request.method} /${path.join("/")}`)) {
+    const idempotencyKey = request.headers.get("Idempotency-Key");
+    // Match the API contract without rewriting the caller's retry identity.
+    // Missing-key policy and strict invitation body validation belong to API.
+    if (idempotencyKey !== null) {
+      if (!/^[!-~]{16,128}$/.test(idempotencyKey)) {
+        return problem(
+          422,
+          "invalid_idempotency_key",
+          "Invalid idempotency key",
+          "Idempotency-Key must contain 16-128 visible ASCII characters.",
+        );
+      }
+      headers.set("Idempotency-Key", idempotencyKey);
+    }
+  }
 
   try {
     const upstream = await fetch(upstreamUrl, {
@@ -124,7 +144,10 @@ async function proxyInternalApi(
       cache: "no-store",
     });
     if (upstream.status === 204) {
-      return new Response(null, { status: 204 });
+      return new Response(null, {
+        status: 204,
+        headers: { "Cache-Control": "no-store" },
+      });
     }
     return new Response(await upstream.arrayBuffer(), {
       status: upstream.status,
