@@ -1,5 +1,22 @@
 # Final acceptance reconciliation
 
+## Coordinator follow-up, 23:49 UTC
+
+The historical open reissue defect below is resolved by `5231feb`, with six
+regressions first failing and then passing. Native review additionally found
+focus loss and duplicate provider landmarks; `1c1d606` fixes both, and the
+desktop/mobile exact-fix rerun passes with zero main-scoped axe violations
+(`165e51a`). Final web/shared suites pass 643/101 tests; strict typing passes
+142 Python files plus web/shared. The affected 38-case production browser retry
+passes, with nine earlier green cases separately qualified by revision.
+Patched dependency and tracked-source/history secret audits are clean. Final
+API/web images build; rollback-only remote experiments pass 18 tests but do not
+implement a committing migration bridge. These updates resolve the specific
+pending evidence noted below, not the remaining package/external gates. See
+`integrated-verification.md` and the latest progress override for exact scope.
+
+## Original independent review
+
 Reviewed `e3d73a7361a69b8343b39409b7c26d090c0a6988` on November 4, 2026. This is
 bounded engineering acceptance evidence, not a green release or full package
 acceptance. All 21 packages retain their individual final-plan gates. Read the

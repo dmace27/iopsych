@@ -1,5 +1,17 @@
 # Integrated verification checkpoint
 
+Final follow-up: `1c1d606` passes **643 web / 101 shared JS tests**, configured
+coverage gates and strict web/shared/Python typing (142 Python files). The
+affected browser retry passes **38 cases**, zero skips, 55 axe scans with zero
+violations; nine previous green cases remain revision-qualified separately.
+The native reissue rerun additionally verifies persistent unknown-outcome locks,
+same UUID, eventual success focus, unique landmarks and no overflow at both
+desktop/mobile sizes. Clean final web image built from `1c1d606`; patched API
+image built from `97c09e4` loads certifi2026.10.23 with networking disabled.
+Tracked-source and all-local-ref secret scans returned zero findings after
+integration of the exact synthetic exceptions. Operational remote migration,
+hosted/provider/manual/scientific/privacy gates remain open.
+
 2026-11-04, Standard/default service only. This is technical evidence, not
 whole-plan, hosted-provider, scientific, privacy or release approval.
 

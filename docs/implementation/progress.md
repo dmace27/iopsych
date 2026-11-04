@@ -18,6 +18,52 @@ All five active worker sessions were observed Fast, then switched once using sup
 
 ## Current scheduling and critical path
 
+### Current override: 23:49 UTC — reviewed technical checkpoint
+
+This supersedes historical active-owner and pending-test rows below, not their
+revision-qualified evidence. Five live Fast workers were converted to Standard;
+every later worker was verified Standard without toggling the coordinator.
+Persisted `service_tier = "default"` remains verified. All dispatched workers
+have now reported; completed terminals are released, with zero pending service
+conversions. No duplicate dispatch was created after the interruption.
+
+Remote `646201a` is an ancestor of integration (`5cde2e7` merge). Auth0, Resend,
+direct-v2/frozen-v1 compatibility, all five UI lanes and provider reissue are
+integrated. Independent review and native testing found and repaired sticky
+unknown-outcome recovery (`5231feb`), replacement focus and duplicate landmarks
+(`1c1d606`); exact desktop/mobile reruns pass (`165e51a`). Main remains
+`f5224c9d7d7d6b143bd43c3ca5c77022856cdb90`; no push, public deployment,
+purchase, real email or production-secret copying occurred.
+
+Verified evidence: 1187 API assertions with zero skips plus 11 focused appended
+tests on unchanged application sources reach 100% statement/branch coverage;
+643 web and 101 shared JS tests pass configured gates; 95 Python contract tests
+pass; web/shared typing and 142 Python files pass. Full lint and formatting pass.
+The 38 affected production browser cases now pass with 55 zero-violation axe
+scans; nine earlier account/issuance passes remain separately revision-qualified.
+Clean final web image at `1c1d606` and patched-certifi API image at `97c09e4`
+build successfully; the latter loads certifi2026.10.23. Fresh 52-package Python
+audit is clean, npm audit is clean, and tracked-source/all-local-ref Gitleaks
+scans are clean after exact synthetic exceptions. See integrated-verification,
+browser-auth0-adaptation, reissue-native-review and security-final receipts.
+
+Remote lineage remains **partial engineering**, not an operational bridge:
+`f9f01d8`/`4cad9a9` provide rollback-only populated experiments. Coordinator's
+first root-checkout attempt was correctly refused because local dotenv exists;
+the clean isolated child rerun passed all 18 tests and removed its owned DB.
+No existing local database was reset. A committing bridge still needs complete
+catalog/concurrency/envelope/version-receipt proof and actual source-lineage
+confirmation before use. This is remaining work, not a completed release gate.
+
+Remaining product choices include cross-device drafts/optional context and
+manager review states (questions surfaced with recommended choices). Retention
+category clocks, rights workflows and privacy/content/scientific approval are
+not inferred. Real Auth0/Resend credentials, hosted verification, manual
+accessibility/intended-user evidence and operational sign-offs remain separate.
+All 21 package mappings and individual acceptance gates remain in the plan and
+acceptance-final.md; the accelerated target does not convert partial work into
+full-package acceptance.
+
 ### Current override: 23:35 UTC — remote integrated, Standard-only verification
 
 Reviewed remote `646201a` is now integrated by merge `5cde2e7`, including Auth0,
