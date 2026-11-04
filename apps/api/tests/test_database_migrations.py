@@ -1,12 +1,15 @@
 """Alembic migration and database command tests."""
 
+import logging
+from collections.abc import Iterator
 from pathlib import Path
+from weakref import ReferenceType, WeakValueDictionary
 
 import pytest
-from alembic import command
 from alembic.config import Config
 from sqlalchemy import create_engine, inspect, text
 
+from alembic import command
 from app.database import seed, verify
 
 API_ROOT = Path(__file__).resolve().parents[1]
@@ -24,6 +27,35 @@ EXPECTED_TABLES = {
     "roles",
     "users",
 }
+
+
+@pytest.fixture(autouse=True)
+def restore_logging_state(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
+    """Keep Alembic's logging configuration and capture streams inside each test.
+
+    Isolating the handler registries prevents fileConfig from closing the
+    caller's handlers before they can be restored at teardown.
+    """
+    loggers = [logging.getLogger(), logging.getLogger("alembic"), logging.getLogger("sqlalchemy")]
+    loggers.extend(
+        item
+        for item in logging.root.manager.loggerDict.values()
+        if isinstance(item, logging.Logger) and item not in loggers
+    )
+    handlers: list[ReferenceType[logging.Handler]] = []
+    with monkeypatch.context() as logging_patch:
+        for logger in loggers:
+            for attribute in ("level", "disabled", "propagate"):
+                logging_patch.setattr(logger, attribute, getattr(logger, attribute))
+            for attribute in ("handlers", "filters"):
+                logging_patch.setattr(logger, attribute, getattr(logger, attribute).copy())
+        logging_patch.setattr(logging, "_handlers", WeakValueDictionary())
+        logging_patch.setattr(logging, "_handlerList", handlers)
+        try:
+            yield
+        finally:
+            logging.shutdown(handlers[:])
+    logging.getLogger().setLevel(logging.getLogger().level)
 
 
 def alembic_config(database_url: str) -> Config:

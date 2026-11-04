@@ -16,9 +16,11 @@ from starlette.routing import Route
 from starlette.types import Message, Receive, Scope, Send
 
 from alembic import command
+from app.invitations.config import InvitationSettings
 from app.main import create_app
 from app.runtime.config import RuntimeSettings
 from app.runtime.telemetry import CompletionTelemetryMiddleware, correlation_headers
+from tests.test_database_migrations import restore_logging_state as restore_logging_state
 
 LOGGER = "app.runtime.telemetry"
 SENSITIVE = "synthetic-private-value"
@@ -30,18 +32,6 @@ async def test_migration_logging_preserves_completion_telemetry(
     monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
 ) -> None:
     """Embedded Alembic configuration must not disable an imported app logger."""
-    # fileConfig also replaces root handlers and changes configured logger levels.
-    # Restore those test-process settings at teardown; do not repair disabled
-    # state before checking the actual migration-to-request interaction.
-    loggers = [logging.getLogger()] + [
-        item
-        for item in logging.root.manager.loggerDict.values()
-        if isinstance(item, logging.Logger)
-    ]
-    for logger in loggers:
-        for attribute in ("level", "disabled", "propagate"):
-            monkeypatch.setattr(logger, attribute, getattr(logger, attribute))
-        monkeypatch.setattr(logger, "handlers", logger.handlers.copy())
     monkeypatch.setenv("DATABASE_URL", "sqlite+pysqlite:///:memory:")
     config = Config(Path(__file__).resolve().parents[1] / "alembic.ini")
     command.upgrade(config, "head")
@@ -170,7 +160,10 @@ def test_server_owned_id_and_sensitive_inputs(
 def test_actual_candidate_and_unknown_routes(
     path: str, template: str, status: int, caplog: pytest.LogCaptureFixture
 ) -> None:
-    application = create_app(session_factory=MagicMock(spec=sessionmaker))
+    application = create_app(
+        session_factory=MagicMock(spec=sessionmaker),
+        invitation_settings=InvitationSettings(_env_file=None, token_signing_secret=None),
+    )
     with TestClient(application) as client:
         response = client.get(path, params={"private": SENSITIVE})
     assert response.status_code == status
