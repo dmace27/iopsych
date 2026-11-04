@@ -1,0 +1,38 @@
+{
+  "application_revision": "040b5ea",
+  "aggregate": "7170c55",
+  "test_revision": "0421b47",
+  "command": "bash scripts/browser-e2e.sh accessibility.spec.ts current.spec.ts maintenance-privacy.spec.ts privacy-history.spec.ts smoke.spec.ts",
+  "result": "passed",
+  "spec_results": {
+    "accessibility": 18,
+    "current": 3,
+    "maintenance-privacy": 5,
+    "privacy-history": 1,
+    "smoke": 11
+  },
+  "passed": 38,
+  "failed": 0,
+  "skipped": 0,
+  "unchanged_prior_results": {
+    "revision": "f918bbb",
+    "accounts": 3,
+    "invitation-issuance": 6
+  },
+  "production_build": "passed",
+  "fresh_migration_head": "20261104_0012",
+  "browser": "Chromium 156.0.8078.4",
+  "axe": "4.14.0",
+  "axe_scan_count": 55,
+  "axe_violation_count": 0,
+  "axe_incomplete_rule_counts": {
+    "color-contrast": 10
+  },
+  "rate_limits": "Real300/min peer budget unchanged;61s gap between specs",
+  "cleanup": "All five allocated ports free after owned stack cleanup",
+  "limitations": [
+    "Results cover two explicitly identified revisions, not a new full47-case single-revision run",
+    "Synthetic HMAC/local mail; no live provider, hosted HTTPS or manual accessibility acceptance",
+    "Current v2 report/frozen v1 evidence exercised; persisted-v1 browser replay not claimed"
+  ]
+}

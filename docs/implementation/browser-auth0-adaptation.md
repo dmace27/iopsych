@@ -78,3 +78,31 @@ Focused runner checks now **34 passed**; strict browser TypeScript, scoped
 Prettier, Ruff checks/format and diff checks pass. No new browser pass is claimed
 until the app repair and packaging build-slot handoff permit the affected-spec
 rerun. Green accounts/issuance cases are not scheduled for duplicate execution.
+
+## Affected-spec retry (passed)
+
+After packaging released the serialized build slot, merged `7170c55` into
+application revision `040b5ea` (includes coordinator natural-label/whitespace
+fix `c83204d`). Test revision `0421b47` corrects the invitation discovery select
+value before that spec executed. Exact command:
+
+```sh
+bash scripts/browser-e2e.sh accessibility.spec.ts current.spec.ts maintenance-privacy.spec.ts privacy-history.spec.ts smoke.spec.ts
+```
+
+Production build and fresh migrations through0012 passed. **38 passed, zero
+failed/skipped**: accessibility18, current3, maintenance/privacy5, privacy
+history1, smoke11. All ten original failures are covered by this passing retry.
+The v2 direct structure result, v2 question selection, v1 scoring/trace envelope,
+frozen definition hash, retained statement evidence, native dialog/focus, consent,
+storage-denied/quota completion, exports, anonymization and separate account
+boundaries passed. API300/min protection remained intact with61s gaps between
+specs. Axe reports no violations; incomplete checks remain in the compact JSON
+receipt `tests/browser/evidence/auth0-aggregate-retry.json`.
+
+Accounts3 and issuance6 passed at original `f918bbb` and were intentionally not
+repeated. This is revision-qualified47-case coverage across two runs, not a
+fresh47/47 single-revision claim. Newer provider UI changes and external/manual
+acceptance are outside this checkpoint. All allocated ports3116/8116/5556/1136/
+8136 were confirmed free after cleanup; only owned containers/network/artifacts
+were removed. Generated Next type-path changes were restored, not committed.
