@@ -3,16 +3,19 @@
 import asyncio
 import json
 import logging
+from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock
 from uuid import UUID, uuid4
 
 import pytest
+from alembic.config import Config
 from fastapi import Request
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import sessionmaker
 from starlette.routing import Route
 from starlette.types import Message, Receive, Scope, Send
 
+from alembic import command
 from app.main import create_app
 from app.runtime.config import RuntimeSettings
 from app.runtime.telemetry import CompletionTelemetryMiddleware, correlation_headers
@@ -20,6 +23,75 @@ from app.runtime.telemetry import CompletionTelemetryMiddleware, correlation_hea
 LOGGER = "app.runtime.telemetry"
 SENSITIVE = "synthetic-private-value"
 FIELDS = {"event", "request_id", "method", "route", "status_class", "duration_ms", "release_id"}
+
+
+@pytest.mark.anyio
+async def test_migration_logging_preserves_completion_telemetry(
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    """Embedded Alembic configuration must not disable an imported app logger."""
+    # fileConfig also replaces root handlers and changes configured logger levels.
+    # Restore those test-process settings at teardown; do not repair disabled
+    # state before checking the actual migration-to-request interaction.
+    loggers = [logging.getLogger()] + [
+        item
+        for item in logging.root.manager.loggerDict.values()
+        if isinstance(item, logging.Logger)
+    ]
+    for logger in loggers:
+        for attribute in ("level", "disabled", "propagate"):
+            monkeypatch.setattr(logger, attribute, getattr(logger, attribute))
+        monkeypatch.setattr(logger, "handlers", logger.handlers.copy())
+    monkeypatch.setenv("DATABASE_URL", "sqlite+pysqlite:///:memory:")
+    config = Config(Path(__file__).resolve().parents[1] / "alembic.ini")
+    command.upgrade(config, "head")
+    assert not logging.getLogger(LOGGER).disabled
+    # Alembic deliberately replaces root handlers; reattach pytest's capture sink.
+    logging.getLogger().addHandler(caplog.handler)
+    middleware = CompletionTelemetryMiddleware(AsyncMock(), routes=[])
+    await middleware({"type": "http", "method": "GET"}, AsyncMock(), AsyncMock())
+    (entry,) = records(caplog)
+    assert entry["method"] == "GET"
+
+
+@pytest.mark.anyio
+async def test_standalone_logging_adds_only_one_fallback_handler(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    logger = logging.getLogger(LOGGER)
+    monkeypatch.setattr(logger, "handlers", [])
+    monkeypatch.setattr(logger, "propagate", False)
+    middleware = CompletionTelemetryMiddleware(AsyncMock(), routes=[])
+    CompletionTelemetryMiddleware(AsyncMock(), routes=[])
+    assert len(logger.handlers) == 1
+    try:
+        await middleware({"type": "http", "method": SENSITIVE}, AsyncMock(), AsyncMock())
+        output = capsys.readouterr().err
+        payload = json.loads(output)
+        assert set(payload) == FIELDS
+        assert payload["method"] == "OTHER"
+        assert SENSITIVE not in output
+    finally:
+        logger.handlers[0].close()
+
+
+@pytest.mark.anyio
+async def test_stream_failure_and_oversized_route_are_bounded(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    route = Route("/" + "a" * 256, endpoint=AsyncMock())
+
+    async def application(scope: Scope, receive: Receive, send: Send) -> None:
+        scope["route"] = route
+        await send({"type": "http.response.start", "status": 200, "headers": []})
+        raise RuntimeError(SENSITIVE)
+
+    middleware = CompletionTelemetryMiddleware(application, routes=[route])
+    with pytest.raises(RuntimeError, match=SENSITIVE):
+        await middleware({"type": "http", "method": "GET"}, AsyncMock(), AsyncMock())
+    (entry,) = records(caplog)
+    assert entry["route"] == "unmatched"
+    assert entry["status_class"] == "unknown"
 
 
 @pytest.fixture

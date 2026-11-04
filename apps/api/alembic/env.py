@@ -2,9 +2,9 @@
 
 from logging.config import fileConfig
 
-from alembic import context
 from sqlalchemy import engine_from_config, pool
 
+from alembic import context
 from app.database import models  # noqa: F401 - registers model metadata.
 from app.database.base import Base
 from app.database.config import DatabaseSettings
@@ -12,7 +12,7 @@ from app.database.config import DatabaseSettings
 config = context.config
 
 if config.config_file_name is not None:
-    fileConfig(config.config_file_name)
+    fileConfig(config.config_file_name, disable_existing_loggers=False)
 
 config.set_main_option("sqlalchemy.url", DatabaseSettings().database_url.replace("%", "%%"))
 target_metadata = Base.metadata
