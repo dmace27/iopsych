@@ -8,8 +8,9 @@ import { issueInvitation } from "../../../../lib/invitation-issuance-client";
 import { InvitationCreateSchema } from "../../../../lib/invitation-issuance-contracts";
 
 const button =
-  "min-h-11 rounded-lg border border-teal-700 px-4 py-2 font-bold text-teal-900 disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-teal-700";
-const field = "block min-h-11 w-full rounded-lg border border-slate-400 p-2";
+  "action-secondary min-h-11 rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700";
+const field =
+  "mt-1 block min-h-11 w-full min-w-0 rounded-md border border-slate-300 bg-white p-2 text-base font-normal focus-visible:outline-2 focus-visible:outline-teal-700";
 export function InvitationIssueForm({
   roleId,
   onIssued,
@@ -143,18 +144,19 @@ export function InvitationIssueForm({
   return (
     <section
       aria-labelledby="issue-heading"
-      className="space-y-4 rounded-xl border border-slate-200 p-5"
+      className="surface space-y-4 border-y border-slate-200 bg-white px-4 py-4"
     >
-      <h2 id="issue-heading" className="text-xl font-bold">
+      <h2 id="issue-heading" className="text-lg font-semibold">
         Issue invitation
       </h2>
-      <p>
+      <p className="max-w-3xl text-sm leading-6 text-slate-600">
         The server checks role availability, profile approval, expiry policy,
         and assessment eligibility when issuing.
       </p>
       {error ? <div role="alert">{error}</div> : null}
       {unauthorized ? (
         <Link
+          className="inline-flex min-h-11 items-center text-teal-700 underline focus-visible:outline-2 focus-visible:outline-teal-700"
           href={`/sign-in?returnTo=${encodeURIComponent(`/roles/${roleId}/invites`)}`}
         >
           Sign in to issue invitations
@@ -190,9 +192,9 @@ export function InvitationIssueForm({
         >
           <fieldset
             disabled={disabled || busy || done || needsNewRequest}
-            className="space-y-4"
+            className="grid min-w-0 gap-4 md:grid-cols-2"
           >
-            <label className="block">
+            <label className="field-label block min-w-0 text-sm font-medium">
               Recipient email
               <input
                 className={field}
@@ -206,7 +208,7 @@ export function InvitationIssueForm({
                 }}
               />
             </label>
-            <label className="block">
+            <label className="field-label block min-w-0 text-sm font-medium">
               Approved profile version
               <select
                 className={field}
@@ -225,7 +227,7 @@ export function InvitationIssueForm({
                 ))}
               </select>
             </label>
-            <label className="block">
+            <label className="field-label block min-w-0 text-sm font-medium">
               Requested expiry in hours (optional)
               <input
                 className={field}
@@ -240,9 +242,11 @@ export function InvitationIssueForm({
                 }}
               />
             </label>
-            <p>Leave expiry blank to use the server default.</p>
+            <p className="self-center text-sm text-slate-600">
+              Leave expiry blank to use the server default.
+            </p>
             <button
-              className={button}
+              className={`${button} justify-self-start`}
               type="submit"
               disabled={!parsed.success || !selected}
             >
@@ -250,8 +254,11 @@ export function InvitationIssueForm({
             </button>
           </fieldset>
           {preview && parsed.success && selected ? (
-            <div className="space-y-3" aria-label="Invitation preview">
-              <h3 className="font-bold">Confirm invitation request</h3>
+            <div
+              className="space-y-3 border-l-4 border-teal-700 pl-4 text-sm [overflow-wrap:anywhere]"
+              aria-label="Invitation preview"
+            >
+              <h3 className="font-semibold">Confirm invitation request</h3>
               <p>Recipient: {parsed.data.email}</p>
               <p>
                 Profile version: {selected.version} ({selected.id})
@@ -264,7 +271,7 @@ export function InvitationIssueForm({
               </p>
               <button
                 type="button"
-                className={button}
+                className="action-primary min-h-11 rounded-md bg-teal-700 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700"
                 disabled={disabled || busy || done || needsNewRequest}
                 onClick={() => void confirm()}
               >

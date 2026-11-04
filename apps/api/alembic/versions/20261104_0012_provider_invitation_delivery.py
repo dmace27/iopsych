@@ -59,13 +59,18 @@ def upgrade() -> None:
         sa.UniqueConstraint("provider_message_id", name="uq_invitation_delivery_provider_message"),
     )
     op.create_index(
-        "ix_provider_invitation_deliveries_due", "provider_invitation_deliveries", ["status", "next_attempt_at"]
+        "ix_provider_invitation_deliveries_due",
+        "provider_invitation_deliveries",
+        ["status", "next_attempt_at"],
     )
     op.create_table(
         "provider_invitation_delivery_events",
         sa.Column("provider_event_id", sa.String(255), primary_key=True),
         sa.Column(
-            "delivery_id", sa.Uuid(), sa.ForeignKey("provider_invitation_deliveries.id"), nullable=False
+            "delivery_id",
+            sa.Uuid(),
+            sa.ForeignKey("provider_invitation_deliveries.id"),
+            nullable=False,
         ),
         sa.Column("event_type", sa.String(80), nullable=False),
         sa.Column("occurred_at", sa.DateTime(timezone=True), nullable=False),
@@ -74,11 +79,15 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     """Remove only delivery state; downgrade discards queued messages and event deduplication."""
-    pending = op.get_bind().scalar(sa.text(
-        "SELECT count(*) FROM provider_invitation_deliveries WHERE status IN ('queued', 'retrying')"
-    ))
+    pending = op.get_bind().scalar(
+        sa.text(
+            "SELECT count(*) FROM provider_invitation_deliveries WHERE status IN ('queued', 'retrying')"
+        )
+    )
     if pending:
         raise RuntimeError("Cancel pending provider deliveries before downgrade")
     op.drop_table("provider_invitation_delivery_events")
-    op.drop_index("ix_provider_invitation_deliveries_due", table_name="provider_invitation_deliveries")
+    op.drop_index(
+        "ix_provider_invitation_deliveries_due", table_name="provider_invitation_deliveries"
+    )
     op.drop_table("provider_invitation_deliveries")

@@ -42,7 +42,7 @@ function ReportError({
       />
       {error.unauthorized ? (
         <Link
-          className="inline-block rounded font-bold text-teal-800 underline"
+          className="inline-flex min-h-11 items-center rounded font-semibold text-teal-800 underline focus-visible:ring-2 focus-visible:ring-teal-700"
           href={`/sign-in?returnTo=${encodeURIComponent(returnTo)}`}
         >
           Sign in to view reports
@@ -76,12 +76,17 @@ function ReportReader({ reportId }: { reportId: string }) {
   return (
     <main
       id="main-content"
-      className="mx-auto max-w-7xl space-y-8 px-5 py-8 sm:px-8"
+      className="workspace-shell mx-auto max-w-6xl space-y-6 px-4 py-6 text-slate-900 sm:px-8"
     >
-      <Link className="rounded font-bold text-teal-800 underline" href="/roles">
+      <Link
+        className="inline-flex min-h-11 items-center rounded font-semibold text-teal-800 underline focus-visible:ring-2 focus-visible:ring-teal-700"
+        href="/roles"
+      >
         ← Back to roles
       </Link>
-      <h1 className="text-3xl font-bold text-slate-950">Recruiter report</h1>
+      <h1 className="workspace-title text-2xl font-semibold text-slate-950">
+        Recruiter report
+      </h1>
       {error ? (
         <ReportError
           error={error}
@@ -198,19 +203,19 @@ function RoleReports({ roleId }: { roleId: string }) {
   return (
     <main
       id="main-content"
-      className="mx-auto max-w-7xl space-y-8 px-5 py-8 sm:px-8"
+      className="workspace-shell mx-auto max-w-6xl space-y-6 px-4 py-6 text-slate-900 sm:px-8"
     >
       <Link
-        className="rounded font-bold text-teal-800 underline"
+        className="inline-flex min-h-11 items-center rounded font-semibold text-teal-800 underline focus-visible:ring-2 focus-visible:ring-teal-700"
         href={`/roles/${roleId}`}
       >
         ← Back to role profile
       </Link>
       <header>
-        <h1 className="text-3xl font-bold text-slate-950">
+        <h1 className="workspace-title text-2xl font-semibold text-slate-950">
           {title ? `${title}: recruiter reports` : "Recruiter reports"}
         </h1>
-        <p className="mt-3 max-w-3xl leading-7 text-slate-600">
+        <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
           Submitted assessments, in submission order. Each report compares six
           separate preferences with the approved role profile used for that
           invitation. There is no overall score or candidate ranking.
@@ -236,16 +241,19 @@ function RoleReports({ roleId }: { roleId: string }) {
       ) : (
         <section
           aria-labelledby="sources-heading"
-          className="rounded-2xl border border-slate-200 bg-white p-6"
+          className="surface overflow-hidden rounded-lg border border-slate-200 bg-white"
         >
-          <h2 id="sources-heading" className="text-xl font-bold">
+          <h2
+            id="sources-heading"
+            className="border-b border-slate-200 px-4 py-4 text-base font-semibold"
+          >
             Submitted assessments
           </h2>
-          <ul className="mt-4 divide-y divide-slate-200">
+          <ul className="record-list divide-y divide-slate-200">
             {sources.map((source) => (
               <li
                 key={source.assessment_id}
-                className="flex flex-wrap items-center justify-between gap-4 py-5"
+                className="record-row flex flex-wrap items-center justify-between gap-x-6 gap-y-2 px-4 py-3"
               >
                 <div className="min-w-0">
                   <h3 className="break-all font-semibold text-slate-950">
@@ -262,7 +270,7 @@ function RoleReports({ roleId }: { roleId: string }) {
                   type="button"
                   disabled={busy !== null}
                   onClick={() => void open(source)}
-                  className="min-h-11 rounded-lg border border-teal-700 px-4 py-2 font-bold text-teal-900 disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-teal-700"
+                  className="action-secondary min-h-11 rounded-md border border-slate-300 px-4 py-2 text-sm font-semibold text-teal-900 hover:bg-slate-50 disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-teal-700"
                   aria-label={`${source.report_id ? "View" : "Generate"} report for ${source.candidate_email}`}
                 >
                   {busy === source.assessment_id
@@ -279,7 +287,7 @@ function RoleReports({ roleId }: { roleId: string }) {
               type="button"
               disabled={busy !== null}
               onClick={() => void more()}
-              className="min-h-11 rounded-lg border border-slate-300 px-4 font-bold disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-teal-700"
+              className="action-secondary m-4 min-h-11 rounded-md border border-slate-300 px-4 text-sm font-semibold disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-teal-700"
             >
               {busy === "more" ? "Loading…" : "Load more assessments"}
             </button>
@@ -297,7 +305,7 @@ function RoleReports({ roleId }: { roleId: string }) {
       {selected ? (
         <div className="space-y-5">
           <Link
-            className="rounded font-bold text-teal-800 underline"
+            className="inline-flex min-h-11 items-center rounded font-semibold text-teal-800 underline focus-visible:ring-2 focus-visible:ring-teal-700"
             href={`/reports/${selected.report.id}`}
           >
             Open saved report link

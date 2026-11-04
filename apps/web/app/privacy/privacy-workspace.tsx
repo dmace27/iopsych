@@ -255,7 +255,12 @@ export function PrivacyWorkspace() {
   }
 
   async function handleLoadMoreAudit() {
-    if (state.status !== "ready" || auditLoadingMore || lookupLoading || working)
+    if (
+      state.status !== "ready" ||
+      auditLoadingMore ||
+      lookupLoading ||
+      working
+    )
       return;
     const requestVersion = ++auditRequestVersion.current;
     setAuditLoadingMore(true);
@@ -292,7 +297,10 @@ export function PrivacyWorkspace() {
 
   if (state.status === "loading") {
     return (
-      <main className="mx-auto max-w-7xl px-5 py-10 sm:px-8" id="main-content">
+      <main
+        className="workspace-shell mx-auto max-w-6xl px-5 py-8 sm:px-8"
+        id="main-content"
+      >
         <LoadingState label="Loading privacy administration" />
       </main>
     );
@@ -300,8 +308,8 @@ export function PrivacyWorkspace() {
   if (state.status === "denied") {
     return (
       <main className="mx-auto max-w-3xl px-5 py-14 sm:px-8" id="main-content">
-        <section className="rounded-2xl border border-amber-200 bg-amber-50 p-6">
-          <h1 className="text-xl font-bold text-amber-950">
+        <section className="border-l-4 border-amber-600 bg-white p-4">
+          <h1 className="workspace-title text-2xl font-semibold text-amber-950">
             Administrator access required
           </h1>
           <p className="mt-2 text-sm leading-6 text-amber-900">
@@ -328,29 +336,29 @@ export function PrivacyWorkspace() {
     assessmentId.trim(),
   );
   return (
-    <main className="mx-auto max-w-7xl px-5 py-10 sm:px-8" id="main-content">
+    <main
+      className="workspace-shell mx-auto max-w-6xl px-5 py-8 text-slate-900 sm:px-8"
+      id="main-content"
+    >
       <div aria-live="polite" className="sr-only">
         {announcement}
       </div>
-      <header className="border-b border-slate-300 pb-7">
-        <p className="text-xs font-bold uppercase tracking-[0.18em] text-teal-800">
-          Administrator controls
-        </p>
-        <h1 className="mt-2 text-4xl font-bold tracking-tight text-slate-950">
+      <header className="border-b border-slate-200 pb-5">
+        <h1 className="workspace-title text-2xl font-semibold text-slate-950">
           Candidate privacy
         </h1>
-        <p className="mt-3 max-w-3xl text-base leading-7 text-slate-600">
+        <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
           Complete data-rights requests, review immutable activity, and enforce
           the configured pilot retention period.
         </p>
       </header>
 
-      <section aria-labelledby="retention-title" className="mt-8">
-        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+      <section aria-labelledby="retention-title" className="mt-6">
+        <div className="surface border-b border-slate-200 bg-white p-4">
           <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-start">
             <div>
               <h2
-                className="text-xl font-bold text-slate-950"
+                className="text-lg font-semibold text-slate-950"
                 id="retention-title"
               >
                 Retention status
@@ -367,7 +375,7 @@ export function PrivacyWorkspace() {
               </p>
             </div>
             <button
-              className="min-h-11 rounded-xl border border-teal-700 px-5 py-2.5 text-sm font-bold text-teal-800 hover:bg-teal-50 focus-visible:ring-2 focus-visible:ring-teal-700"
+              className="action-secondary min-h-11 rounded-md border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-teal-700"
               disabled={working || lookupLoading}
               onClick={() => void handleRetention()}
               type="button"
@@ -375,18 +383,16 @@ export function PrivacyWorkspace() {
               Run retention now
             </button>
           </div>
-          <dl className="mt-6 grid gap-4 sm:grid-cols-4">
+          <dl className="mt-4 grid grid-cols-2 gap-4 border-t border-slate-200 pt-4 sm:grid-cols-4">
             {[
               ["Active", state.privacy.active_assessments],
               ["Due", state.privacy.due_assessments],
               ["Anonymized", state.privacy.anonymized_assessments],
               ["Total", state.privacy.total_assessments],
             ].map(([label, value]) => (
-              <div className="rounded-xl bg-slate-50 p-4" key={label}>
-                <dt className="text-xs font-bold uppercase tracking-wide text-slate-500">
-                  {label}
-                </dt>
-                <dd className="mt-1 text-2xl font-bold text-slate-950">
+              <div key={label}>
+                <dt className="text-sm text-slate-600">{label}</dt>
+                <dd className="mt-1 text-xl font-semibold text-slate-950">
                   {value}
                 </dd>
               </div>
@@ -397,9 +403,9 @@ export function PrivacyWorkspace() {
 
       <section
         aria-labelledby="lookup-title"
-        className="mt-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"
+        className="surface mt-6 border-b border-slate-200 bg-white p-4"
       >
-        <h2 id="lookup-title" className="text-xl font-bold text-slate-950">
+        <h2 id="lookup-title" className="text-lg font-semibold text-slate-950">
           Find an assessment
         </h2>
         <p className="mt-2 text-sm text-slate-600">
@@ -408,15 +414,16 @@ export function PrivacyWorkspace() {
           results per page.
         </p>
         <form
+          className="grid gap-x-4 sm:grid-cols-[minmax(10rem,1fr)_minmax(0,2fr)]"
           onSubmit={(event) => {
             event.preventDefault();
             void handleLookup();
           }}
         >
-          <label className="mt-4 block text-sm font-bold">
+          <label className="field-label mt-4 block min-w-0 text-sm font-medium">
             Reference type
             <select
-              className="field-control mt-2"
+              className="field-control mt-2 min-h-11"
               value={lookupKind}
               disabled={lookupLoading || working}
               onChange={(event) => {
@@ -428,10 +435,10 @@ export function PrivacyWorkspace() {
               <option value="role_id">Role ID</option>
             </select>
           </label>
-          <label className="mt-4 block text-sm font-bold">
+          <label className="field-label mt-4 block min-w-0 text-sm font-medium">
             Reference ID
             <input
-              className="field-control mt-2 font-mono"
+              className="field-control mt-2 min-h-11 font-mono"
               value={lookupReference}
               disabled={lookupLoading || working}
               onChange={(event) => {
@@ -442,7 +449,7 @@ export function PrivacyWorkspace() {
             />
           </label>
           <button
-            className="mt-4 min-h-11 rounded-xl bg-teal-800 px-5 py-2.5 text-sm font-bold text-white disabled:opacity-50"
+            className="action-primary mt-4 min-h-11 justify-self-start rounded-md bg-teal-700 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700"
             disabled={
               lookupLoading ||
               working ||
@@ -473,11 +480,14 @@ export function PrivacyWorkspace() {
                 without an assessment has no result.
               </p>
             ) : (
-              <ul className="space-y-3">
+              <ul
+                aria-label="Matching assessments"
+                className="record-list divide-y divide-slate-200 border-y border-slate-200"
+              >
                 {lookupResult.items.map((item) => (
                   <li
                     key={item.assessment_id}
-                    className="rounded-xl border border-slate-200 p-4"
+                    className="record-row min-w-0 py-4 [overflow-wrap:anywhere]"
                   >
                     <p className="break-all font-mono text-sm">
                       {item.assessment_id}
@@ -498,7 +508,7 @@ export function PrivacyWorkspace() {
                     </p>
                     <button
                       type="button"
-                      className="mt-3 min-h-11 rounded-xl border border-teal-700 px-4 text-sm font-bold text-teal-800"
+                      className="action-secondary mt-3 min-h-11 max-w-full rounded-md border border-slate-300 px-4 py-2 text-sm font-semibold text-teal-700 focus-visible:outline-2 focus-visible:outline-teal-700"
                       disabled={working}
                       aria-pressed={assessmentId === item.assessment_id}
                       onClick={() => selectAssessment(item.assessment_id)}
@@ -512,7 +522,7 @@ export function PrivacyWorkspace() {
             {lookupResult.next_cursor ? (
               <button
                 type="button"
-                className="mt-4 min-h-11 rounded-xl border border-slate-400 px-4 text-sm font-bold"
+                className="action-secondary mt-4 min-h-11 rounded-md border border-slate-300 px-4 text-sm font-semibold focus-visible:outline-2 focus-visible:outline-teal-700"
                 disabled={working}
                 onClick={() => void handleLookup(true)}
               >
@@ -525,15 +535,15 @@ export function PrivacyWorkspace() {
 
       <section
         aria-labelledby="rights-title"
-        className="mt-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"
+        className="surface mt-6 border-b border-slate-200 bg-white p-4 [overflow-wrap:anywhere]"
       >
-        <h2 className="text-xl font-bold text-slate-950" id="rights-title">
+        <h2 className="text-lg font-semibold text-slate-950" id="rights-title">
           Complete a data-rights request
         </h2>
-        <label className="mt-5 block max-w-2xl text-sm font-bold text-slate-800">
+        <label className="field-label mt-4 block max-w-2xl text-sm font-medium text-slate-800">
           Assessment ID
           <input
-            className="field-control mt-2 font-mono"
+            className="field-control mt-2 min-h-11 font-mono"
             onChange={(event) => {
               selectAssessment(event.target.value);
             }}
@@ -544,7 +554,7 @@ export function PrivacyWorkspace() {
         </label>
         <div className="mt-4 flex flex-wrap gap-3">
           <button
-            className="min-h-11 rounded-xl bg-teal-800 px-5 py-2.5 text-sm font-bold text-white disabled:opacity-50"
+            className="action-secondary min-h-11 rounded-md border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-teal-700"
             disabled={!validAssessmentId || working || lookupLoading}
             onClick={() => void handleExport()}
             type="button"
@@ -552,7 +562,7 @@ export function PrivacyWorkspace() {
             Create JSON export
           </button>
           <button
-            className="min-h-11 rounded-xl border border-rose-700 px-5 py-2.5 text-sm font-bold text-rose-800 disabled:opacity-50"
+            className="min-h-11 rounded-md border border-rose-700 px-4 py-2 text-sm font-semibold text-rose-800 disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-teal-700"
             disabled={!validAssessmentId || working || lookupLoading}
             onClick={() => setConfirmingDeletion(true)}
             type="button"
@@ -560,7 +570,7 @@ export function PrivacyWorkspace() {
             Prepare anonymization
           </button>
           <button
-            className="min-h-11 rounded-xl border border-slate-400 px-5 py-2.5 text-sm font-bold text-slate-700 disabled:opacity-50"
+            className="action-secondary min-h-11 rounded-md border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-teal-700"
             disabled={!validAssessmentId || working || lookupLoading}
             onClick={() => void load(assessmentId.trim())}
             type="button"
@@ -569,14 +579,14 @@ export function PrivacyWorkspace() {
           </button>
         </div>
         {confirmingDeletion ? (
-          <div className="mt-5 rounded-xl border border-rose-200 bg-rose-50 p-4">
+          <div className="mt-5 border-l-4 border-rose-700 bg-rose-50 p-4">
             <p className="text-sm leading-6 text-rose-950">
               Assessment {assessmentId.trim()}: this revokes candidate access,
               erases assessment payloads, and deletes derived reports. Immutable
               audit tombstones remain.
             </p>
             <button
-              className="mt-3 min-h-11 rounded-xl bg-rose-800 px-5 py-2.5 text-sm font-bold text-white"
+              className="mt-3 min-h-11 rounded-md bg-rose-800 px-4 py-2 text-sm font-semibold text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700"
               disabled={working}
               onClick={() => void handleDeletion()}
               type="button"
@@ -586,7 +596,7 @@ export function PrivacyWorkspace() {
             <button
               type="button"
               disabled={working}
-              className="ml-3 min-h-11 px-4 text-sm font-bold"
+              className="ml-3 min-h-11 px-4 text-sm font-semibold focus-visible:outline-2 focus-visible:outline-teal-700"
               onClick={() => setConfirmingDeletion(false)}
             >
               Cancel anonymization
@@ -599,18 +609,18 @@ export function PrivacyWorkspace() {
           </p>
         ) : null}
         {deletion ? (
-          <p className="mt-4 rounded-xl bg-emerald-50 p-4 text-sm text-emerald-950">
+          <p className="mt-4 border-l-4 border-emerald-700 bg-emerald-50 p-4 text-sm text-emerald-950">
             Assessment {deletion.assessment_id} was anonymized. Derived reports
             removed: {deletion.reports_deleted}.
           </p>
         ) : null}
         {exported && exportDownload ? (
-          <div className="mt-5 rounded-xl border border-teal-200 bg-teal-50 p-4">
+          <div className="mt-5 border-l-4 border-teal-700 bg-teal-50 p-4">
             <p className="text-sm font-bold text-teal-950">
               Export ready for {exported.invitation.email}
             </p>
             <a
-              className="mt-3 inline-block font-bold text-teal-800 underline"
+              className="mt-3 inline-flex min-h-11 items-center font-semibold text-teal-700 underline focus-visible:outline-2 focus-visible:outline-teal-700"
               download={`candidate-data-${exported.assessment.id}.json`}
               href={exportDownload}
             >
@@ -620,8 +630,8 @@ export function PrivacyWorkspace() {
         ) : null}
       </section>
 
-      <section aria-labelledby="audit-title" className="mt-8">
-        <h2 className="text-xl font-bold text-slate-950" id="audit-title">
+      <section aria-labelledby="audit-title" className="mt-6">
+        <h2 className="text-lg font-semibold text-slate-950" id="audit-title">
           Immutable audit history
         </h2>
         <p className="mt-2 break-all text-sm text-slate-600">
@@ -637,17 +647,19 @@ export function PrivacyWorkspace() {
           </p>
         ) : null}
         {state.auditEvents.length === 0 ? (
-          <p className="mt-4 rounded-xl border border-slate-200 bg-white p-5 text-sm text-slate-600">
+          <p className="mt-4 border-y border-slate-200 bg-white p-4 text-sm text-slate-600">
             No matching audit events.
           </p>
         ) : (
-          <ul className="mt-4 space-y-3">
+          <ul
+            aria-label="Audit events"
+            className="record-list surface mt-4 divide-y divide-slate-200 border-y border-slate-200 bg-white"
+          >
             {state.auditEvents.map((event) => (
-              <li
-                className="rounded-xl border border-slate-200 bg-white p-4"
-                key={event.id}
-              >
-                <p className="font-bold text-slate-900">{event.event_type}</p>
+              <li className="record-row min-w-0 p-4" key={event.id}>
+                <p className="font-semibold text-slate-900 [overflow-wrap:anywhere]">
+                  {event.event_type}
+                </p>
                 <p className="mt-1 break-all font-mono text-xs text-slate-500">
                   {event.entity_type} · {event.entity_id}
                 </p>
@@ -657,7 +669,7 @@ export function PrivacyWorkspace() {
                 <p className="mt-2 break-all text-xs text-slate-600">
                   Actor: {event.actor_id ?? "system"}
                 </p>
-                <pre className="mt-2 overflow-x-auto rounded-lg bg-slate-50 p-3 text-xs text-slate-700">
+                <pre className="mt-2 max-w-full overflow-x-auto whitespace-pre-wrap bg-slate-50 p-3 text-xs text-slate-700 [overflow-wrap:anywhere]">
                   {JSON.stringify(event.details, null, 2)}
                 </pre>
               </li>
@@ -666,7 +678,7 @@ export function PrivacyWorkspace() {
         )}
         {state.auditHasMore ? (
           <button
-            className="mt-4 min-h-11 rounded-xl border border-slate-400 px-5 py-2.5 text-sm font-bold text-slate-700 disabled:opacity-50"
+            className="action-secondary mt-4 min-h-11 rounded-md border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-teal-700"
             disabled={auditLoadingMore || working || lookupLoading}
             onClick={() => void handleLoadMoreAudit()}
             type="button"

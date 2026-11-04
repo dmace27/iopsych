@@ -47,7 +47,7 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 describe("report presentation", () => {
-  it("shows six independent cards, all outcome states, questions and version references", async () => {
+  it("shows six independent comparisons, all outcome states, questions and version references", async () => {
     const user = userEvent.setup();
     render(
       <ReportDetail
@@ -56,6 +56,31 @@ describe("report presentation", () => {
       />,
     );
     expect(screen.getAllByRole("article")).toHaveLength(6);
+    const sections = [
+      screen.getByRole("heading", {
+        name: "Report for synthetic@example.test",
+      }),
+      screen.getByRole("heading", { name: "Report summary" }),
+      screen.getByRole("heading", {
+        name: "Comparisons and supporting evidence",
+      }),
+      screen.getByRole("heading", { name: "Limitations and responsible use" }),
+      screen.getByRole("heading", { name: "Interview guide" }),
+    ];
+    for (let index = 1; index < sections.length; index++) {
+      expect(
+        sections[index - 1].compareDocumentPosition(sections[index]) &
+          Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
+    }
+    for (const [index, article] of screen.getAllByRole("article").entries()) {
+      const saved = reportFixture.result.items[index];
+      expect(article).toHaveTextContent(
+        saved.explanation.applied_rule.description,
+      );
+      if (saved.explanation.uncertainty)
+        expect(article).toHaveTextContent(saved.explanation.uncertainty);
+    }
     expect(screen.getByText("Insufficient evidence")).toBeVisible();
     expect(screen.getByText("Worth discussing")).toBeVisible();
     expect(screen.getByText("Potential friction")).toBeVisible();

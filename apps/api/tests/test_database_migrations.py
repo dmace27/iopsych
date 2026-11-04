@@ -24,7 +24,6 @@ EXPECTED_TABLES = {
     "provider_invitation_delivery_events",
     "audit_events",
     "candidate_consents",
-    "invitation_deliveries",
     "organizations",
     "role_construct_ratings",
     "role_profiles",

@@ -1,7 +1,13 @@
 /** @vitest-environment jsdom */
 
 import "@testing-library/jest-dom/vitest";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import {
+  cleanup,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -154,5 +160,36 @@ describe("RolesWorkspace", () => {
     expect(
       await screen.findByRole("link", { name: /platform engineer/i }),
     ).toHaveAttribute("href", `/roles/${ROLE_ID}`);
+  });
+
+  it("keeps each role status and metadata in its accessible navigation target", async () => {
+    apiMocks.getRoles.mockResolvedValue([
+      role(),
+      {
+        ...role(),
+        id: ORGANIZATION_ID,
+        title: "Research Associate",
+        status: "archived",
+      },
+    ]);
+    apiMocks.getCurrentUser.mockResolvedValue(currentUser("hiring_manager"));
+    render(<RolesWorkspace />);
+
+    const activeRecord = await screen.findByRole("link", {
+      name: /Platform Engineer/,
+    });
+    expect(within(activeRecord).getByText("Draft")).toBeVisible();
+    expect(
+      within(activeRecord).getByText("Engineering · Toronto"),
+    ).toBeVisible();
+    expect(
+      within(activeRecord).getByText(/Created Sep 26, 2026/),
+    ).toBeVisible();
+    const archivedRecord = screen.getByRole("link", {
+      name: /Research Associate/,
+    });
+    expect(within(archivedRecord).getByText("Archived")).toBeVisible();
+    expect(archivedRecord).toHaveAttribute("href", `/roles/${ORGANIZATION_ID}`);
+    expect(screen.queryByRole("button", { name: "Create role" })).toBeNull();
   });
 });

@@ -2,7 +2,13 @@
 
 import { CONSTRUCT_KEYS } from "@iopsych/shared";
 import "@testing-library/jest-dom/vitest";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import {
+  cleanup,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -211,5 +217,71 @@ describe("RoleProfileWorkspace", () => {
     expect(
       screen.queryByRole("button", { name: "Create draft profile" }),
     ).not.toBeInTheDocument();
+  });
+
+  it("keeps historical evidence readable without offering revision or approval", async () => {
+    apiMocks.getRole.mockResolvedValue(role());
+    apiMocks.getRoleProfiles.mockResolvedValue([profile(), profile(2)]);
+    const user = userEvent.setup();
+    render(<RoleProfileWorkspace roleId={IDS.role} />);
+
+    await user.click(
+      await screen.findByRole("button", { name: /Version 1, draft/ }),
+    );
+
+    expect(
+      screen.getByRole("heading", { name: "Profile version 1" }),
+    ).toBeVisible();
+    expect(
+      screen.getAllByRole("heading", { name: "Source evidence" }),
+    ).toHaveLength(6);
+    expect(screen.getAllByText("high confidence")).toHaveLength(6);
+    expect(
+      screen.queryByRole("button", { name: "Save new version" }),
+    ).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: /Approve version/ }),
+    ).toBeNull();
+  });
+
+  it("starts a new complete draft from an approved profile without editing its evidence", async () => {
+    apiMocks.getCurrentUser.mockResolvedValue({
+      ...manager(),
+      role: "recruiter",
+    });
+    apiMocks.getRole.mockResolvedValue(role("active"));
+    apiMocks.getRoleProfiles.mockResolvedValue([profile(1, "approved")]);
+    apiMocks.createRoleProfile.mockResolvedValue(profile(2));
+    const user = userEvent.setup();
+    render(<RoleProfileWorkspace roleId={IDS.role} />);
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: "Start a new draft from version 1",
+      }),
+    );
+    expect(screen.getByText(/Approved versions are frozen/)).toBeVisible();
+    expect(
+      screen.getAllByRole("textbox", { name: /Job-description evidence/ }),
+    ).toHaveLength(6);
+    await user.click(
+      screen.getByRole("button", { name: "Create draft profile" }),
+    );
+
+    await waitFor(() =>
+      expect(apiMocks.createRoleProfile).toHaveBeenCalledWith(IDS.role, {
+        constructs: profile().constructs,
+      }),
+    );
+    expect(apiMocks.reviseRoleProfile).not.toHaveBeenCalled();
+    const history = screen.getByRole("complementary", {
+      name: "Version history",
+    });
+    expect(
+      within(history).getByRole("button", { name: /Version 1, approved/ }),
+    ).toBeVisible();
+    expect(
+      within(history).getByRole("button", { name: /Version 2, draft/ }),
+    ).toHaveAttribute("aria-current", "true");
   });
 });
