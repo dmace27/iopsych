@@ -343,9 +343,9 @@ export function RoleProfileWorkspace({ roleId }: { roleId: string }) {
                       <span className="flex items-center justify-between gap-2">
                         <span className="text-sm font-semibold text-slate-900">
                           Version {profile.version}
-                        </span>
+                        </span>{" "}
                         <StatusBadge status={profile.status} />
-                      </span>
+                      </span>{" "}
                       <span className="mt-1 block text-xs text-slate-600">
                         {formatDate(profile.created_at)}
                       </span>
