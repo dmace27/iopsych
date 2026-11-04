@@ -1,7 +1,9 @@
 """Connection-free safety checks for the populated-upgrade fixture."""
 
+from collections.abc import Callable, Generator
+from inspect import unwrap
 from pathlib import Path
-from types import SimpleNamespace
+from typing import cast
 from unittest.mock import MagicMock
 from uuid import UUID
 
@@ -55,26 +57,34 @@ def test_approved_loopback_pairs(host: str, port: int, database: str) -> None:
     ],
 )
 def test_rejected_before_engine_creation(
-    value: str, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    value: str, monkeypatch: pytest.MonkeyPatch, tmp_path: Path, request: pytest.FixtureRequest
 ) -> None:
     engine = MagicMock(side_effect=AssertionError("Must not create an engine"))
     monkeypatch.setattr(upgrade, "create_engine", engine)
     monkeypatch.setenv("TEST_POSTGRES_URL", value)
-    fixture = upgrade.upgrade_url.__wrapped__(SimpleNamespace(param="postgresql"), tmp_path)
+    monkeypatch.setattr(request, "param", "postgresql", raising=False)
+    fixture_function = cast(
+        Callable[[pytest.FixtureRequest, Path], Generator[str]], unwrap(upgrade.upgrade_url)
+    )
+    fixture = fixture_function(request, tmp_path)
     with pytest.raises(ValueError, match="Upgrade tests require"):
         next(fixture)
     engine.assert_not_called()
 
 
 def test_generated_schema_only_and_cleanup_without_connection(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, request: pytest.FixtureRequest
 ) -> None:
     base = "postgresql+psycopg://synthetic:synthetic@127.0.0.1:5571/iopsych_regression"
     monkeypatch.setenv("TEST_POSTGRES_URL", base)
     admin = MagicMock()
     factory = MagicMock(return_value=admin)
     monkeypatch.setattr(upgrade, "create_engine", factory)
-    fixture = upgrade.upgrade_url.__wrapped__(SimpleNamespace(param="postgresql"), tmp_path)
+    monkeypatch.setattr(request, "param", "postgresql", raising=False)
+    fixture_function = cast(
+        Callable[[pytest.FixtureRequest, Path], Generator[str]], unwrap(upgrade.upgrade_url)
+    )
+    fixture = fixture_function(request, tmp_path)
     scoped = make_url(next(fixture))
     factory.assert_called_once_with(make_url(base))
     connection = admin.begin.return_value.__enter__.return_value

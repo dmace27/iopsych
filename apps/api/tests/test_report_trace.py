@@ -43,7 +43,10 @@ FIXTURES = Path(__file__).parent / "fixtures/report_trace"
 
 
 def source(name: str = "complete") -> dict[str, Any]:
-    return json.loads((FIXTURES / f"{name}.source.json").read_text())
+    payload: object = json.loads((FIXTURES / f"{name}.source.json").read_text())
+    assert isinstance(payload, dict)
+    assert all(isinstance(key, str) for key in payload)
+    return payload
 
 
 @pytest.mark.parametrize("name", ["complete", "skipped", "two-skipped", "all-skipped"])
@@ -240,7 +243,10 @@ async def create_report(
         },
     )
     assert response.status_code == 201, response.text
-    return response.json()
+    payload: object = response.json()
+    assert isinstance(payload, dict)
+    assert all(isinstance(key, str) for key in payload)
+    return payload
 
 
 @pytest.mark.anyio

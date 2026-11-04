@@ -6,6 +6,7 @@ import json
 import logging
 import traceback
 from concurrent.futures import ThreadPoolExecutor
+from datetime import UTC, datetime
 from email.message import Message
 from io import BytesIO
 from threading import Event
@@ -14,13 +15,13 @@ from typing import Any
 from urllib.error import HTTPError
 from urllib.request import HTTPHandler, HTTPSHandler, Request
 from urllib.response import addinfourl
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import pytest
 from pydantic import SecretStr, ValidationError
 
 from app.auth.errors import AccessProblemError
-from app.database.models import RoleStatus
+from app.database.models import RoleProfileStatus, RoleStatus
 from app.extraction.config import RoleExtractionSettings
 from app.extraction.provider import (
     OpenAIStructuredRoleExtractionProvider,
@@ -29,6 +30,7 @@ from app.extraction.provider import (
     _extraction_deadline,
 )
 from app.extraction.service import StructuredRoleExtractionService
+from app.roles.schemas import RoleProfileCreateRequest, RoleProfileResponse
 from tests.test_role_extraction import JOB_DESCRIPTION, SequenceProvider, valid_extraction
 
 ROLE = RoleExtractionInput("Title", "Department", "Remote", JOB_DESCRIPTION)
@@ -67,15 +69,14 @@ def test_settings_reject_unbounded_values(field: str, invalid: object) -> None:
 
 
 def test_response_read_is_bounded_and_closed(monkeypatch: pytest.MonkeyPatch) -> None:
-    response = BytesIO(b"x" * 1000)
-    sizes: list[int] = []
-    original = response.read
+    sizes: list[int | None] = []
 
-    def read(size: int = -1) -> bytes:
-        sizes.append(size)
-        return original(size)
+    class TrackingResponse(BytesIO):
+        def read(self, size: int | None = -1, /) -> bytes:
+            sizes.append(size)
+            return super().read(size)
 
-    response.read = read  # type: ignore[method-assign]
+    response = TrackingResponse(b"x" * 1000)
     monkeypatch.setattr("app.extraction.provider.urlopen", lambda *a, **kw: response)
     with pytest.raises(RoleExtractionProviderError, match="too large") as caught:
         OpenAIStructuredRoleExtractionProvider(settings(max_response_bytes=32)).extract(ROLE)
@@ -183,16 +184,19 @@ def test_stdlib_redirects_fail_closed(
     status: int,
     destination: str,
 ) -> None:
-    requests: list[Request] = []
-    responses: list[Any] = []
+    class RedirectResponse(addinfourl):
+        msg: str
 
-    def fake_open(handler: Any, request: Request) -> Any:
+    requests: list[Request] = []
+    responses: list[RedirectResponse] = []
+
+    def fake_open(handler: Any, request: Request) -> RedirectResponse:
         # Only the socket-facing handlers are replaced: real urllib opener,
         # response processing and redirect handling remain under test.
         requests.append(request)
         headers = Message()
         headers["Location"] = f"{destination}?token=synthetic-secret"
-        response = addinfourl(BytesIO(b"synthetic-secret"), headers, request.full_url, status)
+        response = RedirectResponse(BytesIO(b"synthetic-secret"), headers, request.full_url, status)
         response.msg = "synthetic-secret"
         responses.append(response)
         return response
@@ -232,9 +236,26 @@ class Profiles:
     def get_role(self, role_id: object) -> SimpleNamespace:
         return SimpleNamespace(status=RoleStatus.DRAFT, **ROLE.__dict__)
 
-    def create_profile(self, *args: Any, **kwargs: Any) -> str:
+    def create_profile(
+        self,
+        role_id: UUID,
+        payload: RoleProfileCreateRequest,
+        *,
+        assumptions: list[str],
+    ) -> RoleProfileResponse:
         self.created += 1
-        return "draft"
+        return RoleProfileResponse(
+            id=uuid4(),
+            role_id=role_id,
+            version=self.created,
+            status=RoleProfileStatus.DRAFT,
+            created_by=uuid4(),
+            approved_by=None,
+            approved_at=None,
+            created_at=datetime.now(UTC),
+            assumptions=assumptions,
+            constructs=payload.constructs,
+        )
 
 
 def service(provider: Any, **kwargs: Any) -> StructuredRoleExtractionService:
@@ -324,8 +345,8 @@ def test_concurrent_and_duplicate_calls_fail_fast_and_release(same_role: bool, l
             assert not second_provider.inputs
         finally:
             release.set()
-        assert pending.result(timeout=3) == "draft"
-    assert second.extract(first_id) == "draft"
+        assert pending.result(timeout=3).status is RoleProfileStatus.DRAFT
+    assert second.extract(first_id).status is RoleProfileStatus.DRAFT
 
 
 def test_failure_frees_admission_and_redacts_traceback() -> None:
@@ -339,13 +360,13 @@ def test_failure_frees_admission_and_redacts_traceback() -> None:
     with pytest.raises(AccessProblemError) as caught:
         runner.extract(role_id)
     assert "synthetic-secret" not in "".join(traceback.format_exception(caught.value))
-    assert runner.extract(role_id) == "draft"
+    assert runner.extract(role_id).status is RoleProfileStatus.DRAFT
 
 
 def test_stalled_read_is_closed_and_safe(monkeypatch: pytest.MonkeyPatch) -> None:
     class StalledResponse(BytesIO):
-        def read(self, size: int = -1) -> bytes:
-            assert size > 0
+        def read(self, size: int | None = -1, /) -> bytes:
+            assert size is not None and size > 0
             raise TimeoutError("synthetic-secret")
 
     response = StalledResponse()
