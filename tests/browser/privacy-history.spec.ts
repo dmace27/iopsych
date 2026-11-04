@@ -125,7 +125,7 @@ test("selected assessment traverses real linked history, retains pagination scop
   );
   expect(subject).toBeDefined();
   await page.goto("/privacy");
-  await page.getByLabel("Reference type").selectOption("invite_id");
+  await page.getByLabel("Reference type").selectOption("invitation_id");
   await page
     .getByLabel("Reference ID", { exact: true })
     .fill(subject.invitation_id);
