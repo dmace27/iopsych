@@ -1,5 +1,15 @@
 # 6B decision preparation
 
+**Current supersession (2026-11-04):** The historical Clerk/SES and unresolved
+formula recommendations below are superseded by the selected Auth0/Resend
+implementation integrated at `5cde2e7` and the repository owner’s November 3
+direct-structure v2 product decision in
+`docs/decisions/structure-comparison.md`. That product decision is not
+independent scientific, content, threshold or real-pilot approval. Draft
+resume/context, manager review/notes, organization, hosting and privacy
+decisions remain open where no accountable decision exists; the historical
+preparation record below is preserved.
+
 Prepared 2026-11-04 from `a8de73c`. Status: **recommendations only; every
 decision below is pending user/reviewer approval**. Preparation is complete;
 package 6B's full acceptance is blocked until actual decisions and authorized
