@@ -70,8 +70,6 @@ async def test_provider_downgrade_preserves_pending_and_terminal_evidence(
         assert preserved is not None and preserved.status is status
 
 
-
-
 @pytest.fixture
 def anyio_backend() -> str:
     """Use asyncio with production sync database route execution."""

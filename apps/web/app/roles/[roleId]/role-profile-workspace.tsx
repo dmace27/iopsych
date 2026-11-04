@@ -329,7 +329,6 @@ export function RoleProfileWorkspace({ roleId }: { roleId: string }) {
                 {state.profiles.map((profile) => (
                   <li key={profile.id}>
                     <button
-                      aria-label={`Version ${profile.version}, ${profile.status}, ${formatDate(profile.created_at)}`}
                       aria-current={
                         profile.id === selectedProfile?.id ? "true" : undefined
                       }

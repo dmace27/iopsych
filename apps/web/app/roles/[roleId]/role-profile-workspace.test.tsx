@@ -226,7 +226,7 @@ describe("RoleProfileWorkspace", () => {
     render(<RoleProfileWorkspace roleId={IDS.role} />);
 
     await user.click(
-      await screen.findByRole("button", { name: /Version 1, draft/ }),
+      await screen.findByRole("button", { name: /Version 1 Draft/ }),
     );
 
     expect(
@@ -278,10 +278,10 @@ describe("RoleProfileWorkspace", () => {
       name: "Version history",
     });
     expect(
-      within(history).getByRole("button", { name: /Version 1, approved/ }),
+      within(history).getByRole("button", { name: /Version 1 Approved/ }),
     ).toBeVisible();
     expect(
-      within(history).getByRole("button", { name: /Version 2, draft/ }),
+      within(history).getByRole("button", { name: /Version 2 Draft/ }),
     ).toHaveAttribute("aria-current", "true");
   });
 });
