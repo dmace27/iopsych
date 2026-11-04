@@ -7,6 +7,12 @@ import {
 } from "../../../lib/internal-session";
 
 const MAX_TOKEN_LENGTH = 16_384;
+const SESSION_COOKIE_OPTIONS = {
+  httpOnly: true,
+  path: "/",
+  sameSite: "strict",
+  secure: process.env.NODE_ENV === "production",
+} as const;
 
 /** Return a stable problem response without exposing token or upstream detail. */
 function problem(
@@ -103,11 +109,8 @@ export async function POST(request: Request): Promise<Response> {
 
   const cookieStore = await cookies();
   cookieStore.set(INTERNAL_SESSION_COOKIE, token, {
-    httpOnly: true,
+    ...SESSION_COOKIE_OPTIONS,
     maxAge: 8 * 60 * 60,
-    path: "/",
-    sameSite: "strict",
-    secure: process.env.NODE_ENV === "production",
   });
   return new Response(await upstream.arrayBuffer(), {
     headers: {
@@ -130,7 +133,11 @@ export async function DELETE(request: Request): Promise<Response> {
     );
   }
 
-  (await cookies()).delete(INTERNAL_SESSION_COOKIE);
+  (await cookies()).set(INTERNAL_SESSION_COOKIE, "", {
+    ...SESSION_COOKIE_OPTIONS,
+    expires: new Date(0),
+    maxAge: 0,
+  });
   return new Response(null, {
     status: 204,
     headers: { "Cache-Control": "no-store" },

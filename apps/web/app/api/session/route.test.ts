@@ -153,7 +153,15 @@ describe("internal browser session", () => {
       }),
     );
 
-    expect(cookieMocks.delete).toHaveBeenCalledWith("iopsych_internal_token");
+    expect(cookieMocks.set).toHaveBeenCalledWith("iopsych_internal_token", "", {
+      httpOnly: true,
+      path: "/",
+      sameSite: "strict",
+      secure: false,
+      expires: new Date(0),
+      maxAge: 0,
+    });
+    expect(cookieMocks.delete).not.toHaveBeenCalled();
     expect(response.status).toBe(204);
   });
 });
@@ -181,4 +189,82 @@ it("preserves API throttling and never creates a session on a rate-limit failure
   } finally {
     vi.unstubAllGlobals();
   }
+});
+
+describe.each([
+  ["production", "__Host-iopsych_internal_token", true],
+  ["development", "iopsych_internal_token", false],
+] as const)("%s session cookie lifecycle", (environment, name, secure) => {
+  beforeEach(() => {
+    vi.resetModules();
+    vi.stubEnv("NODE_ENV", environment);
+    cookieMocks.set.mockReset();
+    cookieMocks.delete.mockReset();
+    cookieMocks.cookies.mockReset();
+    cookieMocks.cookies.mockResolvedValue({
+      set: cookieMocks.set,
+      delete: cookieMocks.delete,
+    });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(Response.json({ id: "synthetic-user" })),
+    );
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.unstubAllGlobals();
+    vi.resetModules();
+  });
+
+  it("expires the host-only root cookie with the same protections as creation", async () => {
+    const { POST: signIn, DELETE: signOut } = await import("./route");
+    const options = { httpOnly: true, path: "/", sameSite: "strict", secure };
+    expect((await signIn(signInRequest("synthetic-token"))).status).toBe(200);
+    expect(cookieMocks.set).toHaveBeenNthCalledWith(
+      1,
+      name,
+      "synthetic-token",
+      {
+        ...options,
+        maxAge: 28_800,
+      },
+    );
+    const response = await signOut(
+      new Request("http://web.test/api/session", {
+        method: "DELETE",
+        headers: { Origin: "http://web.test" },
+      }),
+    );
+    expect(response.status).toBe(204);
+    expect(await response.text()).toBe("");
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
+    expect(cookieMocks.set).toHaveBeenNthCalledWith(2, name, "", {
+      ...options,
+      expires: new Date(0),
+      maxAge: 0,
+    });
+    expect(cookieMocks.delete).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    {},
+    { Origin: "https://attacker.example", "Sec-Fetch-Site": "same-origin" },
+    { "Sec-Fetch-Site": "same-site" },
+    { Origin: "null" },
+  ])(
+    "rejects untrusted sign-out without mutating cookies: %j",
+    async (headers) => {
+      const { DELETE: signOut } = await import("./route");
+      const response = await signOut(
+        new Request("http://web.test/api/session", {
+          method: "DELETE",
+          headers: headers as Record<string, string>,
+        }),
+      );
+      expect(response.status).toBe(403);
+      expect(cookieMocks.cookies).not.toHaveBeenCalled();
+      expect(fetch).not.toHaveBeenCalled();
+    },
+  );
 });
