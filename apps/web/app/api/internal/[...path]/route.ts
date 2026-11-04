@@ -121,8 +121,6 @@ async function proxyInternalApi(
   }
   if (INVITATION_ISSUANCE_ROUTE.test(`${request.method} /${path.join("/")}`)) {
     const idempotencyKey = request.headers.get("Idempotency-Key");
-    // Match the API contract without rewriting the caller's retry identity.
-    // Missing-key policy and strict invitation body validation belong to API.
     if (idempotencyKey !== null) {
       if (!/^[!-~]{16,128}$/.test(idempotencyKey)) {
         return problem(
