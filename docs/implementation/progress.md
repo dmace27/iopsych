@@ -18,7 +18,26 @@ Future launches must inherit the verified Fast default and have their own live s
 
 ## Current scheduling and critical path
 
-### Latest checkpoint: 23:00 UTC
+### Latest checkpoint: 23:10 UTC
+
+Accelerated schedule remains committed in `3cf79c2`; no original acceptance criterion or scope gate was removed. Integration is `b704965`: durable local queue `a60b115`, account backend `4206efc`, account UI `5c07567`, mounted router `b704965`, browser maintenance `4666c08`, and frozen regression/package reports `175d809`/`5e4f4a4`. These are integrated bounded slices, not full 7B/8A acceptance. Coordinator independently passed 24 account contract/API tests after mounting. Two new Ruff import-order findings belong to the account/queue follow-up owners; no green latest-head aggregate claim.
+
+Frozen `58eaad8` regression reports 840 API tests with 100% coverage, 371 web, 99 shared and 93 Python contract tests passing, plus all eleven opt-in cases passing separately. Its four Ruff failures were corrected in `995cf3c`; incoming account/queue changes still require a new combined checkpoint. Browser maintenance reports 37/37 production cases plus 17 runner checks passing, including actual privacy reconciliation and native revoke/pagination focus. Manual screen-reader/device acceptance remains open. Clean-export API packaging/migration0009 checks passed, but web Docker build exposed missing report JSON fixtures; repair is dispatched, not waived.
+
+| Active task | Dispatch / child branch suffix | Exclusive ownership and allocation |
+| --- | --- | --- |
+| Invitation issuance UI | `ctx_c686e3c911ce` / `iopsych-invite-issue-ui` | Form/client/contracts and scoped workspace; no proxy; 3158/8178/5598 |
+| Issuance proxy | `ctx_df350113bb20` / `iopsych-issuance-proxy` | Exact POST route/header forwarding and dedicated proxy tests |
+| Account hardening | `ctx_1f4650751daf` / `iopsych-account-hardening` | Account tests/service; explicitly delegated0010 rollback guard/full-chain verification; PG5594 |
+| Queue review/coverage | `ctx_96ffd0fc02da` / `iopsych-queue-review` | Queue/worker and dedicated tests; PG5586/local mail1138/8138 |
+| Accounts production browser | `ctx_bd6de80e066e` / `iopsych-accounts-browser` | New browser cases/fixtures; exclusive3116/8116/5556/1136/8136 |
+| Packaging repair | `ctx_5d3490e98555` / `iopsych-package-repair` | Web Dockerfile and packaging evidence;3157/8177/5597 |
+
+All six live worker screens independently show `GPT-6-Astra medium fast`; zero unsupported sessions observed and no coordinator setting toggled. Five new worktrees start from committed `b704965`; their saved setup runs beside agents and must not be raced. Prior completed reports acknowledged and workers released. Coordinator retains shared dependencies, migration allocation and integration; only0010 is delegated for the explicit rollback safety repair.
+
+Critical path: queued delivery/security verification + account rollback safety/full migration chain → merged issuance UI/proxy → expanded actual browser journey → fresh aggregate regression and clean images. Independent tests proceed now; reserve23:46–00:31 for final integration/regression/repairs and truthful handoff. The 00:31 target is throughput only. Product/provider/scientific/privacy decisions and hosted/manual gates remain unchanged and unapproved. Existing-account mutation does not provision identities; local queue does not select a production provider or fix the unchanged synchronous default.
+
+### Historical checkpoint: 23:00 UTC
 
 Current integration `e137028` includes privacy discovery backend/UI/proxy (`9c8783b`, `39d0d72`, `c060fec`), invitation UI (`82d6687`), a11y corrections (`8865f8d`), strict typing (`447da48`), safe invite return path (`0d31bd0`), telemetry migration logging correction (`ba2759a`), delivery policy (`42228c3`), credential cipher (`6e6b6ca`) and report boundary tests (`e137028`). Coordinator independently passed privacy API22, privacy UI/proxy41, invitation UI/client/proxy22, focus/candidate25, safe return34, recovery53 and credential/report-boundary195 tests. API strict typing passed99 files before the newest test additions.
 
