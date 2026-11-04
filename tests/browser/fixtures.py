@@ -129,3 +129,26 @@ def seed_browser_admin(session):
             role=InternalUserRole.ADMIN,
         )
     )
+
+
+def seed_browser_pagination(session):
+    """Older synthetic rows exercise a final page without issuing usable tokens."""
+    import hashlib
+    from datetime import UTC, datetime
+
+    from app.assignments.registry import new_assignment
+    from app.database.models import AssessmentInvite, AssessmentInviteStatus
+    from app.database.seed import ALPHA_PROFILE_ID
+
+    for index in range(26):
+        session.add(
+            AssessmentInvite(
+                role_profile_id=ALPHA_PROFILE_ID,
+                email=f"pagination-{index:02d}@example.invalid",
+                token_hash=hashlib.sha256(f"synthetic-pagination-{index}".encode()).hexdigest(),
+                created_at=datetime(2020, 1, 1, tzinfo=UTC),
+                expires_at=datetime(2020, 1, 2, tzinfo=UTC),
+                status=AssessmentInviteStatus.EXPIRED,
+                assignment_json=new_assignment(allow_synthetic=True),
+            )
+        )

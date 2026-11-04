@@ -147,7 +147,12 @@ def main():
             ]
         )
         sys.path[:0] = [str(ROOT / "apps/api"), str(BROWSER)]
-        from fixtures import LocalMailboxDelivery, seed_browser_admin, synthetic_credentials
+        from fixtures import (
+            LocalMailboxDelivery,
+            seed_browser_admin,
+            seed_browser_pagination,
+            synthetic_credentials,
+        )
         from sqlalchemy import create_engine
 
         from app.assignments.registry import new_assignment
@@ -164,7 +169,17 @@ def main():
         with create_session_factory(engine)() as session:
             seed_database(session)
             seed_browser_admin(session)
-            for name in ("INVITE", "COMPLETE", "DENIED", "QUOTA", "CLEAR", "REVOKE"):
+            seed_browser_pagination(session)
+            for name in (
+                "INVITE",
+                "COMPLETE",
+                "DENIED",
+                "QUOTA",
+                "CLEAR",
+                "REVOKE",
+                "PRIVACY",
+                "FOCUS",
+            ):
                 token = InviteTokenCodec(environment["INVITE_TOKEN_SIGNING_SECRET"]).generate()
                 tokens[f"BROWSER_E2E_{name}"] = token.raw_token
                 session.add(

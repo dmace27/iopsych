@@ -9,6 +9,8 @@ if (
     "QUOTA",
     "CLEAR",
     "REVOKE",
+    "PRIVACY",
+    "FOCUS",
     "RECRUITER",
     "MANAGER",
     "ADMIN",
