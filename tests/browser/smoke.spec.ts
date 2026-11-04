@@ -1,3 +1,4 @@
+import { exchangeSession, syntheticSignIn } from "./auth";
 import { test, expect } from "@playwright/test";
 import { readFileSync } from "node:fs";
 import AxeBuilder from "@axe-core/playwright";
@@ -87,11 +88,8 @@ test("public sign-in is accessible and rejects invalid credentials", async ({
     page.getByRole("heading", { name: "Sign in to Role studio" }),
   ).toBeVisible();
   await accessible(page);
-  await page
-    .getByLabel("Internal access token")
-    .fill("synthetic-invalid-token");
-  await page.getByRole("button", { name: "Continue to roles" }).click();
-  await expect(page.getByRole("alert")).toBeVisible();
+  await expect(page.getByLabel("Internal access token")).toHaveCount(0);
+  expect(await exchangeSession(page, "synthetic-invalid-token")).toBe(401);
   await expect(page).toHaveURL(/\/sign-in$/);
   expect(await page.context().cookies()).toEqual([]);
 });
@@ -133,11 +131,7 @@ async function signIn(
   page: import("@playwright/test").Page,
   identity = "RECRUITER",
 ) {
-  await page.goto("/sign-in");
-  await page
-    .getByLabel("Internal access token")
-    .fill(process.env[`BROWSER_E2E_${identity}`]!);
-  await page.getByRole("button", { name: "Continue to roles" }).click();
+  await syntheticSignIn(page, identity);
   await expect(page).toHaveURL(/\/roles$/);
   await expect(
     page.getByRole("heading", { name: "Organization roles" }),

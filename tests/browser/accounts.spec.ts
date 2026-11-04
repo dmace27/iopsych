@@ -1,3 +1,4 @@
+import { exchangeSession, syntheticSignIn } from "./auth";
 import { test, expect, type Page, type Locator } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 
@@ -15,11 +16,7 @@ test.beforeEach(async ({ context }) => {
 });
 
 async function signIn(page: Page, identity = "ADMIN") {
-  await page.goto("/sign-in");
-  await page
-    .getByLabel("Internal access token")
-    .fill(process.env[`BROWSER_E2E_${identity}`]!);
-  await page.getByRole("button", { name: "Continue to roles" }).click();
+  await syntheticSignIn(page, identity);
   await expect(
     page.getByRole("heading", { name: "Organization roles" }),
   ).toBeVisible();
@@ -159,17 +156,10 @@ test("admin discovers accounts, changes versioned access and enforces disabled f
     ).toBe(401);
     await member.clearCookies();
     await memberPage.goto("/sign-in");
-    await memberPage
-      .getByLabel("Internal access token")
-      .fill(process.env.BROWSER_E2E_ACCOUNT!);
-    const rejected = memberPage.waitForResponse(
-      (response) =>
-        response.url() === `${origin}/api/session` &&
-        response.request().method() === "POST",
-    );
-    await memberPage.getByRole("button", { name: "Continue to roles" }).click();
-    expect((await rejected).status()).toBe(401);
-    await expect(memberPage.getByRole("main").getByRole("alert")).toBeVisible();
+    expect(
+      await exchangeSession(memberPage, process.env.BROWSER_E2E_ACCOUNT!),
+    ).toBe(401);
+    await expect(memberPage).toHaveURL(/\/sign-in$/);
     expect(
       (await member.cookies()).filter((cookie) => cookie.httpOnly),
     ).toHaveLength(0);

@@ -44,6 +44,10 @@ def test_spec_selection_rejects_flags_paths_and_patterns(argument):
     [
         ("DATABASE_URL", "postgresql://external.invalid/real"),
         ("API_BASE_URL", "https://external.invalid"),
+        ("AUTH0_ISSUER", "https://external.invalid"),
+        ("AUTH_PROVIDER", "auth0"),
+        ("ENABLE_TOKEN_SIGN_IN", "true"),
+        ("APP_BASE_URL", "https://external.invalid"),
         ("INVITE_CANDIDATE_BASE_URL", "https://external.invalid"),
         ("SMTP_HOST", "external.invalid"),
         ("MAIL_URL", "https://external.invalid"),
@@ -212,3 +216,26 @@ def test_fixture_application_cannot_start_without_owned_runner():
         pytest.raises(RuntimeError, match="isolated runner"),
     ):
         create_fixture_app()
+
+
+def test_fixture_environment_explicitly_opts_into_synthetic_auth_only():
+    with patch.dict(
+        os.environ,
+        {
+            "PATH": "/synthetic/bin",
+            "AUTH0_CLIENT_SECRET": "must-not-be-inherited",
+            "RESEND_API_KEY": "must-not-be-inherited",
+            "AUTH_PROVIDER": "auth0",
+            "ENABLE_TOKEN_SIGN_IN": "false",
+        },
+        clear=True,
+    ):
+        environment = runner.fixture_environment()
+    assert environment["PATH"] == "/synthetic/bin"
+    assert environment["AUTH_PROVIDER"] == "hmac"
+    assert environment["ENABLE_TOKEN_SIGN_IN"] == "true"
+    assert environment["APP_BASE_URL"] == runner.WEB
+    assert environment["AUTH_JWT_ISSUER"] == "https://auth.example.invalid"
+    assert environment["ROLE_EXTRACTION_PROVIDER"] == "disabled"
+    assert not any(key.startswith(("AUTH0_", "RESEND_")) for key in environment)
+    assert "must-not-be-inherited" not in environment.values()

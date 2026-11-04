@@ -39,6 +39,9 @@ def preflight():
         "DATABASE_",
         "API_BASE_",
         "AUTH_",
+        "AUTH0_",
+        "APP_BASE_",
+        "ENABLE_TOKEN_SIGN_IN",
         "INVITE_",
         "ROLE_EXTRACTION_",
         "SMTP_",
@@ -102,10 +105,8 @@ def redact(output, secrets_to_redact):
     return output
 
 
-def main():
-    specs = selected_specs(sys.argv[1:])
-    signal.signal(signal.SIGTERM, lambda *_: sys.exit(143))
-    preflight()
+def fixture_environment():
+    """Build a provider-free child environment with explicit synthetic auth opt-in."""
     environment = {
         key: os.environ[key]
         for key in ("PATH", "HOME", "TMPDIR", "SYSTEMROOT")
@@ -115,6 +116,9 @@ def main():
         DATABASE_URL=DB,
         DATABASE_ECHO="false",
         API_BASE_URL=API,
+        AUTH_PROVIDER="hmac",
+        ENABLE_TOKEN_SIGN_IN="true",
+        APP_BASE_URL=WEB,
         AUTH_JWT_SECRET=secrets.token_urlsafe(48),
         AUTH_JWT_ISSUER="https://auth.example.invalid",
         AUTH_JWT_AUDIENCE="iopsych-api",
@@ -128,6 +132,14 @@ def main():
         NEXT_TELEMETRY_DISABLED="1",
         PYTHONPATH=f"{ROOT / 'apps/api'}{os.pathsep}{BROWSER}",
     )
+    return environment
+
+
+def main():
+    specs = selected_specs(sys.argv[1:])
+    signal.signal(signal.SIGTERM, lambda *_: sys.exit(143))
+    preflight()
+    environment = fixture_environment()
     project = f"iopsych-e2e-{uuid4().hex[:12]}"
     compose = ["docker", "compose", "-p", project, "-f", str(BROWSER / "compose.yaml")]
 
