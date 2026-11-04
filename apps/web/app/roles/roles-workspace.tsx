@@ -34,6 +34,7 @@ function errorMessage(error: unknown): string {
 export function RolesWorkspace() {
   const router = useRouter();
   const titleInput = useRef<HTMLInputElement>(null);
+  const createButton = useRef<HTMLButtonElement>(null);
   const [state, setState] = useState<LoadState>({ status: "loading" });
   const [showCreate, setShowCreate] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -111,6 +112,7 @@ export function RolesWorkspace() {
         </div>
         {state.status === "ready" && canEditRoles(state.user.role) ? (
           <button
+            ref={createButton}
             aria-expanded={showCreate}
             className="inline-flex min-h-11 items-center justify-center rounded-xl bg-teal-800 px-5 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-teal-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-700 focus-visible:ring-offset-2"
             onClick={() => setShowCreate((visible) => !visible)}
@@ -212,7 +214,10 @@ export function RolesWorkspace() {
               <button
                 className="min-h-11 rounded-xl border border-slate-300 bg-white px-5 py-2.5 text-sm font-bold text-slate-700 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-700 focus-visible:ring-offset-2"
                 disabled={submitting}
-                onClick={() => setShowCreate(false)}
+                onClick={() => {
+                  setShowCreate(false);
+                  createButton.current?.focus();
+                }}
                 type="button"
               >
                 Cancel

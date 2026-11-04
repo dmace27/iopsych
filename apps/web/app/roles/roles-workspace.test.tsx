@@ -102,6 +102,29 @@ describe("RolesWorkspace", () => {
     });
   });
 
+  it("returns keyboard focus to Create role after cancelling and supports reopening", async () => {
+    apiMocks.getRoles.mockResolvedValue([]);
+    apiMocks.getCurrentUser.mockResolvedValue(currentUser("recruiter"));
+    const user = userEvent.setup();
+    render(<RolesWorkspace />);
+
+    const trigger = await screen.findByRole("button", { name: "Create role" });
+    trigger.focus();
+    await user.keyboard("{Enter}");
+    expect(screen.getByRole("textbox", { name: "Role title" })).toHaveFocus();
+    // Department, Location, Job description, submit, then Cancel.
+    for (let index = 0; index < 5; index++) await user.tab();
+    expect(screen.getByRole("button", { name: "Cancel" })).toHaveFocus();
+    await user.keyboard("{Enter}");
+
+    expect(trigger).toHaveFocus();
+    expect(trigger).toHaveAttribute("aria-expanded", "false");
+    expect(screen.queryByRole("textbox", { name: "Role title" })).toBeNull();
+    expect(apiMocks.createRole).not.toHaveBeenCalled();
+    await user.keyboard("{Enter}");
+    expect(screen.getByRole("textbox", { name: "Role title" })).toHaveFocus();
+  });
+
   it("shows a manager the permission-aware empty state without authoring controls", async () => {
     apiMocks.getRoles.mockResolvedValue([]);
     apiMocks.getCurrentUser.mockResolvedValue(currentUser("hiring_manager"));

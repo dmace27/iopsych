@@ -1027,7 +1027,7 @@ function ConsentDetail({
   term: string;
 }) {
   return (
-    <div className="rounded-2xl bg-slate-50 p-5">
+    <div className="min-w-0 rounded-2xl bg-slate-50 p-5 wrap-anywhere">
       <dt className="font-bold text-slate-950">{term}</dt>
       <dd className="mt-2 text-sm leading-6 text-slate-700">{description}</dd>
     </div>
