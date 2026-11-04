@@ -120,6 +120,8 @@ def seed_browser_admin(session):
     from app.database.models import InternalUserRole, User
     from app.database.seed import ALPHA_ORGANIZATION_ID
 
+    seed_browser_foreign_assessment(session)
+
     session.add(
         User(
             id=UUID("00000000-0000-4000-8000-000000000098"),
@@ -140,6 +142,78 @@ def seed_browser_admin(session):
             role=InternalUserRole.ADMIN,
         )
     )
+
+
+def seed_browser_foreign_assessment(session):
+    """One real scored Beacon submission for cross-tenant privacy denial checks."""
+    import hashlib
+    from datetime import UTC, datetime, timedelta
+    from uuid import UUID
+
+    from app.assignments.registry import (
+        new_assignment,
+        read_assignment,
+        score_assignment,
+    )
+    from app.database.models import (
+        Assessment,
+        AssessmentInvite,
+        AssessmentInviteStatus,
+        CandidateConsent,
+        ConsentDecision,
+    )
+    from app.database.seed import BEACON_PROFILE_ID
+    from iopsych_contracts.assessment import AssessmentResponseSet
+
+    now = datetime.now(UTC)
+    assignment_json = new_assignment(allow_synthetic=True)
+    assignment = read_assignment(assignment_json)
+    definition = assignment.definition
+    responses = AssessmentResponseSet.model_validate(
+        {
+            "assessment_definition_id": definition.id,
+            "assessment_definition_version": definition.version,
+            "responses": [
+                {
+                    "block_id": block.id,
+                    "skipped": False,
+                    "most_like_item_id": block.items[0].id,
+                    "least_like_item_id": block.items[1].id,
+                }
+                for block in definition.blocks
+            ],
+        }
+    )
+    invite = AssessmentInvite(
+        role_profile_id=BEACON_PROFILE_ID,
+        email="foreign-privacy@example.invalid",
+        token_hash=hashlib.sha256(b"synthetic-foreign-privacy-no-token").hexdigest(),
+        expires_at=now + timedelta(hours=1),
+        status=AssessmentInviteStatus.CONSENTED,
+        assignment_json=assignment_json,
+    )
+    session.add(invite)
+    session.flush()
+    consent = CandidateConsent(
+        invite_id=invite.id,
+        decision=ConsentDecision.CONSENT,
+        notice_version="synthetic-browser-fixture",
+    )
+    session.add(consent)
+    session.flush()
+    session.add(
+        Assessment(
+            id=UUID("00000000-0000-4000-8000-000000000097"),
+            invite_id=invite.id,
+            consent_id=consent.id,
+            submitted_at=now,
+            retention_expires_at=now + timedelta(days=30),
+            definition_json=definition.model_dump(mode="json"),
+            responses_json=responses.model_dump(mode="json"),
+            scores_json=score_assignment(assignment, responses).model_dump(mode="json"),
+        )
+    )
+    session.flush()
 
 
 def seed_browser_pagination(session):
