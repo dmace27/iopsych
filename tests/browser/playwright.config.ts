@@ -8,6 +8,7 @@ if (
     "DENIED",
     "QUOTA",
     "CLEAR",
+    "REVOKE",
     "RECRUITER",
     "MANAGER",
     "ADMIN",

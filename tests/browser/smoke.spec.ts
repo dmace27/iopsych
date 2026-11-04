@@ -429,6 +429,56 @@ test("submitted responses generate a saved report and native evidence dialog", a
   await expect(
     page.getByRole("heading", { name: "Construct comparison report" }),
   ).toBeVisible();
+  for (const width of [320, 375, 1280]) {
+    await page.setViewportSize({ width, height: 800 });
+    const historicalTrigger = page.getByRole("button", {
+      name: "View evidence for Autonomy",
+    });
+    await historicalTrigger.focus();
+    await page.keyboard.press("Enter");
+    const dialog = page.getByRole("dialog", { name: "Evidence: Autonomy" });
+    const evidence = dialog.getByRole("region", {
+      name: "Item-level evidence",
+    });
+    await expect(evidence.getByRole("listitem")).toHaveCount(4);
+    const historicalItems = definition.blocks.flatMap(
+      (block: { items: { construct_key: string; statement: string }[] }) =>
+        block.items.filter((item) => item.construct_key === "autonomy"),
+    );
+    for (let index = 0; index < historicalItems.length; index++) {
+      await expect(evidence.getByRole("listitem").nth(index)).toContainText(
+        historicalItems[index].statement,
+      );
+    }
+    await expect(evidence).toContainText("Inclusive rating band:");
+    await expect(evidence).toContainText("Completeness:");
+    await expect(
+      dialog.getByRole("button", { name: "Close evidence" }),
+    ).toBeFocused();
+    await accessible(page);
+    const geometry = await dialog.evaluate((element) => ({
+      width: element.clientWidth,
+      content: element.scrollWidth,
+      right: element.getBoundingClientRect().right,
+    }));
+    expect.soft(geometry.content).toBeLessThanOrEqual(geometry.width + 1);
+    expect.soft(geometry.right).toBeLessThanOrEqual(width + 1);
+    for (let step = 0; step < 4; step++) {
+      await page.keyboard.press("Tab");
+      const focus = await dialog.evaluate((element) => ({
+        tag: document.activeElement?.tagName,
+        inDialog: element.contains(document.activeElement),
+        browserBoundary: document.activeElement === document.body,
+      }));
+      console.log(
+        "HISTORICAL_FOCUS " + JSON.stringify({ width, step, ...focus }),
+      );
+      expect.soft(focus.inDialog || focus.browserBoundary).toBe(true);
+    }
+    await page.keyboard.press("Escape");
+    await expect(dialog).toHaveCount(0);
+    await expect(historicalTrigger).toBeFocused();
+  }
 });
 
 test("synthetic administrator exports and anonymizes only the disposable candidate", async ({
