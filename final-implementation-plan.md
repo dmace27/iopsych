@@ -207,7 +207,10 @@ worker owns dependency manifests/lockfile. Use isolated child worktrees, unique
 ports/databases, synthetic data and controlled local mail. Scale useful workers
 to measured memory/provider capacity, not an arbitrary cap; avoid duplicate full
 suites and idle workers. Start downstream workers from the latest integrated
-commit, verify Fast mode per session, acknowledge reports and refill promptly.
+commit, verify STANDARD/default service per live session, acknowledge reports and
+refill promptly. The user's latest cost directive revokes all earlier Fast
+authorization: persisted default and running workers must remain Standard;
+never blindly toggle an already-standard session or the coordinator.
 
 The realistic accelerated result is a substantially expanded, reviewed and locally
 tested technical implementation, with precise partial/full evidence and remaining
