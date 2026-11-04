@@ -320,6 +320,48 @@ for (const mode of ["COMPLETE", "DENIED", "QUOTA"]) {
       page.getByRole("heading", { name: "Review your responses" }),
     ).toBeVisible();
     await accessible(page);
+    if (mode === "COMPLETE") {
+      await page.getByRole("button", { name: "Clear device data" }).click();
+      await expect(
+        page.getByRole("heading", { name: "Assessment paused" }),
+      ).toBeVisible();
+      expect(
+        await page.evaluate(() =>
+          Object.keys(localStorage).filter((key) =>
+            key.startsWith("iopsych.candidate."),
+          ),
+        ),
+      ).toEqual([]);
+      await page.getByRole("button", { name: "Continue assessment" }).click();
+      for (let block = 1; block <= definition.blocks.length; block++) {
+        await expect(
+          page.getByText(`Block ${block} of ${definition.blocks.length}`, {
+            exact: true,
+          }),
+        ).toBeVisible();
+        await expect(page.getByRole("radio", { checked: true })).toHaveCount(0);
+        await page
+          .getByRole("radio", { name: /^Most like me:/ })
+          .nth(0)
+          .check();
+        await page
+          .getByRole("radio", { name: /^Least like me:/ })
+          .nth(1)
+          .check();
+        await page
+          .getByRole("button", {
+            name:
+              block === definition.blocks.length
+                ? "Review answers"
+                : "Continue",
+            exact: true,
+          })
+          .click();
+      }
+      await expect(
+        page.getByRole("heading", { name: "Review your responses" }),
+      ).toBeVisible();
+    }
     const submission = page.waitForResponse(
       (r) => r.url().endsWith("/submit") && r.request().method() === "POST",
     );
