@@ -112,7 +112,6 @@ describe("RolesWorkspace", () => {
     trigger.focus();
     await user.keyboard("{Enter}");
     expect(screen.getByRole("textbox", { name: "Role title" })).toHaveFocus();
-    // Department, Location, Job description, submit, then Cancel.
     for (let index = 0; index < 5; index++) await user.tab();
     expect(screen.getByRole("button", { name: "Cancel" })).toHaveFocus();
     await user.keyboard("{Enter}");
