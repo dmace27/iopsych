@@ -71,3 +71,58 @@ This is synthetic development-render evidence, not real login/mail/database,
 production-build, screen-reader, device, user-study, scientific or pilot
 approval. Coordinator owns final serial integration and broad acceptance;
 browser fixture owner retains the 3116 stack. Protected services were untouched.
+
+## Integrated five-lane checkpoint
+
+Rechecked coordinator integration `d7fd9c9` in child merge `5f32f96`, including
+reports `8bc79f5`, candidate `84becb3`, roles `8a382f9`/`d7fd9c9` and the
+previously checked shell/admin changes. The coordinator's superseding
+STANDARD/default policy was received and acknowledged; live terminal then showed
+`GPT-6-Astra medium` without Fast. No service-tier toggle was performed here.
+
+Read exact incoming diffs and inspected owner screenshots, then independently
+rendered the integrated app on owned port 3165 with synthetic intercepted APIs:
+
+- Report reproducer copied to `/tmp/iopsych-review-reports.mjs`, changing only
+  origin to 3165 and fixture root to this checkout; `REPORT_PLAYWRIGHT_MODULE`
+  and `REPORT_AXE_MODULE` point to existing browser-runner dependencies, and
+  `REPORT_RENDER_OUTPUT=/tmp/iopsych-review-reports`. Twelve captures (list,
+  loading, detail, evidence, empty, error at both widths) passed; evidence
+  dialog focus, Escape restoration, retry, overflow and main/dialog axe checks
+  passed.
+- `node /tmp/iopsych-review-candidate-render.mjs`: fourteen captures of consent,
+  validation, selected answers, review/revisit, pause, submit error/retry and
+  acknowledged completion passed; zero main axe violations/overflow, maximum
+  column width 672px, buttons/links/choice labels at least 44px. Consent digest
+  echo and pre-consent definition gate were asserted.
+- `node /tmp/iopsych-review-candidate-states.mjs`: ten additional captures of
+  loading, unavailable, declined, storage failure and notice-review-required
+  states passed at both widths, with zero main axe violations/overflow.
+- `node /tmp/iopsych-review-roles.cjs`: fourteen captures of role list, create,
+  draft profile, approved profile, empty, error and loading passed without
+  overflow; create-field focus passed and approved main had zero axe violations.
+  These use existing Chrome/Playwright dependencies, no installation changes.
+
+Visually inspected the newly integrated mobile report evidence, mobile candidate
+review and desktop role records. Historical statements, item choices and
+contributions remain visible; confidence explicitly means response completeness,
+not probability/performance. Candidate selected statements and skipped blocks
+are readable, revisit actions wrap below content, completion has no fit label,
+and role/report no-ranking warnings remain. No blocking presentation regression
+was found. Selection, scoring, consent/storage/acknowledgement and immutable
+profile guards were not changed by this review.
+
+Concrete reconciliation requirement sent to coordinator: at this checkpoint,
+`report-trace-contracts.ts` still restricts both the envelope and
+question-selection algorithm to `1.0.0`. The remote semantics owner must support
+the explicit v2 algorithm in both places while retaining report/trace
+consistency and historical v1 checks. Report UI's new version-aware labels alone
+do not establish v2 trace compatibility. This is an outstanding integration
+dependency, not a newly introduced presentation regression; remote/provider
+reconciliation and its runtime checks are outside this checkpoint's acceptance.
+
+All evidence remains local under
+`/tmp/iopsych-review-{reports,candidate,roles}`. No application files were
+edited, no unit/full suite was duplicated, and the owned dev server was stopped.
+The automatic Next AGENTS heading rewrite was restored. Both receipt commits
+passed scoped Prettier and `git diff --check`.
