@@ -7,7 +7,6 @@ Revises: 20261104_0009
 from collections.abc import Sequence
 
 import sqlalchemy as sa
-
 from alembic import op
 
 revision: str = "20261104_0010"
@@ -28,7 +27,16 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    """Remove access-management fields without modifying historical identities."""
+    """Refuse to erase access revocations that older application code cannot enforce."""
+
+    connection = op.get_bind()
+    if connection.dialect.name == "postgresql":
+        # Hold through the DDL transaction so a concurrent revocation cannot
+        # slip between the check and dropping the access-state column.
+        connection.execute(sa.text("LOCK TABLE users IN ACCESS EXCLUSIVE MODE"))
+    disabled = connection.scalar(sa.text("SELECT count(*) FROM users WHERE is_active = false"))
+    if disabled:
+        raise RuntimeError("Cannot downgrade user access while disabled accounts exist")
 
     with op.batch_alter_table("users") as batch:
         batch.drop_constraint("ck_users_version_positive", type_="check")
