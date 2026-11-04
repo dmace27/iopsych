@@ -56,8 +56,13 @@ it("keeps self read-only and confirms role changes with focus and expected versi
   });
   render(<AccountsWorkspace />);
   await screen.findByText("Alpha Admin (you)");
-  expect(screen.getAllByRole("combobox")).toHaveLength(1);
-  await user.selectOptions(screen.getByRole("combobox"), "hiring_manager");
+  expect(screen.getAllByRole("combobox", { name: /^Role for / })).toHaveLength(
+    1,
+  );
+  await user.selectOptions(
+    screen.getByRole("combobox", { name: "Role for Other User" }),
+    "hiring_manager",
+  );
   await user.click(screen.getByRole("button", { name: "Review role change" }));
   expect(screen.getByRole("button", { name: "Cancel" })).toHaveFocus();
   expect(updateAccount).not.toHaveBeenCalled();

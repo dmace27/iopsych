@@ -29,6 +29,7 @@ beforeEach(() => {
   session.cookies.mockReset();
   session.cookies.mockResolvedValue({
     get: () => ({ value: "synthetic-session" }),
+    delete: vi.fn(),
   });
   vi.stubGlobal(
     "fetch",

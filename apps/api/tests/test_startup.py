@@ -39,7 +39,7 @@ def test_launcher_reaches_health_with_local_configuration(
     checkout = tmp_path / "checkout"
     scripts = checkout / "scripts"
     scripts.mkdir(parents=True)
-    for name in ("run-api.sh", "run_api.py"):
+    for name in ("run-api.sh", "run-api.py"):
         shutil.copy2(ROOT / "scripts" / name, scripts / name)
     api = checkout / "apps/api"
     shutil.copytree(
@@ -72,8 +72,8 @@ def test_launcher_reaches_health_with_local_configuration(
         # A shell-sourced file would execute both command-substitution forms.
         content += f"\nSTARTUP_LITERAL=$(touch '{marker}') `touch '{marker}'` ${{PATH}}\n"
         (api / ".env").write_text(content, encoding="utf-8")
-        # An invalid inherited port proves that the file still takes precedence.
-        environment["API_PORT"] = "invalid-inherited-port"
+        # The integration launcher intentionally preserves exported port overrides.
+        environment["API_PORT"] = str(port)
 
     with (tmp_path / "startup.log").open("wb") as log:
         process = subprocess.Popen(

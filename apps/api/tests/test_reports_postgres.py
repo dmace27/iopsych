@@ -58,7 +58,9 @@ def postgres_report_factory(monkeypatch: pytest.MonkeyPatch) -> Generator[sessio
             seed_database(session)
             session.commit()
         yield factory
-        command.downgrade(alembic_config(isolated_url), "base")
+        # Dedicated migration tests exercise guarded downgrades. This disposable
+        # schema can contain retained notices and pending encrypted delivery work;
+        # cleanup drops only its unique test schema in the finally block.
     finally:
         engine.dispose()
         with admin_engine.begin() as connection:

@@ -483,6 +483,11 @@ it("allows only exact GET trace paths", async () => {
       ).status,
     ).toBe(404);
     expect(fetch).toHaveBeenCalledTimes(1);
+  } finally {
+    vi.unstubAllGlobals();
+  }
+});
+
 it("forwards account management and clears an expired browser credential", async () => {
   const clear = vi.fn();
   headerMocks.cookies.mockResolvedValue({

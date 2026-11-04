@@ -33,8 +33,7 @@ def notice_pg(monkeypatch: pytest.MonkeyPatch) -> Generator[tuple[Engine, Config
     if (
         url.drivername != "postgresql+psycopg"
         or url.host != "127.0.0.1"
-        or url.port != 5603
-        or url.database != "iopsych_notice"
+        or (url.port, url.database) not in {(5603, "iopsych_notice"), (5606, "iopsych_reconcile")}
         or url.query
     ):
         raise ValueError("Notice tests require 127.0.0.1:5603/iopsych_notice without overrides")
