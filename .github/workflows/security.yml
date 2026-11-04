@@ -7,7 +7,7 @@ on:
 permissions:
   contents: read
 jobs:
-  dependencies:
+  javascript-dependencies:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -15,31 +15,44 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version-file: .nvmrc
-      - uses: actions/setup-python@v5
-        with:
-          python-version-file: .python-version
       - run: npm ci
       - name: Audit JavaScript dependencies
         run: |
           mkdir -p security-reports
           npm audit --audit-level=high --json > security-reports/npm-audit.json
-      - run: npm run api:install
+      - name: Preserve JavaScript scan evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: javascript-dependency-scan
+          path: security-reports/npm-audit.json
+          retention-days: 14
+  python-dependencies:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version-file: .python-version
+      - run: bash scripts/install-api.sh
       - name: Audit installed Python dependency graph
         run: |
+          mkdir -p security-reports
           python -m venv /tmp/audit-tools
           /tmp/audit-tools/bin/pip install pip-audit==2.10.0
           .venv/bin/pip freeze --exclude-editable > /tmp/api-dependencies.txt
           /tmp/audit-tools/bin/pip-audit -r /tmp/api-dependencies.txt --strict --format json > security-reports/python-audit.json
-      - name: Preserve dependency scan evidence
+      - name: Preserve Python scan evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: dependency-scans
-          path: security-reports/
+          name: python-dependency-scan
+          path: security-reports/python-audit.json
           retention-days: 14
   secrets:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
         with:
@@ -49,14 +62,34 @@ jobs:
           go-version: stable
       - name: Install pinned open-source secret scanner
         run: go install github.com/zricethezav/gitleaks/v8@v8.24.3
-      - name: Scan full Git history without printing secrets
-        run: |
-          mkdir -p security-reports
-          gitleaks git --redact --exit-code 1 --report-format json --report-path security-reports/gitleaks.json
-      - name: Preserve redacted secret scan evidence
+      - uses: actions/setup-python@v5
+        with:
+          python-version-file: .python-version
+      - name: Test scanner failure and disclosure handling
+        run:
+          python -m unittest discover -s scripts -p test_security_secrets.py -v
+      - name: Scan current checkout and full Git history
+        run: python scripts/security-secrets.py
+      - name: Preserve sanitized secret scan counts
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: secret-scan
-          path: security-reports/
+          name: secret-scan-counts
+          path: security-reports/secret-summary.json
           retention-days: 14
+  # Keep the existing required check name while aggregating every scanner.
+  dependencies:
+    if: always()
+    needs: [javascript-dependencies, python-dependencies, secrets]
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Require every security scanner to succeed
+        env:
+          JAVASCRIPT_RESULT: ${{ needs.javascript-dependencies.result }}
+          PYTHON_RESULT: ${{ needs.python-dependencies.result }}
+          SECRETS_RESULT: ${{ needs.secrets.result }}
+        run: |
+          test "$JAVASCRIPT_RESULT" = success
+          test "$PYTHON_RESULT" = success
+          test "$SECRETS_RESULT" = success
