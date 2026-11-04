@@ -67,6 +67,13 @@ async function proxyCandidateApi(
   );
   const body = await request.arrayBuffer();
   const headers = new Headers({ Accept: "application/json" });
+  if (
+    request.headers.get("X-IOPsych-Notice-Snapshot") === "1" &&
+    ((request.method === "GET" && path.length === 1) ||
+      (request.method === "POST" && path[1] === "consent"))
+  ) {
+    headers.set("X-IOPsych-Notice-Snapshot", "1");
+  }
   const contentType = request.headers.get("content-type");
   if (contentType && body.byteLength > 0) {
     headers.set("Content-Type", contentType);

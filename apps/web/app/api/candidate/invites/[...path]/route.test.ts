@@ -9,6 +9,54 @@ function context(...path: string[]) {
 }
 
 describe("candidate API proxy", () => {
+  it.each([
+    ["GET", [], "1", true],
+    ["POST", ["consent"], "1", true],
+    ["GET", ["definition"], "1", false],
+    ["POST", ["submit"], "1", false],
+    ...[undefined, "0", "true", "01", "1, 1", "2"].flatMap((value) => [
+      ["GET", [], value, false],
+      ["POST", ["consent"], value, false],
+    ]),
+  ] as [string, string[], string | undefined, boolean][])(
+    "limits capability forwarding for %s %j value %s",
+    async (method, suffix, capability, forwarded) => {
+      vi.mocked(fetch).mockResolvedValue(Response.json({ safe: true }));
+      const headers = new Headers({
+        Origin: "http://web.test",
+        Authorization: "Bearer synthetic-private",
+        Cookie: "session=synthetic-private",
+        "X-Untrusted": "synthetic-private",
+      });
+      if (capability !== undefined)
+        headers.set("X-IOPsych-Notice-Snapshot", capability);
+      const body =
+        method === "POST"
+          ? JSON.stringify({
+              decision: "consent",
+              presented_notice_sha256: "a".repeat(64),
+            })
+          : undefined;
+      const response = await (method === "GET" ? GET : POST)(
+        new Request("http://web.test/api/candidate/invites/token", {
+          method,
+          headers,
+          body,
+        }),
+        context("token", ...suffix),
+      );
+      const [, init] = vi.mocked(fetch).mock.calls[0]!;
+      expect(Object.fromEntries(new Headers(init?.headers))).toEqual({
+        accept: "application/json",
+        ...(body ? { "content-type": "text/plain;charset=UTF-8" } : {}),
+        ...(forwarded ? { "x-iopsych-notice-snapshot": "1" } : {}),
+      });
+      if (body)
+        expect(new TextDecoder().decode(init?.body as ArrayBuffer)).toBe(body);
+      expect(init?.cache).toBe("no-store");
+      expect(response.headers.get("Cache-Control")).toBe("no-store");
+    },
+  );
   beforeEach(() => {
     delete process.env.API_BASE_URL;
     vi.stubGlobal("fetch", vi.fn());
@@ -101,7 +149,10 @@ describe("candidate API proxy", () => {
   it("rejects cross-site consent before contacting the API", async () => {
     const response = await POST(
       new Request("http://web.test/api/candidate/invites/token/consent", {
-        headers: { Origin: "https://attacker.example" },
+        headers: {
+          Origin: "https://attacker.example",
+          "X-IOPsych-Notice-Snapshot": "1",
+        },
         method: "POST",
       }),
       context("token", "consent"),

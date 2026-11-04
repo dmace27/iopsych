@@ -1,6 +1,25 @@
 import { z } from "zod";
 
 const JsonObjectSchema = z.record(z.string(), z.unknown());
+const NoticeTextSchema = z
+  .string()
+  .refine(
+    (value) => value.trim().length > 0 && !/[\uD800-\uDFFF]/u.test(value),
+  );
+const NoticeDigestSchema = z.string().regex(/^[a-f0-9]{64}$/);
+const NoticeSnapshotSchema = z.strictObject({
+  schema_version: z.literal(1),
+  retention_days: z.int().min(1).max(3650),
+  consent_notice: z.strictObject({
+    version: NoticeTextSchema.refine((value) => Array.from(value).length <= 80),
+    purpose: NoticeTextSchema,
+    data_use: NoticeTextSchema,
+    retention: NoticeTextSchema,
+    accommodation_contact_email: NoticeTextSchema,
+    privacy_contact_email: NoticeTextSchema,
+    decline_without_penalty: z.boolean(),
+  }),
+});
 
 export const PrivacyStatusSchema = z.strictObject({
   retention_days: z.int().positive(),
@@ -67,6 +86,21 @@ export const CandidateDataExportSchema = z.strictObject({
     decision: z.enum(["consent", "decline"]),
     notice_version: z.string().min(1),
     recorded_at: z.string().min(1),
+    notice_snapshot: NoticeSnapshotSchema.nullish(),
+    notice_sha256: NoticeDigestSchema.nullish(),
+    notice_snapshot_origin: z
+      .enum(["issued", "first_presented", "legacy_decision"])
+      .nullish(),
+    notice_snapshot_recorded_at: z.iso.datetime({ offset: true }).nullish(),
+    presented_notice_sha256: NoticeDigestSchema.nullish(),
+    notice_history: z
+      .enum([
+        "not_recorded",
+        "digest_recorded",
+        "legacy_unverified",
+        "legacy_unknown",
+      ])
+      .nullish(),
   }),
   assessment: z.strictObject({
     id: z.uuid(),

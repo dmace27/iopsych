@@ -67,7 +67,9 @@ async function candidateRequest<T>(
 
 /** Load public role and consent-notice context for a bearer invitation. */
 export function getCandidateInvite(token: string): Promise<CandidateInvite> {
-  return candidateRequest(token, CandidateInviteSchema);
+  return candidateRequest(token, CandidateInviteSchema, "", {
+    headers: { "X-IOPsych-Notice-Snapshot": "1" },
+  });
 }
 
 /** Record the candidate's terminal, explicit consent decision. */
@@ -77,6 +79,7 @@ export function recordCandidateConsent(
   presentedNoticeSha256?: string | null,
 ): Promise<CandidateInvite> {
   return candidateRequest(token, CandidateInviteSchema, "/consent", {
+    headers: { "X-IOPsych-Notice-Snapshot": "1" },
     body: JSON.stringify({
       decision,
       ...(presentedNoticeSha256 == null
