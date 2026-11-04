@@ -10,7 +10,7 @@ from fastapi import Request
 from fastapi.testclient import TestClient
 from httpx import ASGITransport, AsyncClient
 from pydantic import ValidationError
-from sqlalchemy import Engine
+from sqlalchemy import Engine, text
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import Session, sessionmaker
 from starlette.types import Message, Receive, Scope, Send
@@ -18,6 +18,7 @@ from starlette.types import Message, Receive, Scope, Send
 from app.database.session import create_session_factory
 from app.main import create_app
 from app.runtime.config import RuntimeSettings
+from app.runtime.health import expected_schema_heads
 from app.runtime.middleware import RequestBodyLimitMiddleware
 from iopsych_contracts import ApiProblem
 
@@ -151,6 +152,10 @@ def test_configuration(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def test_readiness_success_and_ordinary_body(database_engine: Engine) -> None:
+    with database_engine.begin() as connection:
+        connection.execute(text("CREATE TABLE alembic_version (version_num VARCHAR(32))"))
+        for head in expected_schema_heads():
+            connection.execute(text("INSERT INTO alembic_version VALUES (:head)"), {"head": head})
     application = create_app(session_factory=create_session_factory(database_engine))
 
     @application.post("/body-echo")
@@ -190,14 +195,17 @@ def test_readiness_failure_is_safe_and_liveness_independent() -> None:
 
 @pytest.mark.anyio
 async def test_slow_probe_leaves_event_loop_available() -> None:
-    """Offload is tested independently from driver deadlines, which remain open."""
+    """Offload keeps liveness responsive while a readiness query is pending."""
     started = threading.Event()
     release = threading.Event()
     session = MagicMock(spec=Session)
 
-    def execute(statement: object) -> None:
+    def execute(statement: object) -> MagicMock:
         started.set()
         assert release.wait(5)
+        result = MagicMock()
+        result.scalars.return_value = expected_schema_heads()
+        return result
 
     session.execute.side_effect = execute
     factory = MagicMock(spec=sessionmaker)

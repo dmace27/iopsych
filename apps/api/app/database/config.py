@@ -24,3 +24,8 @@ class DatabaseSettings(BaseSettings):
     database_url: str = "postgresql+psycopg://iopsych:iopsych@localhost:5432/iopsych"
     database_echo: bool = False
     database_pool_size: int = Field(default=5, ge=1, le=50)
+    database_connect_timeout_seconds: int = Field(default=5, ge=2, le=60)
+    database_pool_timeout_seconds: float = Field(default=5, gt=0, le=60, allow_inf_nan=False)
+    database_max_overflow: int = Field(default=10, ge=0, le=50)
+    database_statement_timeout_ms: int = Field(default=15_000, ge=1, le=300_000)
+    database_lock_timeout_ms: int = Field(default=3_000, ge=1, le=60_000)

@@ -15,7 +15,12 @@ REQUEST_TRANSACTION_INFO_KEY = "request_managed_transaction"
 
 
 def create_database_engine(settings: DatabaseSettings | None = None) -> Engine:
-    """Create an engine without opening a connection eagerly."""
+    """Create an engine without opening a connection eagerly.
+
+    Psycopg budgets are authoritative over startup statement/lock options.
+    Preserve other startup options and reject ambiguous timeout configuration.
+    SQLite and other drivers retain their existing connection behavior.
+    """
 
     resolved = settings or DatabaseSettings()
     url = make_url(resolved.database_url)
@@ -30,6 +35,23 @@ def create_database_engine(settings: DatabaseSettings | None = None) -> Engine:
         options["poolclass"] = StaticPool
     elif url.get_backend_name() != "sqlite":
         options["pool_size"] = resolved.database_pool_size
+    if url.get_backend_name() == "postgresql" and url.get_driver_name() == "psycopg":
+        startup_options = url.query.get("options", "")
+        if "connect_timeout" in url.query or not isinstance(startup_options, str):
+            raise ValueError("Conflicting database connection options")
+        trailing_escapes = len(startup_options) - len(startup_options.rstrip("\\"))
+        if trailing_escapes % 2:
+            raise ValueError("Invalid database connection options")
+        options["pool_timeout"] = resolved.database_pool_timeout_seconds
+        options["max_overflow"] = resolved.database_max_overflow
+        options["connect_args"] = {
+            "connect_timeout": resolved.database_connect_timeout_seconds,
+            "options": (
+                f"{startup_options} -c statement_timeout={resolved.database_statement_timeout_ms}"
+                f" -c lock_timeout={resolved.database_lock_timeout_ms}"
+            ).lstrip(),
+        }
+        url = url.difference_update_query(["options"])
     return create_engine(url, **options)
 
 
