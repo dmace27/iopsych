@@ -61,15 +61,15 @@ All three child worktrees started at committed integration revision `a8de73c`. B
 
 | Package/task | Branch | Task / active dispatch | Ownership | Ports / DB | State / evidence |
 | --- | --- | --- | --- | --- | --- |
-| 6A | `iopsych-6a-setup` | `task_51aea6c0d21e` / `ctx_454cacc97083` | Setup/startup, local synthetic login, focused tests, README, 6A report | 3101 / 8101 / `iopsych_6a`, DB port 5541 | Running; actual agent commands observed; setup hook exit 0 |
-| 6B preparation | `iopsych-6b-decisions` | `task_3b6a7f8f3efd` / `ctx_d7fff07517b3` | `6b-decisions.md`, `6b-report.md` only | 3102 / 8102 / `iopsych_6b` reserved | Running; turn_started observed; approvals pending |
-| 12A/12B audit | `iopsych-12ab-audit` | `task_7d18dbac142d` / `ctx_03a733782cc2` | Read-only code/test audit; `12ab-audit.md` report only | 3103 / 8103 / `iopsych_audit` reserved | Running; actual code/test inspection observed |
+| 6A | `iopsych-6a-setup` | `task_51aea6c0d21e` / `ctx_454cacc97083` | Setup/startup, local synthetic login, focused tests, README, 6A report | 3101 / 8101 / `iopsych_6a`, DB port 5541 | Integrated `486c6b2`; worker released; acceptance reopened by review |
+| 6B preparation | `iopsych-6b-decisions` | `task_3b6a7f8f3efd` / `ctx_d7fff07517b3` | `6b-decisions.md`, `6b-report.md` only | 3102 / 8102 / `iopsych_6b` reserved | Integrated `4638236`; worker released; actual decisions pending |
+| 12A/12B audit | `iopsych-12ab-audit` | `task_7d18dbac142d` / `ctx_03a733782cc2` | Read-only code/test audit; `12ab-audit.md` report only | 3103 / 8103 / `iopsych_audit` reserved | Integrated `8bb1016`; worker released; audit is not acceptance |
 
 Initial dispatches `ctx_8f1ba11ba1d4`, `ctx_30f32ea5ece7`, `ctx_c6e202ebf48d` failed before task delivery because of Codex's update prompt. Selected “Skip until next version” and retried the same tasks in the same terminals using supported `--retry-of`; no duplicate editors. Those retry turns started but the provider rejected the literal `gpt-6` model for the ChatGPT account. All three were explicitly stopped after inspecting the terminal error. The worker model menu lists GPT-6-Astra as available/default; subsequent starts use `gpt-6-astra`, with actual agent tool execution observed. Audit retry `ctx_e879905cb46c` failed before delivery with `terminal_handle_stale`, then its owned terminal was released through Orca and the same task retried. No task implementation occurred in rejected-model turns. Saved setup: `npm ci && PYTHON_BIN=python3.12 npm run api:install`.
 
 ## Package ledger
 
-Expanded wave confirmed eight active workers, all with `turn_started` and requested/effective `gpt-6-astra`. New four worktrees branch from `3602cb0`; runner branched from `8450a09`. Branch names below have `AbhiNutakki/` prefix.
+Historical expanded wave confirmed eight active workers, all with `turn_started` and requested/effective `gpt-6-astra`. These bounded slices below are now integrated and their workers released; the current dispatched-work table above governs active ownership. Four worktrees branched from `3602cb0`; runner branched from `8450a09`. Branch names below have `AbhiNutakki/` prefix.
 
 | Slice | Branch | Task / dispatch | Exclusive ownership | Runtime allocation |
 | --- | --- | --- | --- | --- |
@@ -79,7 +79,7 @@ Expanded wave confirmed eight active workers, all with `turn_started` and reques
 | 12B preparation | `iopsych-12b-a11y` | `task_e6bd8f0e591f` / `ctx_2e6f574be424` | `docs/accessibility/**`, `12b-preparation.md`; no app edits | 3107/8107/5547, `iopsych_a11y` |
 | 12C preparation | `iopsych-12c-runbooks` | `task_04ff3171b77a` / `ctx_dbef9130a02e` | `docs/operations/**`, `12c-preparation.md` only | 3108/8108/5548, `iopsych_runbooks` |
 
-All report basenames above live under `docs/implementation/`. Setup hooks run concurrently; workers verify completion before tests. Root package/lock files remain 6A/coordinator owned; runner uses an isolated test-tool manifest/lock. Automated axe tooling belongs to runner, manual protocol/evidence to 12B, and current gap inventory to the read-only auditor. Full package acceptance remains pending despite these slices running.
+All report basenames above live under `docs/implementation/`. Setup hooks succeeded for the completed slices. Root package/lock ownership has transferred to dependency remediation; runner retains an isolated test-tool manifest/lock. Automated axe tooling belongs to the active browser worker. Full package acceptance remains pending despite these preparations being integrated.
 
 Pending means no acceptance claimed. A prepared decision or scaffold never closes the full package. Revision-linked reports will record exact commands, results, failures/skips and external limitations.
 
@@ -111,7 +111,9 @@ Pending means no acceptance claimed. A prepared decision or scaffold never close
 
 6B documentation commit `298ce31` reviewed, independently passed Prettier and diff checks, integrated as `4638236`. Coverage audit `ed41304` reviewed, independently passed Prettier and diff checks, integrated as `8bb1016`. Both completed workers reported success for their bounded tasks and were released; neither closes full package acceptance. Audit worker reports 104 web tests passing and 127 API tests passing/two PostgreSQL skips under explicitly reduced coverage/cache settings; see report, not a release gate. Existing historical test counts remain baseline context only.
 
-6C backend compatibility task `task_d7602200cf01`, dispatch `ctx_1d41002f09c5`, branch `AbhiNutakki/iopsych-6c-versions` started from `4638236`, with 3110/8110/5550 and `iopsych_6c` reserved. It must obtain coordinator contract/migration agreement before shared edits; frontend will be split after agreement. No scoring change or approval is implied. User questions for provider defaults, journey scope and synthetic-only interpretation are pending asynchronously; independent work continues.
+6C backend compatibility task `task_d7602200cf01`, dispatch `ctx_1d41002f09c5`, branch `AbhiNutakki/iopsych-6c-versions` started from `4638236`, with 3110/8110/5550 and `iopsych_6c` reserved. Contract and migration 0008 were agreed before edits; frontend is now separately dispatched. Coordinator review requested exact retained-content recognition even when a tampered payload has a recomputed checksum. No scoring change or approval is implied. User questions for provider defaults and journey scope remain pending asynchronously; interpretation remains reviewer-gated.
+
+Independent coordinator checks so far: local-login/sign-in Vitest 25 passed; storage/component Vitest 17 passed; launcher/API-login pytest 14 passed with one warning; browser-runner safety pytest 13 passed; deployment Compose configuration validation passed. These are targeted checks, not a combined release regression. Security assessment is integrated as `d2d46cd`; remediation and fresh scans are active. No full package is newly declared accepted by this ledger refresh.
 
 ## Shared contract decisions
 
