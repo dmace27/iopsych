@@ -12,7 +12,7 @@ function request(
   return new Request(url, {
     method: "POST",
     body: JSON.stringify(body),
-    headers: { Origin: origin },
+    headers: { Origin: origin, Host: new URL(url).host },
   });
 }
 
@@ -49,6 +49,72 @@ describe("local synthetic session", () => {
   ])("rejects hosted URL %s", async (url) => {
     expect((await POST(request({}, url))).status).toBe(404);
   });
+  it.each(["origin", "fetch-metadata"])(
+    "rejects hostile actual Host despite normalized loopback URL and %s",
+    async (signal) => {
+      const req = request();
+      req.headers.set("host", "rebind.example.invalid:3113");
+      req.headers.set("x-forwarded-host", "127.0.0.1:3113");
+      req.headers.set("forwarded", "host=127.0.0.1:3113");
+      if (signal === "origin") {
+        req.headers.set("origin", "http://rebind.example.invalid:3113");
+      } else {
+        req.headers.delete("origin");
+        req.headers.set("sec-fetch-site", "same-origin");
+      }
+      expect((await POST(req)).status).toBe(404);
+      expect(fetch).not.toHaveBeenCalled();
+      expect(cookieMocks.set).not.toHaveBeenCalled();
+    },
+  );
+  it.each([
+    null,
+    "",
+    "localhost:",
+    "localhost:0",
+    "localhost:65536",
+    "localhost:abc",
+    "localhost:3113:80",
+    "localhost,evil.invalid",
+    "evil.invalid@localhost",
+    "localhost@evil.invalid",
+    "localhost/evil",
+    "localhost?evil",
+    "localhost#evil",
+    "localhost\\evil",
+    "local host",
+    "localhost.",
+    "127.1",
+    "2130706433",
+    "0x7f000001",
+    "%6cocalhost",
+    "::1",
+    "[::1",
+    "[::1]:-1",
+    "[::ffff:127.0.0.1]",
+  ])("rejects absent or malformed actual Host %s", async (host) => {
+    const req = request();
+    if (host === null) req.headers.delete("host");
+    else req.headers.set("host", host);
+    req.headers.delete("origin");
+    req.headers.set("sec-fetch-site", "same-origin");
+    req.headers.set("x-forwarded-host", "localhost:3101");
+    expect((await POST(req)).status).toBe(404);
+    expect(fetch).not.toHaveBeenCalled();
+    expect(cookieMocks.set).not.toHaveBeenCalled();
+  });
+  it.each(["localhost", "LOCALHOST:3113", "127.0.0.1:3113", "[::1]:3113"])(
+    "accepts explicit loopback authority %s with Fetch Metadata",
+    async (host) => {
+      const req = request();
+      req.headers.set("host", host);
+      req.headers.delete("origin");
+      req.headers.set("sec-fetch-site", "same-origin");
+      expect((await POST(req)).status).toBe(200);
+      expect(fetch).toHaveBeenCalledOnce();
+      expect(cookieMocks.set).toHaveBeenCalledOnce();
+    },
+  );
   it("rejects cross-origin mutation", async () => {
     expect(
       (await POST(request({}, undefined, "https://attacker.example"))).status,

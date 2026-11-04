@@ -8,6 +8,20 @@ import {
 
 const LOOPBACK = new Set(["localhost", "127.0.0.1", "[::1]"]);
 
+function hasLoopbackHost(request: Request): boolean {
+  // Next may normalize request.url to its listener. Validate the actual HTTP
+  // authority separately, without URL coercions or forwarded-host headers.
+  const host = request.headers.get("host");
+  if (!host) return false;
+  const authority =
+    /^(localhost|127\.0\.0\.1|\[::1\])(?::([0-9]{1,5}))?$/i.exec(host);
+  if (!authority) return false;
+  return (
+    authority[2] === undefined ||
+    (Number(authority[2]) > 0 && Number(authority[2]) <= 65535)
+  );
+}
+
 /** Exchange fixed synthetic identities without exposing a token to browser JS. */
 export async function POST(request: Request): Promise<Response> {
   const headers = { "Cache-Control": "no-store" };
@@ -16,6 +30,7 @@ export async function POST(request: Request): Promise<Response> {
   if (
     process.env.LOCAL_LOGIN_ENABLED !== "true" ||
     process.env.NODE_ENV !== "development" ||
+    !hasLoopbackHost(request) ||
     !LOOPBACK.has(localUrl.hostname) ||
     localUrl.protocol !== "http:" ||
     !LOOPBACK.has(upstreamUrl.hostname) ||
