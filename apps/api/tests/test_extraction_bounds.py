@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import traceback
 from concurrent.futures import ThreadPoolExecutor
 from email.message import Message
@@ -11,6 +12,8 @@ from threading import Event
 from types import SimpleNamespace
 from typing import Any
 from urllib.error import HTTPError
+from urllib.request import HTTPHandler, HTTPSHandler, Request
+from urllib.response import addinfourl
 from uuid import uuid4
 
 import pytest
@@ -162,6 +165,64 @@ def test_transport_errors_do_not_expose_details(
     assert "synthetic-secret" not in "".join(traceback.format_exception(caught.value))
     if isinstance(error, HTTPError):
         assert error.closed
+
+
+@pytest.mark.parametrize("status", [301, 302, 303, 307, 308])
+@pytest.mark.parametrize(
+    "destination",
+    [
+        "https://provider.example/redirected",
+        "https://other.example/redirected",
+        "http://other.example/redirected",
+    ],
+    ids=["same-origin", "cross-origin", "downgrade"],
+)
+def test_stdlib_redirects_fail_closed(
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+    status: int,
+    destination: str,
+) -> None:
+    requests: list[Request] = []
+    responses: list[Any] = []
+
+    def fake_open(handler: Any, request: Request) -> Any:
+        # Only the socket-facing handlers are replaced: real urllib opener,
+        # response processing and redirect handling remain under test.
+        requests.append(request)
+        headers = Message()
+        headers["Location"] = f"{destination}?token=synthetic-secret"
+        response = addinfourl(BytesIO(b"synthetic-secret"), headers, request.full_url, status)
+        response.msg = "synthetic-secret"
+        responses.append(response)
+        return response
+
+    monkeypatch.setattr(HTTPHandler, "http_open", fake_open)
+    monkeypatch.setattr(HTTPSHandler, "https_open", fake_open)
+    provider = OpenAIStructuredRoleExtractionProvider(
+        settings(base_url="https://provider.example/v1")
+    )
+    with pytest.raises(RoleExtractionProviderError) as caught:
+        provider.extract(ROLE)
+    assert caught.value.retryable is False
+    assert len(requests) == 1
+    assert requests[0].full_url == "https://provider.example/v1/responses"
+    assert requests[0].get_header("Authorization") == "Bearer synthetic-secret"
+    assert responses[0].closed
+    logging.getLogger(__name__).error(
+        "provider failed", exc_info=(type(caught.value), caught.value, caught.value.__traceback__)
+    )
+    assert "synthetic-secret" not in caplog.text
+    assert "synthetic-secret" not in "".join(traceback.format_exception(caught.value))
+
+    requests.clear()
+    responses.clear()
+    runner = service(provider, max_attempts=3, retry_base_delay_seconds=0)
+    with pytest.raises(AccessProblemError):
+        runner.extract(uuid4())
+    assert len(requests) == 1  # No service retry after the rejected redirect.
+    assert responses[0].closed
+    assert runner._profiles.created == 0  # type: ignore[attr-defined]
 
 
 class Profiles:

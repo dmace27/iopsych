@@ -10,13 +10,33 @@ from http.client import HTTPException
 from json import JSONDecodeError
 from typing import TYPE_CHECKING, Any, Protocol
 from urllib.error import HTTPError, URLError
-from urllib.request import Request, urlopen
+from urllib.request import HTTPRedirectHandler, Request, build_opener
 
 from app.extraction.config import RoleExtractionSettings
 from iopsych_contracts import CONSTRUCT_DEFINITIONS, RoleExtraction
 
 # Internal synchronous execution context; the injectable provider protocol stays unchanged.
 _extraction_deadline: ContextVar[float | None] = ContextVar("extraction_deadline", default=None)
+
+
+class _RejectRedirects(HTTPRedirectHandler):
+    """Never follow a redirect with provider credentials or submitted role data."""
+
+    def http_error_302(self, req: Request, fp: Any, code: int, msg: str, headers: Any) -> None:
+        # Let urllib raise HTTPError without reading the body or opening Location.
+        # The adapter closes that response and emits a non-retryable safe error.
+        return None
+
+    http_error_301 = http_error_302
+    http_error_303 = http_error_302
+    http_error_307 = http_error_302
+    http_error_308 = http_error_302
+
+
+def urlopen(request: Request, *, timeout: float) -> Any:
+    """Keep the injectable transport hook while rejecting automatic redirects."""
+
+    return build_opener(_RejectRedirects()).open(request, timeout=timeout)
 
 
 @dataclass(frozen=True)
