@@ -365,7 +365,6 @@ class PrivacyService:
         assessment.responses_json = {"anonymized": True}
         assessment.scores_json = {"anonymized": True}
         assessment.anonymized_at = anonymized_at
-        # Match worker invite→delivery lock order before destroying candidate data.
         cancel_delivery(self._session, record.invite.id)
         record.invite.email = f"deleted-{record.invite.id.hex}@privacy.invalid"
         record.invite.token_hash = sha256(f"anonymized:{record.invite.id}".encode()).hexdigest()

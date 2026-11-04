@@ -200,8 +200,6 @@ class InternalInvitationService:
         assert self._queue_cipher is not None
         organization_id = self._context.organization.organization_id
         try:
-            # A competing dedupe insert rolls back only this savepoint, preserving
-            # request/audit ownership of the outer transaction.
             with self._session.begin_nested():
                 generated = codec.generate()
                 invite = AssessmentInvite(
@@ -240,7 +238,6 @@ class InternalInvitationService:
         invite = self._data.get_assessment_invite_for_role(role_id, invite_id)
         if invite is None:
             raise organization_resource_not_found()
-        # Serialize against worker completion before changing/re-reading lifecycle.
         self._session.refresh(invite, with_for_update=True)
         cancel_delivery(self._session, invite.id)
         if invite.status is AssessmentInviteStatus.REVOKED:
