@@ -50,7 +50,10 @@ describe("candidate API client", () => {
     );
     expect(fetch).toHaveBeenCalledWith(
       "/api/candidate/invites/signed%2Ftoken/definition",
-      expect.objectContaining({ cache: "no-store" }),
+      expect.objectContaining({
+        cache: "no-store",
+        headers: { Accept: "application/json" },
+      }),
     );
     for (const assignment of [
       { ...payload.assignment, assessment_definition_id: "unknown" },
@@ -87,7 +90,13 @@ describe("candidate API client", () => {
     await expect(getCandidateInvite("signed/token")).resolves.toEqual(response);
     expect(fetch).toHaveBeenCalledWith(
       "/api/candidate/invites/signed%2Ftoken",
-      expect.objectContaining({ cache: "no-store" }),
+      expect.objectContaining({
+        cache: "no-store",
+        headers: {
+          Accept: "application/json",
+          "X-IOPsych-Notice-Snapshot": "1",
+        },
+      }),
     );
   });
 
@@ -108,6 +117,11 @@ describe("candidate API client", () => {
       expect.objectContaining({
         body: JSON.stringify({ decision: "consent" }),
         method: "POST",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+          "X-IOPsych-Notice-Snapshot": "1",
+        },
       }),
     );
   });
@@ -259,6 +273,10 @@ describe("candidate API client", () => {
       expect.objectContaining({
         method: "POST",
         body: JSON.stringify(responses),
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+        },
       }),
     );
     await expect(
