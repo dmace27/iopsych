@@ -10,6 +10,12 @@ Only reviewed worker commits integrate here. Dependent workers start from the la
 
 Run targeted checks per worker, with broad combined checks at meaningful integration checkpoints; avoid redundant full suites and shared test state. Timebox decision preparation to concrete recommendations and unresolved approvals. Keep reviewers checking finished diffs, integrate continuously, and automatically replace finished workers with newly eligible tasks. Partial preparation or interface-preserving fixes do not satisfy whole-package dependency/acceptance gates.
 
+### Fast service policy
+
+User explicitly authorizes actual Fast service mode and its higher usage rate, not Ultrafast or purchases. Coordinator priority mode was enabled and verified by the user; do not toggle it. Installed Codex schema exposes `service_tier` config and `serviceTier` session settings; current user default is `service_tier = "fast"`. Defaults alone are not live-session evidence. On 2026-11-04, supported Orca terminal `/fast` control produced **“Service tier set to priority”** and a **fast** status bar in four existing sessions: 6C backend (`ctx_1d41002f09c5`), 6A reviewer (`ctx_e8df940ba05d`), security assessment (`ctx_6e423bb1f5c7`), and runbooks (`ctx_dbef9130a02e`, which completed during the setting change). Three remained working after verification, with no interrupted task turn or unsupported session observed. Completed workers are released, not restarted just to change settings.
+
+Future launches must inherit the verified Fast default and have their own live status inspected; if absent, apply `/fast` once through supported control and verify the priority confirmation. Never blindly toggle an already-fast session. Preserve worker work and resume any setting-interrupted task. Continue maximal useful parallel implementation/review/integration after mode checks.
+
 ## Current scheduling and critical path
 
 Capacity check: 24 GiB RAM, memory-pressure tool reports 37% free, 655 GiB disk available. `gpt-6-astra` verified by actual worker tool execution. Expand four active tasks to eight with independent bounded slices.
