@@ -158,6 +158,14 @@ function AccountControls({ pathname }: { pathname: string }) {
       {status === "loading" ? (
         <span role="status">Checking session…</span>
       ) : null}
+      {account?.role === "admin" ? (
+        <Link
+          href="/accounts"
+          className="rounded-md px-3 py-2 font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-700"
+        >
+          Accounts
+        </Link>
+      ) : null}
       {account ? (
         <div className="max-w-sm break-words">
           <p className="font-semibold">

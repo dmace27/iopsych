@@ -62,6 +62,22 @@ describe("SiteHeader", () => {
     );
   });
 
+  it("shows Accounts only for administrators, including on the accounts page", async () => {
+    navigation.pathname = "/accounts";
+    vi.mocked(getCurrentUser).mockResolvedValue({ ...account, role: "admin" });
+    render(<SiteHeader />);
+    expect(
+      await screen.findByRole("link", { name: "Accounts" }),
+    ).toHaveAttribute("href", "/accounts");
+    cleanup();
+    vi.mocked(getCurrentUser).mockResolvedValue(account);
+    render(<SiteHeader />);
+    await screen.findByText(/Synthetic Manager/);
+    expect(
+      screen.queryByRole("link", { name: "Accounts" }),
+    ).not.toBeInTheDocument();
+  });
+
   it("removes internal navigation from bearer-token candidate pages", () => {
     navigation.pathname = "/candidate/invites/signed-token";
     render(<SiteHeader />);

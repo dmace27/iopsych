@@ -14,6 +14,7 @@ describe("safeReturnTo", () => {
     `/roles/${id}/invites`,
     `/reports/${id}`,
     "/privacy",
+    "/accounts",
   ])("preserves %s", (path) => {
     expect(safeReturnTo(path)).toBe(path);
     expect(isInternalAccountPath(path)).toBe(true);
@@ -22,6 +23,10 @@ describe("safeReturnTo", () => {
     );
   });
   it.each([
+    "/accounts/",
+    "/accounts?token=secret",
+    "/accounts#secret",
+    "/accounts/users",
     undefined,
     null,
     ["/privacy"],

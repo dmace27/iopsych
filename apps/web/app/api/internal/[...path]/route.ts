@@ -11,6 +11,8 @@ interface RouteContext {
 }
 
 const ALLOWED_INTERNAL_ROUTES = [
+  /^GET \/accounts\/users$/,
+  /^PATCH \/accounts\/users\/[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
   /^GET \/auth\/me$/,
   /^(?:GET|POST) \/roles$/,
   /^(?:GET|PATCH|DELETE) \/roles\/[^/]+$/,
