@@ -13,7 +13,7 @@ import type { CurrentUser } from "../../lib/contracts";
 import { signInHref } from "../../lib/safe-return-to";
 
 const button =
-  "rounded-md border border-slate-300 px-3 py-2 text-sm font-semibold disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-teal-700";
+  "action-secondary min-h-11 rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-semibold disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700";
 const roles = ["admin", "recruiter", "hiring_manager"] as const;
 const roleName = (role: string) => role.replaceAll("_", " ");
 type Pending = { account: Account; update: AccountUpdate };
@@ -144,11 +144,14 @@ export function AccountsWorkspace() {
   const expired = error instanceof ApiClientError && error.status === 401;
   const denied = error instanceof ApiClientError && error.status === 403;
   return (
-    <main className="mx-auto max-w-5xl space-y-6 px-5 py-10">
+    <main
+      id="main-content"
+      className="workspace-shell mx-auto max-w-6xl space-y-5 px-5 py-8 text-slate-900 sm:px-8"
+    >
       <h1
         ref={heading}
         tabIndex={-1}
-        className="text-3xl font-bold text-slate-950"
+        className="workspace-title text-2xl font-semibold text-slate-950"
       >
         Accounts
       </h1>
@@ -191,7 +194,10 @@ export function AccountsWorkspace() {
             Up to 25 accounts per page. Your own account is read-only.
           </p>
           {page.items.length === 0 ? <p>No accounts on this page.</p> : null}
-          <ul className="space-y-4" aria-label="Organization accounts">
+          <ul
+            className="record-list surface divide-y divide-slate-200 border-y border-slate-200 bg-white"
+            aria-label="Organization accounts"
+          >
             {page.items.map((account) => (
               <AccountRow
                 key={`${account.id}:${account.version}`}
@@ -202,7 +208,7 @@ export function AccountsWorkspace() {
               />
             ))}
           </ul>
-          <nav aria-label="Account pages" className="flex gap-3">
+          <nav aria-label="Account pages" className="flex flex-wrap gap-3">
             <button
               className={button}
               disabled={!history.length || saving || !!pending || needsRefresh}
@@ -229,12 +235,12 @@ export function AccountsWorkspace() {
           role="alertdialog"
           aria-labelledby="account-confirm-title"
           aria-describedby="account-confirm-detail"
-          className="rounded-xl border-2 border-teal-800 bg-white p-6"
+          className="surface space-y-3 border-l-4 border-teal-700 bg-white p-4 [overflow-wrap:anywhere]"
           onKeyDown={(event) => {
             if (event.key === "Escape" && !saving) dismiss();
           }}
         >
-          <h2 id="account-confirm-title" className="text-xl font-bold">
+          <h2 id="account-confirm-title" className="text-lg font-semibold">
             Confirm access change
           </h2>
           <p id="account-confirm-detail">
@@ -246,7 +252,7 @@ export function AccountsWorkspace() {
                 : "deactivate access"}
             . This changes their access on subsequent requests.
           </p>
-          <div className="mt-4 flex gap-3">
+          <div className="mt-4 flex flex-wrap gap-3">
             <button
               ref={cancel}
               className={button}
@@ -256,7 +262,7 @@ export function AccountsWorkspace() {
               Cancel
             </button>
             <button
-              className={button}
+              className="action-primary min-h-11 rounded-md bg-teal-700 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700"
               disabled={saving}
               onClick={() => void confirm()}
             >
@@ -286,36 +292,47 @@ function AccountRow({
 }) {
   const [role, setRole] = useState(account.role);
   return (
-    <li className="space-y-3 rounded-xl border border-slate-200 bg-white p-5">
-      <h2 className="font-bold">
-        {account.name}
-        {self ? " (you)" : ""}
-      </h2>
-      <p className="break-all text-sm">{account.email}</p>
-      <p>
-        {roleName(account.role)} · {account.is_active ? "Active" : "Inactive"}
-      </p>
+    <li className="record-row grid gap-3 px-4 py-4 lg:grid-cols-[minmax(12rem,1fr)_minmax(0,2fr)] lg:gap-x-6">
+      <div className="min-w-0 space-y-1">
+        <h2 className="font-semibold [overflow-wrap:anywhere]">
+          {account.name}
+          {self ? " (you)" : ""}
+        </h2>
+        <p className="break-all text-sm">{account.email}</p>
+        <p className="text-sm text-slate-600">
+          {roleName(account.role)} · {account.is_active ? "Active" : "Inactive"}
+        </p>
+      </div>
       {self ? (
         <p className="text-sm">
           Your account is read-only. Another administrator must change your
           access.
         </p>
       ) : (
-        <div className="flex flex-wrap items-center gap-3">
-          <label htmlFor={`role-${account.id}`}>Role for {account.name}</label>
-          <select
-            id={`role-${account.id}`}
-            className="rounded-md border p-2"
-            value={role}
-            disabled={disabled}
-            onChange={(event) => setRole(event.target.value as Account["role"])}
-          >
-            {roles.map((value) => (
-              <option key={value} value={value}>
-                {roleName(value)}
-              </option>
-            ))}
-          </select>
+        <div className="flex min-w-0 flex-wrap items-end gap-3">
+          <div className="w-full sm:w-auto">
+            <label
+              className="field-label mb-1 block text-sm font-medium [overflow-wrap:anywhere]"
+              htmlFor={`role-${account.id}`}
+            >
+              Role for {account.name}
+            </label>
+            <select
+              id={`role-${account.id}`}
+              className="min-h-11 w-full rounded-md border border-slate-300 bg-white p-2 text-sm focus-visible:outline-2 focus-visible:outline-teal-700"
+              value={role}
+              disabled={disabled}
+              onChange={(event) =>
+                setRole(event.target.value as Account["role"])
+              }
+            >
+              {roles.map((value) => (
+                <option key={value} value={value}>
+                  {roleName(value)}
+                </option>
+              ))}
+            </select>
+          </div>
           <button
             className={button}
             disabled={disabled || role === account.role}
