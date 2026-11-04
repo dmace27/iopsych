@@ -22,6 +22,7 @@ LEGACY_DEFINITION_PATH = Path(__file__).parent / "definitions/legacy-v1.json"
 LEGACY_SHA256 = "021233ca4dab9c86b87aeabca88f503bf7c70fd0b0d324c64e788b620aeb6e3c"
 # No actual reviewed assessment exists. A future approval requires a new reviewed entry.
 REVIEWED_DEFINITIONS: frozenset[tuple[str, str, str]] = frozenset()
+RETIRED_DEFINITIONS: frozenset[tuple[str, str, str]] = frozenset()
 SCORERS = MappingProxyType({"1.0.0": score_assessment})
 MATCHERS = MappingProxyType({"1.0.0": match_role_profile})
 REPORT_READERS = MappingProxyType({"1.0.0": MatchingResult.model_validate})
@@ -76,8 +77,10 @@ def snapshot(definition: AssessmentDefinition, *, algorithm: str = "1.0.0") -> d
 def new_assignment(*, allow_synthetic: bool) -> dict[str, Any]:
     definition = legacy_definition()
     key = (definition.id, definition.version, LEGACY_SHA256)
-    if definition.status is AssessmentDefinitionStatus.RETIRED or (
-        key not in REVIEWED_DEFINITIONS and not allow_synthetic
+    if (
+        definition.status is AssessmentDefinitionStatus.RETIRED
+        or key in RETIRED_DEFINITIONS
+        or (key not in REVIEWED_DEFINITIONS and not allow_synthetic)
     ):
         raise resource_conflict(
             code="assessment_definition_not_assignable",
@@ -97,6 +100,7 @@ def read_assignment(payload: dict[str, Any] | None) -> AssignmentSnapshot:
             or definition.scoring.version not in SCORERS
             or definition.scoring != legacy.scoring
             or assignment.matching_algorithm_version not in MATCHERS
+            or assignment.definition_sha256 != LEGACY_SHA256
             or definition_hash(definition.model_dump(mode="json")) != assignment.definition_sha256
         ):
             raise ValueError("Unknown or inconsistent assignment")

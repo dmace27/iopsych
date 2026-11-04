@@ -17,7 +17,7 @@ from app.auth.errors import AccessProblemError
 from app.database.models import AlignmentReport, AssessmentInvite, AssessmentInviteStatus
 from app.database.seed import ALPHA_PROFILE_ID
 from iopsych_contracts.assessment import (
-    AssessmentDefinitionStatus,
+    AssessmentDefinition,
     AssessmentResponseSet,
     score_assessment,
 )
@@ -38,13 +38,20 @@ def test_new_assignments_require_explicit_synthetic_policy(monkeypatch: pytest.M
         registry.new_assignment(allow_synthetic=False)
     assert denied.value.code == "assessment_definition_not_assignable"
     original = registry.legacy_definition()
-    retired = original.model_copy(update={"status": AssessmentDefinitionStatus.RETIRED})
-    monkeypatch.setattr(registry, "legacy_definition", lambda: retired)
-    with pytest.raises(AccessProblemError):
-        registry.new_assignment(allow_synthetic=True)
-    # Retirement and policy changes never strand an existing historical assignment.
-    assert registry.read_assignment(registry.snapshot(original)).definition == original
-    assert registry.read_assignment(registry.snapshot(retired)).definition == retired
+    historical = registry.snapshot(original)
+    response = AssessmentResponseSet.model_validate(responses())
+    expected = registry.score_assignment(registry.read_assignment(historical), response)
+    key = (original.id, original.version, registry.LEGACY_SHA256)
+    monkeypatch.setattr(registry, "RETIRED_DEFINITIONS", frozenset({key}))
+    monkeypatch.setattr(registry, "REVIEWED_DEFINITIONS", frozenset({key}))
+    for allow_synthetic in (True, False):
+        with pytest.raises(AccessProblemError) as denied:
+            registry.new_assignment(allow_synthetic=allow_synthetic)
+        assert denied.value.code == "assessment_definition_not_assignable"
+    assignment = registry.read_assignment(historical)
+    assert assignment.definition == original
+    assert registry.score_assignment(assignment, response) == expected
+    assert registry.definition_response(historical).definition == original
 
 
 @pytest.mark.parametrize("mutation", ["missing", "hash", "version", "scorer", "matcher", "shape"])
@@ -137,6 +144,12 @@ async def test_report_reader_never_recomputes_and_unknown_version_is_explicit(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     assessment_id = await submitted(report_client, report_factory)
+    definition = registry.legacy_definition()
+    monkeypatch.setattr(
+        registry,
+        "RETIRED_DEFINITIONS",
+        frozenset({(definition.id, definition.version, registry.LEGACY_SHA256)}),
+    )
     auth = headers(report_factory)
     created = await report_client.post(
         "/v1/reports",
@@ -256,9 +269,13 @@ async def test_new_invite_is_denied_without_synthetic_opt_in(
 
 
 @pytest.mark.anyio
+@pytest.mark.parametrize(
+    "field", ["assessment_definition_id", "assessment_definition_version", "scoring_version"]
+)
 async def test_report_generation_rejects_score_version_mismatch(
     report_client: AsyncClient,
     report_factory: sessionmaker[Session],
+    field: str,
 ) -> None:
     from app.database.models import Assessment
 
@@ -267,7 +284,7 @@ async def test_report_generation_rejects_score_version_mismatch(
         assessment = session.get(Assessment, UUID(assessment_id))
         assert assessment is not None
         scores = deepcopy(assessment.scores_json)
-        scores["scoring_version"] = "99.0.0"
+        scores[field] = "unknown-assessment" if field == "assessment_definition_id" else "99.0.0"
         assessment.scores_json = scores
         session.commit()
     denied = await report_client.post(
@@ -280,3 +297,49 @@ async def test_report_generation_rejects_score_version_mismatch(
     )
     assert denied.status_code == 409
     assert denied.json()["code"] == "unsupported_assessment_version"
+
+
+@pytest.mark.parametrize("mutation", ["item", "construct", "title", "status", "id", "version"])
+def test_recomputed_hash_cannot_authorize_changed_content(mutation: str) -> None:
+    payload = registry.new_assignment(allow_synthetic=True)
+    definition = payload["definition"]
+    if mutation == "item":
+        definition["blocks"][0]["items"][0]["statement"] = "Changed synthetic statement."
+    elif mutation == "construct":
+        items = definition["blocks"][0]["items"]
+        items[0]["construct_key"], items[1]["construct_key"] = (
+            items[1]["construct_key"],
+            items[0]["construct_key"],
+        )
+    elif mutation == "title":
+        definition["title"] = "Changed synthetic title"
+    elif mutation == "status":
+        definition["status"] = "retired"
+    elif mutation == "id":
+        definition["id"] = "other-assessment"
+    else:
+        definition["version"] = "2.0.0"
+    parsed = AssessmentDefinition.model_validate(definition)
+    payload["definition_sha256"] = registry.definition_hash(parsed.model_dump(mode="json"))
+    assert payload["definition_sha256"] != registry.LEGACY_SHA256
+    with pytest.raises(AccessProblemError) as denied:
+        registry.read_assignment(payload)
+    assert denied.value.code == "unsupported_assessment_version"
+
+
+def test_reviewed_issuance_policy_preserves_exact_snapshot(monkeypatch: pytest.MonkeyPatch) -> None:
+    definition = registry.legacy_definition()
+    key = (definition.id, definition.version, registry.LEGACY_SHA256)
+    monkeypatch.setattr(registry, "REVIEWED_DEFINITIONS", frozenset({key}))
+    assert registry.new_assignment(allow_synthetic=False) == registry.snapshot(definition)
+
+
+@pytest.mark.parametrize("dispatch", ["SCORERS", "MATCHERS"])
+def test_assignment_requires_retained_dispatch(
+    dispatch: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    payload = registry.new_assignment(allow_synthetic=True)
+    monkeypatch.setattr(registry, dispatch, {})
+    with pytest.raises(AccessProblemError) as denied:
+        registry.read_assignment(payload)
+    assert denied.value.code == "unsupported_assessment_version"
