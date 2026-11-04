@@ -65,7 +65,11 @@ def guard():
         "PGSERVICEFILE",
         "PGPASSFILE",
     }
-    if forbidden.intersection(os.environ) or (ROOT / "apps/api/.env").exists():
+    if (
+        forbidden.intersection(os.environ)
+        or any(name.startswith("PG") for name in os.environ)
+        or (ROOT / "apps/api/.env").exists()
+    ):
         raise RuntimeError(
             "Unset ambient database/Docker configuration; isolated checkout required"
         )
@@ -126,29 +130,35 @@ def signature(connection):
     for table in inspector.get_table_names():
         result[table] = {
             "columns": sorted(
-                (c["name"], str(c["type"]), c["nullable"], str(c["default"]))
-                for c in inspector.get_columns(table)
+                (
+                    column["name"],
+                    str(column["type"]),
+                    column["nullable"],
+                    str(column["default"]),
+                )
+                for column in inspector.get_columns(table)
             ),
             "checks": sorted(
-                c["sqltext"] for c in inspector.get_check_constraints(table)
+                constraint["sqltext"]
+                for constraint in inspector.get_check_constraints(table)
             ),
             "unique": sorted(
-                tuple(c["column_names"])
-                for c in inspector.get_unique_constraints(table)
+                tuple(constraint["column_names"])
+                for constraint in inspector.get_unique_constraints(table)
             ),
             "pk": inspector.get_pk_constraint(table)["constrained_columns"],
             "fk": sorted(
                 (
-                    tuple(c["constrained_columns"]),
-                    c["referred_table"],
-                    tuple(c["referred_columns"]),
-                    str(c["options"]),
+                    tuple(constraint["constrained_columns"]),
+                    constraint["referred_table"],
+                    tuple(constraint["referred_columns"]),
+                    str(constraint["options"]),
                 )
-                for c in inspector.get_foreign_keys(table)
+                for constraint in inspector.get_foreign_keys(table)
             ),
             "indexes": sorted(
-                (tuple(c["column_names"]), c["unique"])
-                for c in inspector.get_indexes(table)
+                (tuple(index["column_names"]), index["unique"])
+                for index in inspector.get_indexes(table)
             ),
         }
     result["triggers"] = (
@@ -175,16 +185,16 @@ def signature(connection):
 def rows(connection, columns=None, rename=False):
     inspector = sa.inspect(connection)
     columns = columns or {
-        t: [c["name"] for c in inspector.get_columns(t)]
-        for t in inspector.get_table_names()
-        if t != "alembic_version"
+        table_name: [column["name"] for column in inspector.get_columns(table_name)]
+        for table_name in inspector.get_table_names()
+        if table_name != "alembic_version"
     }
     result = {}
     for table, names in columns.items():
         actual = table
         if rename and table in ("invitation_deliveries", "invitation_delivery_events"):
             actual = "provider_" + table
-        quoted = ",".join('"' + n + '"' for n in names)
+        quoted = ",".join('"' + column_name + '"' for column_name in names)
         values = (
             connection.execute(sa.text(f'SELECT {quoted} FROM "{actual}"'))
             .tuples()
@@ -208,7 +218,7 @@ def _experiment(
     connection.execute(
         sa.text(
             "LOCK TABLE "
-            + ",".join('"' + t + '"' for t in tables)
+            + ",".join('"' + table_name + '"' for table_name in tables)
             + " IN ACCESS EXCLUSIVE MODE"
         )
     )
@@ -264,7 +274,9 @@ def _experiment(
     return {
         "source": head[0],
         "row_sha256": digest(before),
-        "rows": {t: len(v) for t, v in before.items()},
+        "rows": {
+            table_name: len(table_rows) for table_name, table_rows in before.items()
+        },
         "source_schema_sha256": digest(expected_source),
         "target_schema_sha256": digest(expected_target),
         "version_translated": False,

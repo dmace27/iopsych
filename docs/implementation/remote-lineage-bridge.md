@@ -98,7 +98,7 @@ complete reviewed allowlist and adversarial fixtures before version translation.
 - Only after engineering acceptance, obtain any actual remote-database context and
   operational authorization, backup/restore evidence and writer-quiescence plan.
 
-The task is reported **partial/failed**, rather than publishing an unsafe committing
+The original implementation task was reported **partial/failed**, rather than publishing an unsafe committing
 bridge within the bounded timebox. Coordinator owns integration and further work.
 
 ## Verification receipt (synthetic only)
@@ -115,3 +115,39 @@ Observed canonical target signature:
 `32fe59f7eb4112a07ee2cfa571a38c1aeb8a7ca3a6e8b4bd6324b1645a8e330e`.
 These are evidence hashes of this limited comparison, **not production-approved
 schema fingerprints**. Every receipt records `version_translated: false`.
+
+
+## Independent safety review on integration base 1192fa9
+
+The rollback-only source commit is exactly
+`977b81eb9d124d23ba2d8b531d01f65326e517d6`, cherry-picked in the child checkout
+as `339325f` onto integration base `1192fa9`. The canonical and remote provenance
+pins and all evidence hashes above remain unchanged. The earlier live model/setup
+receipt belongs to the original worker; this review does not independently attest
+to that worker's model settings.
+
+Review confirmed two guard defects: the ambient list omitted `PGHOSTADDR`, which
+libpq can use instead of the URL host, and container startup happened before the
+cleanup block. The harness now refuses every ambient `PG*` setting and creates
+its container before starting it inside the cleanup block. Cleanup targets only
+the ID returned by that creation, including when startup fails; disposal cannot
+skip container removal. A Docker creation timeout or daemon failure can still
+prevent acquiring an ID or completing removal and must not be represented as
+successful cleanup. No existing container is selected or reset.
+
+Python single-letter variables were renamed descriptively without changing data
+or comparison semantics. The fixed URL still rejects changed hosts, ports,
+databases and socket query overrides before opening a savepoint. The Docker
+context must still use a Unix socket and the loopback port must be free. These
+are trusted local harness guards, not authentication against a malicious Docker
+daemon, custom SQLAlchemy creator or callback that deliberately commits.
+
+Independent fresh owned PostgreSQL 16 on loopback port 5619: **18 passed in 7.49s**,
+comprising the original five tests (two populated lineage cases and three refusal
+checks) plus thirteen guard cases. Added cases cover six ambient settings,
+non-Unix Docker endpoints, an occupied port, startup-failure cleanup and four
+changed connection targets. Both populated receipts reproduced every row/source/
+target hash above with `version_translated: false`, including successful rollback,
+injected-failure rollback and repeatability. Ruff and whitespace checks passed;
+no full suite or migration acceptance is claimed. This completes the bounded
+safety review while the operational bridge remains partial and blocked.
