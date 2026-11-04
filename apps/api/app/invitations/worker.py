@@ -26,8 +26,6 @@ from app.invitations.local_delivery import LocalSmtpInvitationDelivery
 from app.invitations.queue import local_cipher, require_queue_database
 from app.invitations.recovery import DeliveryDecision, DeliveryEvent, DeliveryState, decide_delivery
 
-# SMTP has bounded per-I/O time, not total duration. Stale recovery never resends,
-# so even a still-running attempt cannot cause an automatic duplicate.
 RECOVERY_GRACE = timedelta(minutes=2)
 
 
@@ -54,8 +52,7 @@ def _apply(job: InvitationDelivery, decision: DeliveryDecision, now: datetime) -
 
 
 def _audit(session: Session, job: InvitationDelivery) -> None:
-    # Even a malformed queue tenant must not attribute another tenant's invite
-    # identifier to its audit stream. Resolve ownership through the invite chain.
+    """Attribute audit events to the owner resolved through the invite chain."""
     owner = session.scalar(
         select(Role.organization_id)
         .join(RoleProfile, RoleProfile.role_id == Role.id)
@@ -187,14 +184,13 @@ class LocalDeliveryWorker:
                 self._adapter.send(message)
                 outcome = DeliveryEvent.ACCEPTED
             except Exception:
-                # Provider/cipher details and credential-bearing locals never enter
-                # returned errors, telemetry or audit. Unknown acceptance is terminal.
                 pass
             self._complete(claim, outcome)
             attempted += 1
         return attempted
 
     def _claim(self) -> _Claim | None:
+        """Return a send credential only after its claim transaction commits."""
         with self._factory() as session, session.begin():
             now = datetime.now(UTC)
             invite = session.scalar(
@@ -244,7 +240,6 @@ class LocalDeliveryWorker:
                 organization_name=organization.name,
                 invite_expires_at=invite.expires_at,
             )
-        # Exiting session.begin() must commit successfully before returning claim.
         return claim
 
     def _complete(self, claim: _Claim, outcome: DeliveryEvent) -> None:

@@ -163,7 +163,7 @@ def stage_delivery(
     cipher: LocalCredentialCipher,
     key_id: str,
 ) -> None:
-    # Do not trust a caller-supplied tenant independently of the invite/profile chain.
+    """Bind queued credentials to the authoritative invite/profile tenant chain."""
     owner = session.scalar(
         select(Role.organization_id)
         .join(RoleProfile, RoleProfile.role_id == Role.id)

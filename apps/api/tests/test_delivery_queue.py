@@ -12,17 +12,18 @@ from typing import Any
 from uuid import UUID, uuid4
 
 import pytest
+from alembic import command
 from fastapi.testclient import TestClient
-from sqlalchemy import Engine, create_engine, event, func, select
+from sqlalchemy import Engine, MetaData, create_engine, event, func, select
 from sqlalchemy.engine import make_url
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.schema import CreateSchema, DropSchema
 
-from alembic import command
 from app.auth.config import AuthenticationSettings
 from app.auth.context import AuthorizationContext, OrganizationScope
 from app.auth.errors import AccessProblemError
+from app.database.base import Base
 from app.database.models import (
     AssessmentInvite,
     AssessmentInviteStatus,
@@ -45,7 +46,7 @@ from app.invitations.config import InvitationSettings
 from app.invitations.delivery import InvitationDeliveryError, InvitationEmail
 from app.invitations.local_delivery import LocalSmtpInvitationDelivery
 from app.invitations.queue import local_cipher, replay_invitation
-from app.invitations.recovery import DeliveryState
+from app.invitations.recovery import DeliveryEvent, DeliveryState
 from app.invitations.schemas import InvitationCreateRequest
 from app.invitations.service import InternalInvitationService
 from app.invitations.tokens import InviteTokenCodec
@@ -142,18 +143,33 @@ def queue_factory(
         monkeypatch.setenv("DATABASE_URL", rendered)
         command.upgrade(alembic_config(rendered), "20261104_0008")
         engine = create_engine(url)
+    with Session(database_engine) as session:
+        seed_database(session)
+        session.commit()
+    historical = MetaData()
+    historical.reflect(bind=engine)
+    with database_engine.connect() as source, engine.begin() as target:
+        for table in Base.metadata.sorted_tables:
+            rows = source.execute(select(table)).mappings().all()
+            if rows:
+                old_table = historical.tables[table.name]
+                target.execute(
+                    old_table.insert(),
+                    [{column.name: row[column.name] for column in old_table.c} for row in rows],
+                )
     factory = create_session_factory(engine)
     with factory() as session:
-        seed_database(session)
-        user = session.get(User, ALPHA_USER_ID)
-        assert user is not None
-        user.auth_subject = "provider-alpha-recruiter"
-        session.commit()
         roles_before = session.scalar(select(func.count()).select_from(Role))
     if admin is not None:
         command.upgrade(alembic_config(rendered), "head")
         with factory() as session:
             assert session.scalar(select(func.count()).select_from(Role)) == roles_before
+    with factory() as session:
+        user = session.get(User, ALPHA_USER_ID)
+        assert user is not None
+        assert user.is_active is True and user.version == 1
+        user.auth_subject = "provider-alpha-recruiter"
+        session.commit()
     try:
         yield factory
     finally:
@@ -730,3 +746,180 @@ def test_lost_key_does_not_block_api_revocation(queue_factory: sessionmaker[Sess
         job = session.scalar(select(InvitationDelivery))
         assert job is not None and job.state is DeliveryState.CANCELLED
         assert job.credential_ciphertext is None
+
+
+def test_worker_drain_respects_claim_limit(
+    queue_factory: sessionmaker[Session], captured: list[InvitationEmail]
+) -> None:
+    with queue_factory() as session:
+        for index in range(3):
+            issue(session, key=f"{KEY}-{index}")
+    assert worker(queue_factory).drain(limit=2) == 2
+    assert len(captured) == 2
+    with queue_factory() as session:
+        jobs = session.scalars(select(InvitationDelivery)).all()
+        assert sum(job.state is DeliveryState.SENT for job in jobs) == 2
+        assert sum(job.state is DeliveryState.QUEUED for job in jobs) == 1
+        assert sum(job.attempt_count for job in jobs) == 2
+    assert worker(queue_factory).drain(limit=2) == 1
+    assert len(captured) == 3
+
+
+def test_recovery_during_send_cannot_reactivate_or_retry(
+    queue_factory: sessionmaker[Session], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    with queue_factory() as session:
+        identifier = issue(session).id
+    calls: list[int] = []
+
+    def recover_during_send(self: LocalSmtpInvitationDelivery, message: InvitationEmail) -> None:
+        calls.append(1)
+        assert cleanup_deliveries(queue_factory, now=datetime.now(UTC) + timedelta(minutes=3)) == 1
+
+    monkeypatch.setattr(LocalSmtpInvitationDelivery, "send", recover_during_send)
+    assert worker(queue_factory).drain() == 1
+    assert worker(queue_factory).drain() == 0
+    assert calls == [1]
+    with queue_factory() as session:
+        invite = session.get(AssessmentInvite, identifier)
+        job = session.scalar(select(InvitationDelivery))
+        assert invite is not None and invite.status is AssessmentInviteStatus.PENDING_DELIVERY
+        assert invite.sent_at is None
+        assert job is not None and job.state is DeliveryState.UNCERTAIN
+        assert job.attempt_count == 1
+        assert job.credential_ciphertext is None and job.credential_key_id is None
+
+
+@pytest.mark.parametrize("mutation", ["key", "expiry", "swap"])
+def test_changed_credential_binding_never_sends(
+    queue_factory: sessionmaker[Session], captured: list[InvitationEmail], mutation: str
+) -> None:
+    with queue_factory() as session:
+        issue(session)
+        job = session.scalar(select(InvitationDelivery))
+        assert job is not None
+        if mutation == "key":
+            job.credential_key_id = "unavailable-key"
+        elif mutation == "expiry":
+            job.credential_expires_at += timedelta(seconds=1)
+        else:
+            second = issue(session, key=KEY + "-second")
+            other = session.scalar(
+                select(InvitationDelivery).where(InvitationDelivery.invite_id == second.id)
+            )
+            assert other is not None
+            job.credential_ciphertext, other.credential_ciphertext = (
+                other.credential_ciphertext,
+                job.credential_ciphertext,
+            )
+        session.commit()
+    count = 2 if mutation == "swap" else 1
+    assert worker(queue_factory).drain() == count
+    assert worker(queue_factory).drain() == 0
+    assert captured == []
+    with queue_factory() as session:
+        jobs = session.scalars(select(InvitationDelivery)).all()
+        assert len(jobs) == count
+        for job in jobs:
+            assert job.state is DeliveryState.UNCERTAIN and job.attempt_count == 1
+            assert job.credential_ciphertext is None and job.credential_key_id is None
+
+
+def test_cleanup_skips_locked_invite_then_recovers(
+    queue_factory: sessionmaker[Session], captured: list[InvitationEmail]
+) -> None:
+    with queue_factory() as session:
+        identifier = issue(session).id
+    future = datetime.now(UTC) + timedelta(minutes=16)
+    with queue_factory() as locked, locked.begin():
+        locked.scalar(
+            select(AssessmentInvite).where(AssessmentInvite.id == identifier).with_for_update()
+        )
+        with ThreadPoolExecutor(max_workers=1) as executor:
+            assert (
+                executor.submit(cleanup_deliveries, queue_factory, now=future).result(timeout=5)
+                == 0
+            )
+    assert cleanup_deliveries(queue_factory, now=future) == 1
+    assert worker(queue_factory).drain() == 0
+    assert captured == []
+    with queue_factory() as session:
+        job = session.scalar(select(InvitationDelivery))
+        assert job is not None and job.state is DeliveryState.EXPIRED
+        assert job.attempt_count == 0
+        assert job.credential_ciphertext is None and job.credential_key_id is None
+
+
+@pytest.mark.parametrize("missing", ["invite", "job", "claim"])
+def test_completion_rejects_disappeared_or_replaced_claim(
+    queue_factory: sessionmaker[Session], captured: list[InvitationEmail], missing: str
+) -> None:
+    from dataclasses import replace
+
+    with queue_factory() as session:
+        identifier = issue(session).id
+    delivery_worker = worker(queue_factory)
+    claim = delivery_worker._claim()
+    assert claim is not None
+    with queue_factory() as session:
+        job = session.scalar(select(InvitationDelivery))
+        assert job is not None and job.state is DeliveryState.SENDING
+        if missing == "claim":
+            claim = replace(claim, delivery_id=uuid4())
+        else:
+            session.delete(job)
+            session.flush()
+            if missing == "invite":
+                invite = session.get(AssessmentInvite, identifier)
+                assert invite is not None
+                session.delete(invite)
+        session.commit()
+    with pytest.raises(ValueError, match=r"delivery .* is unavailable"):
+        delivery_worker._complete(claim, DeliveryEvent.ACCEPTED)
+    assert delivery_worker.drain() == 0
+    assert captured == []
+    with queue_factory() as session:
+        invite = session.get(AssessmentInvite, identifier)
+        if missing == "invite":
+            assert invite is None
+        else:
+            assert invite is not None and invite.status is AssessmentInviteStatus.PENDING_DELIVERY
+            assert invite.sent_at is None
+
+
+def test_replay_rejects_broken_role_binding(queue_factory: sessionmaker[Session]) -> None:
+    with queue_factory() as session:
+        issue(session)
+        job = session.scalar(select(InvitationDelivery))
+        assert job is not None
+        with pytest.raises(AccessProblemError) as error:
+            replay_invitation(
+                session,
+                ALPHA_ORGANIZATION_ID,
+                uuid4(),
+                (job.idempotency_digest, job.request_digest),
+            )
+        assert error.value.code == "delivery_integrity_failed"
+
+
+def test_cancel_without_delivery_is_safe(queue_factory: sessionmaker[Session]) -> None:
+    from app.invitations.queue import cancel_delivery
+
+    with queue_factory() as session:
+        cancel_delivery(session, uuid4())
+        session.commit()
+        assert session.scalar(select(func.count()).select_from(InvitationDelivery)) == 0
+
+
+def test_audit_rejects_unresolvable_owner(queue_factory: sessionmaker[Session]) -> None:
+    from app.invitations.worker import _audit
+
+    with queue_factory() as session:
+        before = session.scalar(select(func.count()).select_from(AuditEvent))
+        orphan = InvitationDelivery(
+            invite_id=uuid4(), organization_id=BEACON_ORGANIZATION_ID, state=DeliveryState.UNCERTAIN
+        )
+        with pytest.raises(ValueError, match="delivery audit owner is unavailable"):
+            _audit(session, orphan)
+        session.commit()
+        assert session.scalar(select(func.count()).select_from(AuditEvent)) == before
