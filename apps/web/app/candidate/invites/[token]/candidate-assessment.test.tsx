@@ -36,7 +36,7 @@ function candidateInvite(
     },
     decision: null,
     decision_recorded_at: null,
-    expires_at: "2026-10-01T16:00:00Z",
+    expires_at: "2099-10-01T16:00:00Z",
     invitation_id: INVITATION_ID,
     organization_name: "Northstar Labs",
     role_title: "Platform Engineer",
@@ -98,6 +98,11 @@ describe("CandidateAssessment", () => {
     const consent = await screen.findByRole("button", {
       name: "I consent and want to begin",
     });
+    await waitFor(() =>
+      expect(
+        screen.getByRole("heading", { name: "Your choice and your data" }),
+      ).toHaveFocus(),
+    );
     consent.focus();
     await user.keyboard("{Enter}");
 
@@ -165,9 +170,9 @@ describe("CandidateAssessment", () => {
     const completion = window.localStorage.getItem(
       "iopsych.candidate.v1." + INVITATION_ID + ".completion",
     );
-    expect(completion).toContain('"answered_block_count":6');
-    expect(completion).toContain('"assessment_definition_version":"1.0.0"');
-    expect(completion).toContain('"responses"');
+    expect(completion).not.toContain('"answered_block_count"');
+    expect(completion).not.toContain('"assessment_definition_version"');
+    expect(completion).not.toContain('"responses"');
     expect(completion).toContain('"assessment_id"');
     expect(apiMocks.submitCandidateAssessment).toHaveBeenCalledWith(
       "signed-token",
@@ -196,7 +201,7 @@ describe("CandidateAssessment", () => {
     skip.focus();
     await user.keyboard(" ");
     const continueButton = screen.getByRole("button", {
-      name: "Save and continue",
+      name: "Continue",
     });
     continueButton.focus();
     await user.keyboard("{Enter}");
@@ -261,7 +266,7 @@ describe("CandidateAssessment", () => {
     render(<CandidateAssessment token="signed-token" />);
 
     const continueButton = await screen.findByRole("button", {
-      name: "Save and continue",
+      name: "Continue",
     });
     continueButton.focus();
     await user.keyboard("{Enter}");
@@ -272,7 +277,7 @@ describe("CandidateAssessment", () => {
     await waitFor(() => expect(screen.getAllByRole("radio")[0]).toHaveFocus());
   });
 
-  it("requires server acknowledgement, preserves legacy responses, and permits retries", async () => {
+  it("purges legacy answers, requires server acknowledgement, and permits retries", async () => {
     apiMocks.getCandidateInvite.mockResolvedValue(
       candidateInvite({
         can_start_assessment: true,
@@ -306,9 +311,23 @@ describe("CandidateAssessment", () => {
     );
     const user = userEvent.setup();
     render(<CandidateAssessment token="signed-token" />);
+    for (let index = 0; index < 6; index++) {
+      await user.click(
+        await screen.findByRole("checkbox", {
+          name: "Prefer not to answer this block",
+        }),
+      );
+      await user.click(
+        screen.getByRole("button", {
+          name: index === 5 ? "Review answers" : "Continue",
+        }),
+      );
+    }
     expect(
-      await screen.findByRole("heading", { name: "Review your responses" }),
-    ).toBeInTheDocument();
+      window.localStorage.getItem(
+        `iopsych.candidate.v1.${INVITATION_ID}.completion`,
+      ),
+    ).toBeNull();
     await user.click(
       screen.getByRole("button", { name: "Submit my responses" }),
     );
@@ -322,7 +341,7 @@ describe("CandidateAssessment", () => {
       window.localStorage.getItem(
         `iopsych.candidate.v1.${INVITATION_ID}.completion`,
       ),
-    ).toBe(JSON.stringify(legacy));
+    ).toBeNull();
     await user.click(
       screen.getByRole("button", { name: "Submit my responses" }),
     );
@@ -353,7 +372,10 @@ describe("CandidateAssessment", () => {
     expect(screen.queryAllByRole("radio")).toHaveLength(0);
   });
 
-  it("blocks edits during submission and completes even when device receipt storage fails", async () => {
+  it("blocks edits during submission and completes when the storage getter throws", async () => {
+    vi.spyOn(window, "localStorage", "get").mockImplementation(() => {
+      throw new Error("Denied");
+    });
     apiMocks.getCandidateInvite.mockResolvedValue(
       candidateInvite({
         can_start_assessment: true,
@@ -371,7 +393,7 @@ describe("CandidateAssessment", () => {
       );
       await user.click(
         screen.getByRole("button", {
-          name: index === 5 ? "Review answers" : "Save and continue",
+          name: index === 5 ? "Review answers" : "Continue",
         }),
       );
     }
@@ -404,5 +426,93 @@ describe("CandidateAssessment", () => {
       }),
     ).toBeInTheDocument();
     expect(apiMocks.submitCandidateAssessment).toHaveBeenCalledTimes(1);
+  });
+  it("reports quota failure honestly and keeps save-exit on the current page", async () => {
+    apiMocks.getCandidateInvite.mockResolvedValue(
+      candidateInvite({ can_start_assessment: true, decision: "consent" }),
+    );
+    vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+      throw new Error("Quota");
+    });
+    const user = userEvent.setup();
+    render(<CandidateAssessment token="signed-token" />);
+    await user.click(
+      await screen.findByRole("checkbox", {
+        name: "Prefer not to answer this block",
+      }),
+    );
+    expect(
+      await screen.findByText(
+        "Not saved on this device. Keep this page open to finish.",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Saved on this device")).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Save and exit" }));
+    expect(
+      screen.getByText(/Could not save. Keep this page open/),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("heading", { name: "Assessment paused" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("removes a completed choice when edited to incomplete, including after reload", async () => {
+    apiMocks.getCandidateInvite.mockResolvedValue(
+      candidateInvite({ can_start_assessment: true, decision: "consent" }),
+    );
+    const user = userEvent.setup();
+    const first = render(<CandidateAssessment token="signed-token" />);
+    await screen.findByRole("checkbox");
+    const radios = screen.getAllByRole("radio");
+    await user.click(radios[0]!);
+    await user.click(radios[3]!);
+    expect(
+      window.localStorage.getItem(
+        `iopsych.candidate.v1.${INVITATION_ID}.draft`,
+      ),
+    ).not.toBeNull();
+    await user.click(radios[2]!);
+    expect(screen.getByText(/Partial block not saved/)).toBeInTheDocument();
+    expect(
+      window.localStorage.getItem(
+        `iopsych.candidate.v1.${INVITATION_ID}.draft`,
+      ),
+    ).toBeNull();
+    first.unmount();
+    render(<CandidateAssessment token="signed-token" />);
+    await screen.findByRole("checkbox");
+    expect(
+      screen
+        .getAllByRole("radio")
+        .every((radio) => !(radio as HTMLInputElement).checked),
+    ).toBe(true);
+  });
+
+  it("pauses after saving and clears device data without autosaving it again", async () => {
+    apiMocks.getCandidateInvite.mockResolvedValue(
+      candidateInvite({ can_start_assessment: true, decision: "consent" }),
+    );
+    const user = userEvent.setup();
+    render(<CandidateAssessment token="signed-token" />);
+    await user.click(await screen.findByRole("checkbox"));
+    await user.click(screen.getByRole("button", { name: "Save and exit" }));
+    expect(
+      screen.getByRole("heading", { name: "Assessment paused" }),
+    ).toBeInTheDocument();
+    expect(
+      window.localStorage.getItem(
+        `iopsych.candidate.v1.${INVITATION_ID}.draft`,
+      ),
+    ).not.toBeNull();
+    await user.click(screen.getByRole("button", { name: "Clear device data" }));
+    expect(
+      screen.getByText("Device data cleared. You can close this window."),
+    ).toBeInTheDocument();
+    expect(
+      window.localStorage.getItem(
+        `iopsych.candidate.v1.${INVITATION_ID}.draft`,
+      ),
+    ).toBeNull();
+    expect(screen.queryAllByRole("radio")).toHaveLength(0);
   });
 });

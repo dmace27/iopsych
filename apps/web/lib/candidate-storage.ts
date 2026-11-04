@@ -1,84 +1,136 @@
 import type { AssessmentResponseSet } from "@iopsych/shared";
+import { z } from "zod";
 
 import {
-  CandidateCompletionSchema,
   CandidateDraftSchema,
-  type CandidateCompletion,
   type CandidateDraft,
 } from "./candidate-contracts";
 
 const STORAGE_PREFIX = "iopsych.candidate.v1";
+// Device recovery limit, not a server retention policy. Cleanup occurs on access.
+export const DEVICE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
+const ReceiptSchema = z.strictObject({
+  assessment_id: z.uuid(),
+  submitted_at: z.string().datetime(),
+});
+export type DeviceReceipt = z.infer<typeof ReceiptSchema>;
+const key = (id: string, kind: string) => `${STORAGE_PREFIX}.${id}.${kind}`;
 
-function draftKey(invitationId: string): string {
-  return `${STORAGE_PREFIX}.${invitationId}.draft`;
-}
-
-function completionKey(invitationId: string): string {
-  return `${STORAGE_PREFIX}.${invitationId}.completion`;
-}
-
-/** Ignore malformed or obsolete browser state instead of blocking an invite. */
-export function loadCandidateDraft(
-  storage: Storage,
-  invitationId: string,
-): CandidateDraft | null {
+/** Access itself can throw in restricted browser contexts. */
+export function candidateStorage(): Storage | null {
   try {
-    const raw = storage.getItem(draftKey(invitationId));
-    if (raw === null) return null;
-    const parsed = CandidateDraftSchema.safeParse(JSON.parse(raw));
-    return parsed.success ? parsed.data : null;
+    return window.localStorage;
   } catch {
     return null;
   }
 }
 
-/** Persist only a shared-contract response snapshot, never a score. */
+function fresh(timestamp: string, expiresAt?: string): boolean {
+  const time = Date.parse(timestamp);
+  const now = Date.now();
+  return (
+    time <= now &&
+    now - time < DEVICE_MAX_AGE_MS &&
+    (expiresAt === undefined || now < Date.parse(expiresAt))
+  );
+}
+
+export function clearCandidateDevice(
+  storage: Storage | null,
+  id: string,
+): boolean {
+  if (!storage) return false;
+  let cleared = true;
+  for (const kind of ["draft", "completion"]) {
+    try {
+      storage.removeItem(key(id, kind));
+    } catch {
+      cleared = false;
+    }
+  }
+  return cleared;
+}
+
+export function loadCandidateDraft(
+  storage: Storage | null,
+  id: string,
+  expiresAt?: string,
+): CandidateDraft | null {
+  if (!storage) return null;
+  try {
+    const raw = storage.getItem(key(id, "draft"));
+    if (raw === null) return null;
+    const parsed = CandidateDraftSchema.safeParse(JSON.parse(raw));
+    if (parsed.success && fresh(parsed.data.saved_at, expiresAt))
+      return parsed.data;
+  } catch {
+    /* Invalid or inaccessible state must not block the invitation. */
+  }
+  try {
+    storage.removeItem(key(id, "draft"));
+  } catch {
+    /* Best effort. */
+  }
+  return null;
+}
+
 export function saveCandidateDraft(
-  storage: Storage,
-  invitationId: string,
+  storage: Storage | null,
+  id: string,
   responseSet: AssessmentResponseSet,
 ): CandidateDraft {
   const draft = CandidateDraftSchema.parse({
     response_set: responseSet,
     saved_at: new Date().toISOString(),
   });
-  storage.setItem(draftKey(invitationId), JSON.stringify(draft));
+  if (!storage) throw new Error("Device storage unavailable");
+  // Remove first: a failed replacement must not resurrect older complete choices.
+  storage.removeItem(key(id, "draft"));
+  if (responseSet.responses.length)
+    storage.setItem(key(id, "draft"), JSON.stringify(draft));
   return draft;
 }
 
-/** Replace draft state with a submitted response snapshot and score-free receipt. */
+/** Only an acknowledged server ID and timestamp are stored, never answers. */
 export function completeCandidateAssessment(
-  storage: Storage,
-  invitationId: string,
-  responseSet: AssessmentResponseSet,
+  storage: Storage | null,
+  id: string,
+  _responseSet: AssessmentResponseSet,
   assessmentId: string,
-): CandidateCompletion {
-  const skippedBlockCount = responseSet.responses.filter(
-    ({ skipped }) => skipped,
-  ).length;
-  const completion = CandidateCompletionSchema.parse({
+): DeviceReceipt {
+  const receipt = ReceiptSchema.parse({
     assessment_id: assessmentId,
-    answered_block_count: responseSet.responses.length - skippedBlockCount,
-    response_set: responseSet,
-    skipped_block_count: skippedBlockCount,
     submitted_at: new Date().toISOString(),
   });
-  storage.setItem(completionKey(invitationId), JSON.stringify(completion));
-  storage.removeItem(draftKey(invitationId));
-  return completion;
+  clearCandidateDevice(storage, id);
+  try {
+    storage?.setItem(key(id, "completion"), JSON.stringify(receipt));
+  } catch {
+    /* Server acknowledgement remains authoritative. */
+  }
+  return receipt;
 }
 
-/** Resume directly at completion after a reload on the same trusted device. */
+/** Purge old answer-bearing completions; receipts never authorize completion. */
 export function loadCandidateCompletion(
-  storage: Storage,
-  invitationId: string,
-): CandidateCompletion | null {
+  storage: Storage | null,
+  id: string,
+  expiresAt?: string,
+): DeviceReceipt | null {
+  if (!storage) return null;
   try {
-    const raw = storage.getItem(completionKey(invitationId));
+    const raw = storage.getItem(key(id, "completion"));
     if (raw === null) return null;
-    const parsed = CandidateCompletionSchema.safeParse(JSON.parse(raw));
-    return parsed.success ? parsed.data : null;
+    const parsed = ReceiptSchema.safeParse(JSON.parse(raw));
+    if (parsed.success && fresh(parsed.data.submitted_at, expiresAt))
+      return parsed.data;
   } catch {
-    return null;
+    /* Best effort cleanup below. */
   }
+  try {
+    storage.removeItem(key(id, "completion"));
+  } catch {
+    /* Best effort. */
+  }
+  return null;
 }

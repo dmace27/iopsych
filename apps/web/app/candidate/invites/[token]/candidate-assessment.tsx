@@ -16,11 +16,13 @@ import {
   submitCandidateAssessment,
 } from "../../../../lib/candidate-api";
 import type {
-  CandidateCompletion,
   CandidateInvite,
   ConsentDecision,
 } from "../../../../lib/candidate-contracts";
 import {
+  candidateStorage,
+  clearCandidateDevice,
+  type DeviceReceipt,
   completeCandidateAssessment,
   loadCandidateCompletion,
   loadCandidateDraft,
@@ -38,12 +40,13 @@ interface BlockChoice {
 }
 
 type Choices = Record<string, BlockChoice>;
-type View = "consent" | "assessment" | "review" | "declined" | "complete";
+type View =
+  "consent" | "assessment" | "review" | "declined" | "complete" | "paused";
 type LoadState =
   | { status: "loading" }
   | { message: string; status: "error" }
   | {
-      completion: CandidateCompletion | null;
+      completion: DeviceReceipt | null;
       invite: CandidateInvite;
       status: "ready";
       view: View;
@@ -138,7 +141,9 @@ export function CandidateAssessment({ token }: CandidateAssessmentProps) {
   const submissionPending = useRef(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [validationError, setValidationError] = useState<string | null>(null);
-  const [resumedDraft, setResumedDraft] = useState(false);
+  const [saveStatus, setSaveStatus] = useState("Not saved yet");
+  const [retry, setRetry] = useState(0);
+  const [deviceMessage, setDeviceMessage] = useState<string | null>(null);
   const headingRef = useRef<HTMLHeadingElement>(null);
   const firstMostRef = useRef<HTMLInputElement>(null);
 
@@ -149,7 +154,14 @@ export function CandidateAssessment({ token }: CandidateAssessmentProps) {
     void getCandidateInvite(token)
       .then((invite) => {
         if (!active) return;
+        const storage = candidateStorage();
+        loadCandidateCompletion(
+          storage,
+          invite.invitation_id,
+          invite.expires_at,
+        );
         if (invite.decision === "decline") {
+          clearCandidateDevice(storage, invite.invitation_id);
           setState({
             completion: null,
             invite,
@@ -160,6 +172,7 @@ export function CandidateAssessment({ token }: CandidateAssessmentProps) {
         }
         if (invite.can_start_assessment) {
           if (invite.assessment_id) {
+            clearCandidateDevice(storage, invite.invitation_id);
             setState({
               completion: null,
               invite,
@@ -168,20 +181,18 @@ export function CandidateAssessment({ token }: CandidateAssessmentProps) {
             });
             return;
           }
-          const completion = loadCandidateCompletion(
-            window.localStorage,
+          const draft = loadCandidateDraft(
+            storage,
             invite.invitation_id,
+            invite.expires_at,
           );
-          const draft =
-            loadCandidateDraft(window.localStorage, invite.invitation_id) ??
-            completion;
           if (
             draft?.response_set.assessment_definition_id === assessment.id &&
             draft.response_set.assessment_definition_version ===
               assessment.version
           ) {
             setChoices(choicesFromResponses(draft.response_set.responses));
-            setResumedDraft(true);
+            setSaveStatus("Saved on this device");
             const completedBlockIds = new Set(
               draft.response_set.responses.map(({ block_id }) => block_id),
             );
@@ -195,10 +206,10 @@ export function CandidateAssessment({ token }: CandidateAssessmentProps) {
             );
           }
           setState({
-            completion,
+            completion: null,
             invite,
             status: "ready",
-            view: completion ? "review" : "assessment",
+            view: "assessment",
           });
           return;
         }
@@ -217,29 +228,44 @@ export function CandidateAssessment({ token }: CandidateAssessmentProps) {
     return () => {
       active = false;
     };
-  }, [token]);
+  }, [token, retry]);
 
   const persistedInvitationId =
     state.status === "ready" &&
     state.invite.can_start_assessment &&
-    state.view !== "complete"
+    (state.view === "assessment" || state.view === "review")
       ? state.invite.invitation_id
       : null;
 
+  // This effect synchronizes with browser storage; status reflects the actual
+  // external write result, which cannot be derived from render state alone.
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
-    if (persistedInvitationId === null || responseSet.responses.length === 0) {
+    if (persistedInvitationId === null) {
       return;
     }
     try {
       saveCandidateDraft(
-        window.localStorage,
+        candidateStorage(),
         persistedInvitationId,
         responseSet,
       );
+      setSaveStatus(
+        Object.values(choices).some(
+          (choice) =>
+            !choice.skipped &&
+            !(choice.mostLikeItemId && choice.leastLikeItemId),
+        )
+          ? "Partial block not saved; complete both choices before leaving."
+          : responseSet.responses.length
+            ? "Saved on this device"
+            : "Not saved yet",
+      );
     } catch {
-      // Device storage may be disabled; responses can still be submitted to the server.
+      setSaveStatus("Not saved on this device. Keep this page open to finish.");
     }
-  }, [persistedInvitationId, responseSet]);
+  }, [persistedInvitationId, responseSet, choices]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const currentView = state.status === "ready" ? state.view : null;
   useEffect(() => {
@@ -268,6 +294,7 @@ export function CandidateAssessment({ token }: CandidateAssessmentProps) {
     kind: "most" | "least" | "skip",
     itemId?: string,
   ) {
+    setSaveStatus("Saving…");
     setValidationError(null);
     setChoices((current) => {
       const existing = current[blockId] ?? { skipped: false };
@@ -338,10 +365,10 @@ export function CandidateAssessment({ token }: CandidateAssessmentProps) {
     setValidationError(null);
     try {
       const receipt = await submitCandidateAssessment(token, responseSet);
-      let completion: CandidateCompletion | null = null;
+      let completion: DeviceReceipt | null = null;
       try {
         completion = completeCandidateAssessment(
-          window.localStorage,
+          candidateStorage(),
           state.invite.invitation_id,
           responseSet,
           receipt.assessment_id,
@@ -393,6 +420,20 @@ export function CandidateAssessment({ token }: CandidateAssessmentProps) {
           <p className="mt-4 leading-7 text-slate-700" role="alert">
             {state.message}
           </p>
+          <p>
+            Check your connection or ask the person who invited you for a new
+            link. Saved device data cannot reopen an expired or revoked
+            invitation.
+          </p>
+          <button
+            type="button"
+            onClick={() => {
+              setState({ status: "loading" });
+              setRetry((value) => value + 1);
+            }}
+          >
+            Try again
+          </button>
         </section>
       </main>
     );
@@ -415,6 +456,82 @@ export function CandidateAssessment({ token }: CandidateAssessmentProps) {
     invite.consent_notice.accommodation_contact_email +
     "?subject=" +
     encodeURIComponent("Assessment accommodation request");
+
+  const deviceControls = (
+    <aside className="mt-6 space-y-3 text-sm text-slate-700">
+      <p>
+        Resume uses this browser only, for up to 24 hours after saving and
+        before the invitation expires. Only completed blocks are saved. On a
+        shared device, clear your device data before leaving. This does not
+        delete submitted responses. Offline device data is removed only when
+        this page accesses it or you clear browser data.
+      </p>
+      <p role="status">{deviceMessage}</p>
+      <button
+        type="button"
+        disabled={submittingAssessment}
+        onClick={() => {
+          const cleared = clearCandidateDevice(
+            candidateStorage(),
+            invite.invitation_id,
+          );
+          setChoices({});
+          setState({
+            ...state,
+            view: state.view === "complete" ? "complete" : "paused",
+          });
+          setDeviceMessage(
+            cleared
+              ? "Device data cleared. You can close this window."
+              : "Could not clear device storage. Clear this site's data in browser settings before leaving a shared device.",
+          );
+        }}
+      >
+        Clear device data
+      </button>
+      {(view === "assessment" || view === "review") && (
+        <button
+          type="button"
+          disabled={submittingAssessment}
+          onClick={() => {
+            try {
+              saveCandidateDraft(
+                candidateStorage(),
+                invite.invitation_id,
+                responseSet,
+              );
+              setDeviceMessage(
+                "Completed blocks saved. Partial block choices are not saved. You can close this window and reopen your invitation on this browser.",
+              );
+              setState({ ...state, view: "paused" });
+            } catch {
+              setDeviceMessage(
+                "Could not save. Keep this page open to finish, or clear device data before leaving.",
+              );
+            }
+          }}
+        >
+          Save and exit
+        </button>
+      )}
+    </aside>
+  );
+
+  if (view === "paused")
+    return (
+      <CandidateFrame invite={invite} privacyHref={privacyHref}>
+        <h1 ref={headingRef} tabIndex={-1}>
+          Assessment paused
+        </h1>
+        {deviceControls}
+        <button
+          type="button"
+          onClick={() => setState({ ...state, view: "assessment" })}
+        >
+          Continue assessment
+        </button>
+      </CandidateFrame>
+    );
 
   if (view === "declined") {
     return (
@@ -483,6 +600,7 @@ export function CandidateAssessment({ token }: CandidateAssessmentProps) {
             .
           </p>
         </section>
+        {deviceControls}
       </CandidateFrame>
     );
   }
@@ -652,6 +770,7 @@ export function CandidateAssessment({ token }: CandidateAssessmentProps) {
             </button>
           </div>
         </section>
+        {deviceControls}
       </CandidateFrame>
     );
   }
@@ -668,11 +787,7 @@ export function CandidateAssessment({ token }: CandidateAssessmentProps) {
           <span>
             Block {currentBlockIndex + 1} of {assessment.blocks.length}
           </span>
-          <span>
-            {resumedDraft || responseSet.responses.length > 0
-              ? "Saved on this device"
-              : "Not saved yet"}
-          </span>
+          <span>{saveStatus}</span>
         </div>
         <div
           aria-hidden="true"
@@ -785,10 +900,11 @@ export function CandidateAssessment({ token }: CandidateAssessmentProps) {
           >
             {currentBlockIndex === assessment.blocks.length - 1
               ? "Review answers"
-              : "Save and continue"}
+              : "Continue"}
           </button>
         </div>
       </section>
+      {deviceControls}
     </CandidateFrame>
   );
 }
