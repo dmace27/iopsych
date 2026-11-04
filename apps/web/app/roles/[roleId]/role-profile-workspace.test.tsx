@@ -186,4 +186,30 @@ describe("RoleProfileWorkspace", () => {
       screen.queryByRole("button", { name: "Approve version 1" }),
     ).not.toBeInTheDocument();
   });
+  it("preserves invitation navigation and hides all writes for an archived role without profiles", async () => {
+    apiMocks.getCurrentUser.mockResolvedValue({
+      ...manager(),
+      role: "recruiter",
+    });
+    apiMocks.getRole.mockResolvedValue(role("archived"));
+    apiMocks.getRoleProfiles.mockResolvedValue([]);
+    render(<RoleProfileWorkspace roleId={IDS.role} />);
+    expect(
+      await screen.findByText("This archived role is read-only."),
+    ).toBeVisible();
+    expect(
+      screen.getByRole("link", { name: "Manage invitations" }),
+    ).toHaveAttribute("href", `/roles/${IDS.role}/invites`);
+    expect(
+      screen.queryByRole("button", { name: "Edit role details" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", {
+        name: "Extract profile from job description",
+      }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Create draft profile" }),
+    ).not.toBeInTheDocument();
+  });
 });

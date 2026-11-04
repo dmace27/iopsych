@@ -33,6 +33,7 @@ import {
   sortProfiles,
 } from "../../../lib/role-ui";
 import { canManageInvitations } from "../../../lib/invitation-contracts";
+import { RoleMaintenance } from "./role-maintenance";
 import { StatusBadge } from "../../ui/status-badge";
 import {
   EmptyState,
@@ -287,6 +288,16 @@ export function RoleProfileWorkspace({ roleId }: { roleId: string }) {
           </p>
         </details>
       </header>
+      <RoleMaintenance
+        role={state.role}
+        userRole={state.user.role}
+        onChanged={(role) => {
+          setState((current) =>
+            current.status === "ready" ? { ...current, role } : current,
+          );
+          if (role.status === "archived") setStartingReplacement(false);
+        }}
+      />
 
       <div className="mt-8 grid gap-8 xl:grid-cols-[16rem_minmax(0,1fr)]">
         <aside aria-labelledby="version-history-title">
@@ -362,7 +373,9 @@ export function RoleProfileWorkspace({ roleId }: { roleId: string }) {
             />
           ) : null}
 
-          {!selectedProfile && canCreateProfiles(state.user.role) ? (
+          {!selectedProfile &&
+          canCreateProfiles(state.user.role) &&
+          state.role.status !== "archived" ? (
             <div className="space-y-6">
               <section
                 aria-labelledby="extraction-title"
