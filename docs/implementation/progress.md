@@ -18,6 +18,37 @@ All five active worker sessions were observed Fast, then switched once using sup
 
 ## Current scheduling and critical path
 
+### Current override: 23:35 UTC — remote integrated, Standard-only verification
+
+Reviewed remote `646201a` is now integrated by merge `5cde2e7`, including Auth0,
+separate Resend outbox, direct matching v2 with frozen v1 readers, notice0011 and
+provider0012. Independent review found a provider downgrade race/evidence-loss
+blocker; `cdeb0b1` locks both provider tables and refuses any retained evidence,
+and adds mixed-version trace rejection. Five focused provider PostgreSQL checks
+and 41 trace/report checks passed in the owner checkout; final aggregate remains
+pending. All five visual lanes are integrated; independent review receipts
+`6681f27`/`a4b3492` record 72 actual synthetic desktop/mobile renders plus keyboard
+checks, not hosted or manual screen-reader acceptance.
+
+Current active owners: browser/API journey `ctx_9aa9ececde11` (3116 stack),
+provider delivery/reissue UI `ctx_a87017e88a06` (3167), frozen API coverage and
+six opt-in checks `ctx_dccab8fb8843` (5573/5586, Mailpit1139/8139), isolated
+remote-lineage bridge rehearsal `ctx_a9154ab3aa58` (5619), and clean packaging
+`ctx_038eec32c496`. All five live screens verify STANDARD/default, with no pending
+conversion. Completed owners are released rather than restarted. New worktrees
+inherit the persisted Standard default and are individually verified.
+
+Reconciliation build passed; its 1163 passing API assertions still had six skips
+and failed the 100% gate at 99.72%, with source-shift caveats. No green aggregate
+claim. Coordinator independently ran 90 notice/privacy/CLI tests, then 68 CLI
+tests after adding entrypoint/SMTP rejection coverage (`0792224`), and verified
+saved setup after dependency reconciliation. Current critical path is frozen
+coverage/browser → provider UI handoff → final combined checks/images. Remote
+populated lineage bridge is isolated engineering only; no deployed database
+history or operational migration approval is assumed. Original 23:51–00:06
+target and protected final verification window remain; unresolved release,
+product/privacy/scientific and real-provider gates remain explicit.
+
 ### Current override: 23:23 UTC — remote reconciliation and UI
 
 User replaces the two-hour target with30–45 minutes from23:21UTC (23:51–00:06); protect the final10–15 minutes for integrated regression/build, actual browser/migration checks and fixes. Schedule edit `b77567c` retains all21 package mappings and original gates. `git fetch origin codex/fix-security-dependencies` verified remote `646201a`; its full UI brief is imported in `d99c377`. No blind pull or main change. Earlier Clerk/SES recommendations and “provider undecided” entries below are superseded: adopt the branch’s Auth0 and Resend implementations. Its November3 repository-owner direct-structure v2 decision is product evidence, not independent scientific or real-pilot approval. Credentials, verified domains, actual hosted identity/mail and remaining product/privacy decisions are separate gates.
