@@ -68,20 +68,18 @@ it.each([401, 403, 404, 422, 429, 500])(
   async (status) => {
     vi.stubGlobal(
       "fetch",
-      vi
-        .fn()
-        .mockResolvedValue(
-          Response.json(
-            {
-              type: "about:blank",
-              title: "secret",
-              detail: "https://secret/token",
-              status,
-              code: "invalid_invitation_cursor",
-            },
-            { status },
-          ),
+      vi.fn().mockResolvedValue(
+        Response.json(
+          {
+            type: "about:blank",
+            title: "secret",
+            detail: "https://secret/token",
+            status,
+            code: "invalid_invitation_cursor",
+          },
+          { status },
         ),
+      ),
     );
     await expect(getInvitations("role")).rejects.toMatchObject({
       status,
