@@ -16,11 +16,11 @@ All three child worktrees started at committed integration revision `a8de73c`. B
 
 | Package/task | Branch | Task / active dispatch | Ownership | Ports / DB | State / evidence |
 | --- | --- | --- | --- | --- | --- |
-| 6A | `iopsych-6a-setup` | `task_51aea6c0d21e` / `ctx_5ded07118e01` | Setup/startup, local synthetic login, focused tests, README, 6A report | 3101 / 8101 / `iopsych_6a` | Running; turn_started observed; setup hook exit 0 |
-| 6B preparation | `iopsych-6b-decisions` | `task_3b6a7f8f3efd` / `ctx_1babfcadade6` | `6b-decisions.md`, `6b-report.md` only | 3102 / 8102 / `iopsych_6b` reserved | Running; turn_started observed; approvals pending |
-| 12A/12B audit | `iopsych-12ab-audit` | `task_7d18dbac142d` / `ctx_a4ea32dc2ba5` | Read-only code/test audit; `12ab-audit.md` report only | 3103 / 8103 / `iopsych_audit` reserved | Running; turn_started observed |
+| 6A | `iopsych-6a-setup` | `task_51aea6c0d21e` / `ctx_454cacc97083` | Setup/startup, local synthetic login, focused tests, README, 6A report | 3101 / 8101 / `iopsych_6a`, DB port 5541 | Running; actual agent commands observed; setup hook exit 0 |
+| 6B preparation | `iopsych-6b-decisions` | `task_3b6a7f8f3efd` / `ctx_d7fff07517b3` | `6b-decisions.md`, `6b-report.md` only | 3102 / 8102 / `iopsych_6b` reserved | Running; turn_started observed; approvals pending |
+| 12A/12B audit | `iopsych-12ab-audit` | `task_7d18dbac142d` / `ctx_03a733782cc2` | Read-only code/test audit; `12ab-audit.md` report only | 3103 / 8103 / `iopsych_audit` reserved | Running; actual code/test inspection observed |
 
-Initial dispatches `ctx_8f1ba11ba1d4`, `ctx_30f32ea5ece7`, `ctx_c6e202ebf48d` failed before task delivery because of Codex's update prompt. Selected “Skip until next version” and retried the same tasks in the same terminals using supported `--retry-of`; no duplicate editors. Original launch receipts confirm requested/effective `gpt-6`; reused terminals retain that model. Saved setup: `npm ci && PYTHON_BIN=python3.12 npm run api:install`.
+Initial dispatches `ctx_8f1ba11ba1d4`, `ctx_30f32ea5ece7`, `ctx_c6e202ebf48d` failed before task delivery because of Codex's update prompt. Selected “Skip until next version” and retried the same tasks in the same terminals using supported `--retry-of`; no duplicate editors. Those retry turns started but the provider rejected the literal `gpt-6` model for the ChatGPT account. All three were explicitly stopped after inspecting the terminal error. The worker model menu lists GPT-6-Astra as available/default; subsequent starts use `gpt-6-astra`, with actual agent tool execution observed. Audit retry `ctx_e879905cb46c` failed before delivery with `terminal_handle_stale`, then its owned terminal was released through Orca and the same task retried. No task implementation occurred in rejected-model turns. Saved setup: `npm ci && PYTHON_BIN=python3.12 npm run api:install`.
 
 ## Package ledger
 
@@ -53,3 +53,8 @@ Pending means no acceptance claimed. A prepared decision or scaffold never close
 ## Integration evidence
 
 No implementation commits integrated yet. Existing historical test counts are baseline context only, not current acceptance. Read worker reports, review diffs, independently verify relevant checks, integrate on this branch, then update this ledger and dispatch eligible packages.
+
+## Shared contract decisions
+
+- 6A additive local contract approved by coordinator in `msg_3e7b0f122730`: fixed synthetic identity selector at `POST /v1/auth/local-login`, short-lived credential exchanged server-side by `POST /api/session/local` into the existing HttpOnly cookie. Default disabled, explicit development policy, loopback peer/host/configured origins, same-origin mutation checks and exact seeded identity/tenant checks required. No provider/scientific decision, migration or shared-package schema change authorized by this approval.
+- Docker is available (server 29.8.0); existing `iopsych-postgres-1` on 5432 stays intact. 6A has a separate Compose project/database port 5541 allocation.
