@@ -18,6 +18,8 @@ import {
 import { formatDate } from "../../../../lib/role-ui";
 import { EmptyState, LoadingState } from "../../../ui/workspace-states";
 
+import { InvitationIssueForm } from "./invitation-issue-form";
+
 const labels: Record<Invitation["status"], string> = {
   pending_delivery: "Pending delivery",
   active: "Active",
@@ -55,10 +57,12 @@ export function InvitationWorkspace({ roleId }: { roleId: string }) {
 }
 function Invitations({ roleId }: { roleId: string }) {
   const [title, setTitle] = useState("");
+  const [archived, setArchived] = useState(false);
   const [items, setItems] = useState<Invitation[]>([]);
   const [cursor, setCursor] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [issuing, setIssuing] = useState(false);
   const [error, setError] = useState<Failure | null>(null);
   const [attempt, setAttempt] = useState(0);
   const [announcement, setAnnouncement] = useState("");
@@ -96,6 +100,7 @@ function Invitations({ roleId }: { roleId: string }) {
       ]);
       if (ref.current !== version) return;
       setTitle(role.title);
+      setArchived(role.status === "archived");
       setItems(list.items);
       setCursor(list.next_cursor);
       setReady(true);
@@ -221,7 +226,7 @@ function Invitations({ roleId }: { roleId: string }) {
           {!denied ? (
             <button
               className={button}
-              disabled={busy}
+              disabled={busy || issuing}
               onClick={() =>
                 error.restart || !ready ? restart() : retry.current()
               }
@@ -231,9 +236,32 @@ function Invitations({ roleId }: { roleId: string }) {
           ) : null}
         </div>
       ) : null}
+      {title && !denied ? (
+        archived ? (
+          <p>Archived roles cannot issue invitations.</p>
+        ) : (
+          <InvitationIssueForm
+            roleId={roleId}
+            disabled={busy}
+            onBusyChange={setIssuing}
+            onIssued={() => {
+              const refresh = () => {
+                setError(null);
+                setAttempt((value) => value + 1);
+              };
+              retry.current = refresh;
+              refresh();
+            }}
+          />
+        )
+      ) : null}
       {ready && !denied ? (
         <>
-          <button className={button} disabled={busy} onClick={restart}>
+          <button
+            className={button}
+            disabled={busy || issuing}
+            onClick={restart}
+          >
             Refresh invitation history
           </button>
           {items.length === 0 ? (
@@ -277,7 +305,7 @@ function Invitations({ roleId }: { roleId: string }) {
                   {item.status !== "revoked" ? (
                     <button
                       className={button}
-                      disabled={busy}
+                      disabled={busy || issuing}
                       aria-label={`Revoke invitation for ${item.email}`}
                       onClick={() => void act(item)}
                     >
@@ -291,7 +319,7 @@ function Invitations({ roleId }: { roleId: string }) {
           {cursor && !error?.restart ? (
             <button
               className={button}
-              disabled={busy}
+              disabled={busy || issuing}
               onClick={() => void act()}
             >
               Load more invitations
