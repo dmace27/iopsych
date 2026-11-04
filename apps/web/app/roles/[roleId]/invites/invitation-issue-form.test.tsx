@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import "@testing-library/jest-dom/vitest";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { ApiClientError } from "../../../../lib/api-client";
@@ -71,7 +71,14 @@ it("locks duplicate clicks, retains key on uncertain retry, resets on explicit n
     screen.getByRole("button", { name: "Confirm and issue invitation" }),
   );
   expect(api.issue).toHaveBeenCalledOnce();
-  reject(new Error("private"));
+  reject(new ApiClientError("private", { status: 0, code: "network_error" }));
+  expect(await screen.findByRole("alert")).toHaveTextContent(
+    "Retrying keeps the same request key",
+  );
+  expect(
+    screen.getByRole("button", { name: "Start new invitation" }),
+  ).toBeEnabled();
+  expect(api.issue).toHaveBeenCalledOnce();
   await user.click(
     await screen.findByRole("button", { name: "Confirm and retry invitation" }),
   );
@@ -88,6 +95,39 @@ it("locks duplicate clicks, retains key on uncertain retry, resets on explicit n
     screen.getByRole("button", { name: "Confirm and issue invitation" }),
   );
   expect(api.issue.mock.calls[2][2]).not.toBe(api.issue.mock.calls[0][2]);
+});
+it("offers a new request before success after cancellation without automatically resending", async () => {
+  api.issue.mockRejectedValueOnce(new DOMException("Cancelled", "AbortError"));
+  const busy = vi.fn();
+  render(
+    <InvitationIssueForm
+      roleId="role"
+      onIssued={vi.fn()}
+      onBusyChange={busy}
+    />,
+  );
+  const user = await preview();
+  await user.click(
+    screen.getByRole("button", { name: "Confirm and issue invitation" }),
+  );
+  expect(await screen.findByRole("alert")).toHaveTextContent(
+    /revoke any unresolved invitation first/i,
+  );
+  expect(busy.mock.calls).toEqual([[true], [false]]);
+  await user.click(
+    screen.getByRole("button", { name: "Start new invitation" }),
+  );
+  expect(api.issue).toHaveBeenCalledOnce();
+  await user.type(
+    screen.getByLabelText("Recipient email"),
+    "synthetic@example.invalid",
+  );
+  await user.click(screen.getByRole("button", { name: "Review invitation" }));
+  expect(api.issue).toHaveBeenCalledOnce();
+  await user.click(
+    screen.getByRole("button", { name: "Confirm and issue invitation" }),
+  );
+  expect(api.issue.mock.calls[1][2]).not.toBe(api.issue.mock.calls[0][2]);
 });
 it("invalidates preview and key on payload change and validates expiry", async () => {
   api.issue.mockRejectedValueOnce(new Error("private"));
@@ -147,23 +187,72 @@ it("offers safe profile loading retry and handles no approved versions", async (
     await screen.findByText("No approved profile versions are available."),
   ).toBeVisible();
 });
-it("ignores completion after unmount", async () => {
-  let finish!: (value: unknown) => void;
-  api.issue.mockImplementation(
-    () =>
-      new Promise((resolve) => {
-        finish = resolve;
-      }),
-  );
-  const refreshed = vi.fn();
-  const view = render(
-    <InvitationIssueForm roleId="role" onIssued={refreshed} />,
-  );
-  const user = await preview();
-  await user.click(
-    screen.getByRole("button", { name: "Confirm and issue invitation" }),
-  );
-  view.unmount();
-  finish({ status: "active" });
-  await waitFor(() => expect(refreshed).not.toHaveBeenCalled());
-});
+it.each(["resolve", "cancel"])(
+  "releases busy state on unmount before late %s",
+  async (outcome) => {
+    let finish!: (value: unknown) => void;
+    let cancel!: (reason: unknown) => void;
+    api.issue.mockImplementation(
+      () =>
+        new Promise((resolve, reject) => {
+          finish = resolve;
+          cancel = reject;
+        }),
+    );
+    const refreshed = vi.fn();
+    const busy = vi.fn();
+    const view = render(
+      <InvitationIssueForm
+        roleId="role"
+        onIssued={refreshed}
+        onBusyChange={busy}
+      />,
+    );
+    const user = await preview();
+    await user.click(
+      screen.getByRole("button", { name: "Confirm and issue invitation" }),
+    );
+    view.unmount();
+    expect(busy.mock.calls).toEqual([[true], [false]]);
+    await act(async () => {
+      if (outcome === "resolve") finish({ status: "active" });
+      else cancel(new DOMException("Cancelled", "AbortError"));
+    });
+    expect(busy.mock.calls).toEqual([[true], [false]]);
+    await waitFor(() => expect(refreshed).not.toHaveBeenCalled());
+  },
+);
+it.each(["invitation_reissue_required", "idempotency_conflict"])(
+  "requires a deliberate new request after %s",
+  async (code) => {
+    api.issue.mockRejectedValueOnce(
+      new ApiClientError("private-token", { status: 409, code }),
+    );
+    render(<InvitationIssueForm roleId="role" onIssued={vi.fn()} />);
+    const user = await preview();
+    await user.click(
+      screen.getByRole("button", { name: "Confirm and issue invitation" }),
+    );
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      /revoke any unresolved invitation first/i,
+    );
+    expect(screen.getByRole("alert")).not.toHaveTextContent("private-token");
+    expect(screen.getByRole("button", { name: /Confirm and/ })).toBeDisabled();
+    expect(screen.getByLabelText("Recipient email")).toBeDisabled();
+    expect(api.issue).toHaveBeenCalledOnce();
+    await user.click(
+      screen.getByRole("button", { name: "Start new invitation" }),
+    );
+    expect(api.issue).toHaveBeenCalledOnce();
+    await user.type(
+      screen.getByLabelText("Recipient email"),
+      "synthetic@example.invalid",
+    );
+    await user.click(screen.getByRole("button", { name: "Review invitation" }));
+    expect(api.issue).toHaveBeenCalledOnce();
+    await user.click(
+      screen.getByRole("button", { name: "Confirm and issue invitation" }),
+    );
+    expect(api.issue.mock.calls[1][2]).not.toBe(api.issue.mock.calls[0][2]);
+  },
+);

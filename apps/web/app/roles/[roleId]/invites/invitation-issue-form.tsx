@@ -28,6 +28,7 @@ export function InvitationIssueForm({
   const [preview, setPreview] = useState(false);
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
+  const [needsNewRequest, setNeedsNewRequest] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [denied, setDenied] = useState(false);
@@ -36,6 +37,7 @@ export function InvitationIssueForm({
   const lock = useRef(false);
   const requestKey = useRef<string | null>(null);
   const alive = useRef(false);
+  const releaseBusy = useRef<(() => void) | null>(null);
   useEffect(() => {
     alive.current = true;
     let current = true;
@@ -50,28 +52,39 @@ export function InvitationIssueForm({
     return () => {
       current = false;
       alive.current = false;
+      releaseBusy.current?.();
     };
   }, [roleId, attempt]);
   function showError(reason: unknown) {
     const status = reason instanceof ApiClientError ? reason.status : 0;
+    const terminal =
+      reason instanceof ApiClientError &&
+      status === 409 &&
+      ["invitation_reissue_required", "idempotency_conflict"].includes(
+        reason.code,
+      );
+    setNeedsNewRequest(terminal);
     setDenied([401, 403, 404].includes(status));
     setUnauthorized(status === 401);
     setError(
-      status === 401
-        ? "Your session has expired. Sign in again."
-        : status === 403 || status === 404
-          ? "Invitation issuance is unavailable for this role or account."
-          : status === 409 || status === 422
-            ? "The server rejected this request. Check the approved profile, role availability, and expiry policy."
-            : status === 429
-              ? "Too many requests. Wait before retrying."
-              : "The invitation outcome may be unknown. Check invitation history before retrying. Retrying keeps the same request key; delivery is not guaranteed.",
+      terminal
+        ? "This request key cannot be retried. Check invitation history and revoke any unresolved invitation first, then start a new invitation and review it before confirming."
+        : status === 401
+          ? "Your session has expired. Sign in again."
+          : status === 403 || status === 404
+            ? "Invitation issuance is unavailable for this role or account."
+            : status === 409 || status === 422
+              ? "The server rejected this request. Check the approved profile, role availability, and expiry policy."
+              : status === 429
+                ? "Too many requests. Wait before retrying."
+                : "The invitation outcome may be unknown. Check invitation history before retrying. Retrying keeps the same request key; delivery is not guaranteed. Before starting a new invitation, revoke any unresolved invitation first.",
     );
   }
   function edit() {
     requestKey.current = null;
     setPreview(false);
     setDone(false);
+    setNeedsNewRequest(false);
     setError("");
     setMessage("");
   }
@@ -86,6 +99,7 @@ export function InvitationIssueForm({
       disabled ||
       lock.current ||
       done ||
+      needsNewRequest ||
       denied ||
       !preview ||
       !parsed.success ||
@@ -94,6 +108,13 @@ export function InvitationIssueForm({
       return;
     lock.current = true;
     setBusy(true);
+    let released = false;
+    const release = () => {
+      if (released) return;
+      released = true;
+      onBusyChange?.(false);
+    };
+    releaseBusy.current = release;
     onBusyChange?.(true);
     setError("");
     try {
@@ -113,9 +134,9 @@ export function InvitationIssueForm({
       if (alive.current) showError(reason);
     } finally {
       lock.current = false;
+      release();
       if (alive.current) {
         setBusy(false);
-        onBusyChange?.(false);
       }
     }
   }
@@ -167,7 +188,10 @@ export function InvitationIssueForm({
             }
           }}
         >
-          <fieldset disabled={disabled || busy || done} className="space-y-4">
+          <fieldset
+            disabled={disabled || busy || done || needsNewRequest}
+            className="space-y-4"
+          >
             <label className="block">
               Recipient email
               <input
@@ -241,7 +265,7 @@ export function InvitationIssueForm({
               <button
                 type="button"
                 className={button}
-                disabled={disabled || busy || done}
+                disabled={disabled || busy || done || needsNewRequest}
                 onClick={() => void confirm()}
               >
                 {busy
@@ -257,9 +281,10 @@ export function InvitationIssueForm({
       <p role="status" aria-live="polite">
         {message}
       </p>
-      {done ? (
+      {done || (error && preview && !denied) ? (
         <button
           className={button}
+          disabled={disabled || busy}
           onClick={() => {
             edit();
             setEmail("");

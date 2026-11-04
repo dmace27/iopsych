@@ -33,11 +33,21 @@ export async function issueInvitation(
     );
   }
   const payload: unknown = await response.json().catch(() => null);
-  if (!response.ok)
+  if (!response.ok) {
+    const code =
+      response.status === 409 &&
+      payload !== null &&
+      typeof payload === "object" &&
+      "code" in payload &&
+      (payload.code === "invitation_reissue_required" ||
+        payload.code === "idempotency_conflict")
+        ? payload.code
+        : "invitation_issuance_failed";
     throw new ApiClientError("The invitation request could not be completed.", {
       status: response.status,
-      code: "invitation_issuance_failed",
+      code,
     });
+  }
   const parsed = InvitationSchema.safeParse(payload);
   if (response.status !== 201 || !parsed.success)
     throw new ApiClientError(

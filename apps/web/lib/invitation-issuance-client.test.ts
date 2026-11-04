@@ -15,6 +15,41 @@ const invite = {
   revoked_at: null,
 };
 afterEach(() => vi.unstubAllGlobals());
+it.each(["invitation_reissue_required", "idempotency_conflict"])(
+  "preserves safe recovery code %s without upstream details",
+  async (code) => {
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockResolvedValue(
+          Response.json(
+            { code, detail: "private-token", errors: [{ message: "private" }] },
+            { status: 409 },
+          ),
+        ),
+    );
+    await expect(issueInvitation("role", input, "key")).rejects.toMatchObject({
+      code,
+      status: 409,
+      message: "The invitation request could not be completed.",
+      fieldErrors: [],
+    });
+  },
+);
+it("does not expose arbitrary upstream codes", async () => {
+  vi.stubGlobal(
+    "fetch",
+    vi
+      .fn()
+      .mockResolvedValue(
+        Response.json({ code: "private-token" }, { status: 409 }),
+      ),
+  );
+  await expect(issueInvitation("role", input, "key")).rejects.toMatchObject({
+    code: "invitation_issuance_failed",
+  });
+});
 it.each(["pending_delivery", "active"])(
   "posts strict payload and exact request key, accepting %s",
   async (status) => {
