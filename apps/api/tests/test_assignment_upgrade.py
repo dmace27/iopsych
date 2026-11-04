@@ -10,13 +10,13 @@ from typing import Any
 from uuid import uuid4
 
 import pytest
+from alembic import command
 from sqlalchemy import MetaData, create_engine, select, text
 from sqlalchemy.engine import URL, make_url
 from sqlalchemy.exc import ArgumentError, DBAPIError
 from sqlalchemy.orm import Session
 from sqlalchemy.schema import CreateSchema, DropSchema
 
-from alembic import command
 from app.assignments.registry import (
     definition_response,
     legacy_definition,

@@ -9,6 +9,7 @@ from time import monotonic
 from unittest.mock import patch
 
 import pytest
+from alembic import command
 from alembic.config import Config
 from fastapi.testclient import TestClient
 from pydantic import ValidationError
@@ -16,7 +17,6 @@ from sqlalchemy import Engine, text
 from sqlalchemy.engine import make_url
 from sqlalchemy.exc import OperationalError, TimeoutError
 
-from alembic import command
 from app.database.config import API_ROOT, DatabaseSettings
 from app.database.session import create_database_engine, create_session_factory
 from app.main import create_app

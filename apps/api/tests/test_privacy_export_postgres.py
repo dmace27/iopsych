@@ -9,13 +9,13 @@ from time import monotonic, sleep
 from uuid import UUID, uuid4
 
 import pytest
+from alembic import command
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, select, text
 from sqlalchemy.engine import make_url
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.schema import CreateSchema, DropSchema
 
-from alembic import command
 from app.auth.config import AuthenticationSettings
 from app.auth.context import AuthorizationContext, OrganizationScope
 from app.auth.errors import AccessProblemError
