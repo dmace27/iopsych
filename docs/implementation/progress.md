@@ -51,30 +51,32 @@ Pending means no acceptance claimed. A prepared decision or scaffold never close
 | Package | Dependencies | Owner / status | Acceptance evidence required | Branch / commit / blockers |
 | --- | --- | --- | --- | --- |
 | 6A setup | Existing foundation | Worker 6A; running | Fresh setup, PostgreSQL migration/seed/tenant verification, actual launcher regression, synthetic login | First-wave branch; commit pending |
-| 6B decisions | None | Worker 6B prepares; user/product/I-O decide | Every decision has owner, four structure examples, approved choices and spec reconciliation | First-wave branch; decisions pending |
-| 6C historical versions | 6B | Unassigned; gated | Populated upgrades preserve invites/drafts/submissions/v1 reports; assignment policy | Decision gate; no commit |
+| 6B decisions | None | Preparation reviewed/integrated; user/product/I-O decide | Every decision has owner, four structure examples, approved choices and spec reconciliation | Worker `298ce31` → integration `4638236`; actual decisions pending |
+| 6C historical versions | 6B for full acceptance | Backend compatibility preparation running | Populated upgrades preserve invites/drafts/submissions/v1 reports; assignment policy | `iopsych-6c-versions`; contract agreement required before shared edits |
 | 7A provider/session | 6A, identity choice | Unassigned; gated | Separate identities, callback/claims/expiry/sign-out/redirect negatives | Provider decision/configuration |
 | 7B provisioning | 7A, membership choice | Unassigned; gated | Audited grant/change/revoke, deactivation and tenant tests | Dependencies |
 | 7C manager workflow | 6B, 7A | Unassigned; gated | Browser handoff/edit/reject/approve, immutable versions, archive permissions | Decisions/dependencies |
 | 8A delivery lifecycle | 6C, delivery choice | Unassigned; gated | Local captured delivery, idempotency, uncertainty/commit recovery, secure credentials | Delivery decision; external staging later |
 | 8B invitation UI | 8A, 7C | Unassigned; gated | Browser approval-to-invitation, status/permission/error coverage | Dependencies |
-| 9A device recovery | 6C | Unassigned; gated | Denied/quota storage, truthful saving, incomplete edits, expiry, minimal receipts | Historical assignment contract |
+| 9A device recovery | 6C for full acceptance | Interface-preserving slice running | Denied/quota storage, truthful saving, incomplete edits, expiry, minimal receipts | `iopsych-9a-storage`; historical assignment integration pending |
 | 9B progress/context | 6B, 6C, 9A | Unassigned; gated | Approved promise, persistence/access/version/privacy coverage | Scope decisions |
 | 9C evidence/matching | 6B, 6C | Unassigned; gated | Approved four structure extremes, language parity, item-level traces, historical readers | Actual interpretation approval |
 | 10A privacy lifecycle | 6B, 6C, 8A, 9B | Unassigned; gated | All lifecycle categories, policy snapshots, rights and PostgreSQL races | Privacy decisions/dependencies |
 | 10B privacy admin | 10A, 7B | Unassigned; gated | Bounded discovery, related audit, downloads and rights workflow | Dependencies/verified contacts |
 | 10C retention | 10A, 11A scheduler | Unassigned; gated | Backlog drain, missed-run alerts, restore deletion replay | Policy/scheduler/restore |
-| 11A packaging | Hosting choice; initial packaging after 6A | Unassigned; pending | Reproducible assets/schema, controlled migrations, graceful shutdown, rollback rehearsal | Hosting decision; deployment not authorized |
+| 11A packaging | Hosting choice; integrate 6A | Provider-neutral preparation running per user update | Reproducible assets/schema, controlled migrations, graceful shutdown, rollback rehearsal | `iopsych-11a-packaging`; hosting decision; deployment not authorized |
 | 11B runtime bounds | 6A, 7A, 8A; staging 11A | Unassigned; gated | Hosted validation, readiness, size/time/concurrency limits, synthetic provider smoke | Dependencies/provider access |
 | 11C operations | 11A; integration 8A/11B | Unassigned; gated | Safe correlation/logs/alerts, encrypted backup/restore objectives and rehearsal | Hosting/responders/provider setup |
-| 12A E2E | Features 7–10, 11A/11B; scaffold early | Audit worker then implementation owner TBD | Production browser/PostgreSQL journey and negatives, zero required skips, hosted evidence | First-wave audit; full journey dependencies |
-| 12B accessibility | Completed screens, 12A; incremental audit early | Audit worker then implementation owner TBD | Automated scans plus keyboard/screen-reader/device checks and measured user studies | First-wave audit; human evidence pending |
-| 12C runbooks/rehearsal | 10C, 11A–C, 12A/B | Unassigned; gated | Revision-linked rehearsal, named owners and actual content/privacy sign-off | External reviews; no approvals claimed |
+| 12A E2E | Features 7–10, 11A/11B; scaffold early | Audit integrated; runner worker active | Production browser/PostgreSQL journey and negatives, zero required skips, hosted evidence | Audit `ed41304` → `8bb1016`; full journey dependencies |
+| 12B accessibility | Completed screens, 12A; incremental audit early | Audit integrated; preparation worker active | Automated scans plus keyboard/screen-reader/device checks and measured user studies | Manual/user evidence pending; axe owned by runner |
+| 12C runbooks/rehearsal | 10C, 11A–C, 12A/B | Documentation preparation running | Revision-linked rehearsal, named owners and actual content/privacy sign-off | External reviews; no approvals claimed |
 | 12D demo/handoff | 12A–C technical gates | Unassigned; gated | Controlled synthetic demo, walkthrough, evidence, contribution/license/limitations | Public publication separately authorized |
 
 ## Integration evidence
 
-No implementation commits integrated yet. Existing historical test counts are baseline context only, not current acceptance. Read worker reports, review diffs, independently verify relevant checks, integrate on this branch, then update this ledger and dispatch eligible packages.
+6B documentation commit `298ce31` reviewed, independently passed Prettier and diff checks, integrated as `4638236`. Coverage audit `ed41304` reviewed, independently passed Prettier and diff checks, integrated as `8bb1016`. Both completed workers reported success for their bounded tasks and were released; neither closes full package acceptance. Audit worker reports 104 web tests passing and 127 API tests passing/two PostgreSQL skips under explicitly reduced coverage/cache settings; see report, not a release gate. Existing historical test counts remain baseline context only.
+
+6C backend compatibility task `task_d7602200cf01`, dispatch `ctx_1d41002f09c5`, branch `AbhiNutakki/iopsych-6c-versions` started from `4638236`, with 3110/8110/5550 and `iopsych_6c` reserved. It must obtain coordinator contract/migration agreement before shared edits; frontend will be split after agreement. No scoring change or approval is implied. User questions for provider defaults, journey scope and synthetic-only interpretation are pending asynchronously; independent work continues.
 
 ## Shared contract decisions
 
