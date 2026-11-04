@@ -18,11 +18,38 @@ Future launches must inherit the verified Fast default and have their own live s
 
 ## Current scheduling and critical path
 
-Capacity check: 24 GiB RAM, memory-pressure tool reports 37% free, 655 GiB disk available. `gpt-6-astra` verified by actual worker tool execution. Expand four active tasks to eight with independent bounded slices.
+Capacity check at 22:31 UTC: 24 GiB RAM, memory-pressure tool reports 54% free; earlier disk check 655 GiB available. `gpt-6-astra` verified by actual worker tool execution. Seven workers are executing and five additional disjoint slices are launching; recheck actual readiness and memory before further expansion.
 
 Engineering critical path: decision record → approved assignment/version contract (6C) → invitation delivery API (8A) and candidate progress (9A/9B) → privacy lifecycle (10A) → full browser integration (12A). Parallel identity path: identity/membership decisions plus 6A → 7A → 7B/7C → 8B, converging at 12A. Hosting/operations path: 11A preparation → configured hosting/runtime (11B/11C) → 10C restore/retention → 12C rehearsal. Actual product/scientific/provider decisions and external review are gates, not elapsed engineering estimates.
 
-Start now without deciding those gates: 9A storage denial/stale-save/receipt fixes preserving current interfaces; 11A provider-neutral packaging of existing Next/FastAPI/PostgreSQL topology; 12A isolated production browser scaffold; 12B audit/checklist/tool preparation; 12C runbook and rehearsal preparation. Split later API/UI tasks only after contract agreement. Keep root dependency files, shared contracts and migrations singly owned.
+The earlier 9A storage, 11A packaging, 12A runner, 12B preparation and 12C runbook slices are now integrated, not still running. 6C API/UI split is dispatched against the agreed definition envelope. Root dependencies belong exclusively to security-remediation; migration `20261104_0008` belongs exclusively to 6C backend; coordinator integrates.
+
+### Two-hour execution window
+
+Target: **2026-11-04 22:31 through 2026-11-05 00:31 UTC** (17:31–19:31 Toronto). The accelerated section in `final-implementation-plan.md` maps every original package without changing acceptance. Minutes 0–30: finish 6C backend, repair 6A findings, implement candidate UI, dependency/CI fixes, browser expansion, readiness/body and extraction bounds, local delivery adapter; timebox privacy/trace contracts and independent review. Minutes 30–75: continuously review/integrate; launch contract-approved downstream lifecycle/report/privacy slices from updated HEAD; adapt browser fixtures; do not wait for entire phases. Minutes 75–120: reserve combined formatting/lint/types/tests/build, populated PostgreSQL upgrades, isolated browser/packaging regression and repair time. Targeted checks happen before every merge throughout, not only at the end.
+
+Current bottleneck is agreement/integration of immutable assignment backend and UI, then delivery/privacy interfaces; product/provider decisions gate full accounts and delivery. Safe adapters, bounds and contract preparation do not wait on those choices. Realistic result: more reviewed locally verified implementation plus explicit residual gates. Hosted provider credentials, staging/TLS, actual rollback/restore, manual assistive-technology/user studies and I-O/privacy sign-off cannot be claimed from local mocks or this time target.
+
+### Current dispatched work
+
+All new worktrees below are based on integration `c20b3ed`; names have `AbhiNutakki/` branch prefix. The backend retains its original base and agreed migration. Six new ready sessions plus existing backend were independently inspected via rendered terminal screens at 22:32 UTC: **7/7 displayed `GPT-6-Astra medium fast`**, with actual task commands running; zero unsupported sessions. Earlier four explicit priority confirmations remain historical evidence; completed sessions are released. The next five launches require their own live verification before inclusion in this count.
+
+| Task | Worktree suffix | Dispatch | Exclusive ownership / allocation |
+| --- | --- | --- | --- |
+| 6C version backend | `iopsych-6c-versions` | `ctx_1d41002f09c5` | Assignments, invitation/report backend, migration 0008; 3110/8110/5550 |
+| 6A boundary fixes | `iopsych-6a-boundary-fix` | `ctx_30ec6c9e9a90` | Local session route/tests and API launcher/tests; 3113/8113/5553 |
+| 6C candidate UI | `iopsych-6c-candidate-ui` | `ctx_585fc8d50579` | Candidate component, storage, web contract/client/proxy; 3114/8114/5554 |
+| Dependency remediation | `iopsych-security-fixes` | `ctx_5ac67cd6ce11` | Root/web/shared manifests and lockfile, runtime floor; 3115/8115/5555 |
+| 12A browser expansion | `iopsych-12a-expand` | `ctx_6f6fb5f60c61` | Browser tests/fixtures, isolated runner; 3116/8116/5556, mail 1136/8136 |
+| 11B readiness/body bounds | `iopsych-11b-bounds` | `ctx_c990f981efd6` | API main/runtime modules and focused tests; 3117/8117/5557 |
+| Security CI/scans | `iopsych-security-ci` | `ctx_e23a7b33b738` | Security workflow/scanner configuration only; 3118/8118/5558 reserved |
+| 11B extraction bounds | `iopsych-extraction-bounds` | Launch pending verification | Extraction config/provider/service and tests; 3119/8119/5559 |
+| 8A local delivery adapter | `iopsych-local-delivery` | Launch pending verification | New loopback-only SMTP adapter/tests, no main/issuance edits; 3120/8120/5560, mail 1139/8139 |
+| 10A privacy contract | `iopsych-privacy-contract` | Launch pending verification | Read-only code; lifecycle contract document only; 3121/8121/5561 reserved |
+| 9C traceability contract | `iopsych-report-traceability` | Launch pending verification | Read-only code; trace contract document only; 3122/8122/5562 reserved |
+| Integration review | `iopsych-integration-review` | Launch pending verification | Read-only packaging/storage/isolation review and regression preparation; 3123/8123/5563 |
+
+Fresh setup hooks run concurrently; workers must confirm success before checks. No worker owns another worker's database. Full suites are coordinator-scheduled at integration checkpoints, not run by all workers.
 
 Synthetic data and controlled local mail only. No push, public deployment, purchases, real email, production secrets or existing database resets. Preserve ports 3000, 8001 and 8000. Each worker uses a separate checkout and isolated database/schema. No scientific or external approval is inferred from implementation authority.
 
@@ -56,26 +83,26 @@ Pending means no acceptance claimed. A prepared decision or scaffold never close
 
 | Package | Dependencies | Owner / status | Acceptance evidence required | Branch / commit / blockers |
 | --- | --- | --- | --- | --- |
-| 6A setup | Existing foundation | Worker 6A; running | Fresh setup, PostgreSQL migration/seed/tenant verification, actual launcher regression, synthetic login | First-wave branch; commit pending |
+| 6A setup | Existing foundation | Implementation integrated; review blockers; fixes active | Fresh setup, PostgreSQL migration/seed/tenant verification, actual launcher regression, synthetic login | `486c6b2`; review `c20b3ed`: actual Host bypass and Boolean guard mismatch; full acceptance pending fixes/recheck |
 | 6B decisions | None | Preparation reviewed/integrated; user/product/I-O decide | Every decision has owner, four structure examples, approved choices and spec reconciliation | Worker `298ce31` → integration `4638236`; actual decisions pending |
-| 6C historical versions | 6B for full acceptance | Backend compatibility preparation running | Populated upgrades preserve invites/drafts/submissions/v1 reports; assignment policy | `iopsych-6c-versions`; contract agreement required before shared edits |
+| 6C historical versions | 6B for full acceptance | Backend and frontend active; contract agreed | Populated upgrades preserve invites/drafts/submissions/v1 reports; assignment policy | Backend reports 53 focused tests incl. PostgreSQL; not independently verified yet; decision gate remains |
 | 7A provider/session | 6A, identity choice | Unassigned; gated | Separate identities, callback/claims/expiry/sign-out/redirect negatives | Provider decision/configuration |
 | 7B provisioning | 7A, membership choice | Unassigned; gated | Audited grant/change/revoke, deactivation and tenant tests | Dependencies |
 | 7C manager workflow | 6B, 7A | Unassigned; gated | Browser handoff/edit/reject/approve, immutable versions, archive permissions | Decisions/dependencies |
-| 8A delivery lifecycle | 6C, delivery choice | Unassigned; gated | Local captured delivery, idempotency, uncertainty/commit recovery, secure credentials | Delivery decision; external staging later |
+| 8A delivery lifecycle | 6C, delivery choice | Local adapter slice dispatched; lifecycle gated | Local captured delivery, idempotency, uncertainty/commit recovery, secure credentials | Delivery decision, durable recovery contract and staging pending |
 | 8B invitation UI | 8A, 7C | Unassigned; gated | Browser approval-to-invitation, status/permission/error coverage | Dependencies |
-| 9A device recovery | 6C for full acceptance | Interface-preserving slice running | Denied/quota storage, truthful saving, incomplete edits, expiry, minimal receipts | `iopsych-9a-storage`; historical assignment integration pending |
+| 9A device recovery | 6C for full acceptance | Storage fixes integrated; pinned UI integration active | Denied/quota storage, truthful saving, incomplete edits, expiry, minimal receipts | `f63ae17`, report `4e1b3ae`; independent 17 tests pass; full acceptance pending integration/browser |
 | 9B progress/context | 6B, 6C, 9A | Unassigned; gated | Approved promise, persistence/access/version/privacy coverage | Scope decisions |
-| 9C evidence/matching | 6B, 6C | Unassigned; gated | Approved four structure extremes, language parity, item-level traces, historical readers | Actual interpretation approval |
-| 10A privacy lifecycle | 6B, 6C, 8A, 9B | Unassigned; gated | All lifecycle categories, policy snapshots, rights and PostgreSQL races | Privacy decisions/dependencies |
+| 9C evidence/matching | 6B, 6C | Trace contract preparation dispatched; semantic changes gated | Approved four structure extremes, language parity, item-level traces, historical readers | Actual interpretation approval; preserve v1 inverse semantics |
+| 10A privacy lifecycle | 6B, 6C, 8A, 9B | Lifecycle inventory/contract dispatched | All lifecycle categories, policy snapshots, rights and PostgreSQL races | Privacy decisions/dependencies; no policy approval inferred |
 | 10B privacy admin | 10A, 7B | Unassigned; gated | Bounded discovery, related audit, downloads and rights workflow | Dependencies/verified contacts |
 | 10C retention | 10A, 11A scheduler | Unassigned; gated | Backlog drain, missed-run alerts, restore deletion replay | Policy/scheduler/restore |
-| 11A packaging | Hosting choice; integrate 6A | Provider-neutral preparation running per user update | Reproducible assets/schema, controlled migrations, graceful shutdown, rollback rehearsal | `iopsych-11a-packaging`; hosting decision; deployment not authorized |
-| 11B runtime bounds | 6A, 7A, 8A; staging 11A | Unassigned; gated | Hosted validation, readiness, size/time/concurrency limits, synthetic provider smoke | Dependencies/provider access |
+| 11A packaging | Hosting choice; integrate 6A | Packaging integrated; independent review active | Reproducible assets/schema, controlled migrations, graceful shutdown, rollback rehearsal | `bb5d1fd`, report `b4c1056`; worker local container smoke only; hosting/rollback pending |
+| 11B runtime bounds | 6A, 7A, 8A; staging 11A | Disjoint readiness/body and extraction slices dispatched | Hosted validation, readiness, size/time/concurrency limits, synthetic provider smoke | Full hosted/provider gates pending |
 | 11C operations | 11A; integration 8A/11B | Unassigned; gated | Safe correlation/logs/alerts, encrypted backup/restore objectives and rehearsal | Hosting/responders/provider setup |
-| 12A E2E | Features 7–10, 11A/11B; scaffold early | Audit integrated; runner worker active | Production browser/PostgreSQL journey and negatives, zero required skips, hosted evidence | Audit `ed41304` → `8bb1016`; full journey dependencies |
-| 12B accessibility | Completed screens, 12A; incremental audit early | Audit integrated; preparation worker active | Automated scans plus keyboard/screen-reader/device checks and measured user studies | Manual/user evidence pending; axe owned by runner |
-| 12C runbooks/rehearsal | 10C, 11A–C, 12A/B | Documentation preparation running | Revision-linked rehearsal, named owners and actual content/privacy sign-off | External reviews; no approvals claimed |
+| 12A E2E | Features 7–10, 11A/11B; scaffold early | Runner integrated; expansion/security/review active | Production browser/PostgreSQL journey and negatives, zero required skips, hosted evidence | Runner `de9fc5e`, report `a8a37a3`; independent 13 safety tests pass; full journey/hosted pending |
+| 12B accessibility | Completed screens, 12A; incremental audit early | Preparation integrated; automated coverage expansion active | Automated scans plus keyboard/screen-reader/device checks and measured user studies | `637e034`; manual/user evidence pending; axe owned by runner |
+| 12C runbooks/rehearsal | 10C, 11A–C, 12A/B | Runbook preparation integrated; rehearsal pending | Revision-linked rehearsal, named owners and actual content/privacy sign-off | `f9cfaa5`; external reviews, named owners and actual rehearsal pending |
 | 12D demo/handoff | 12A–C technical gates | Unassigned; gated | Controlled synthetic demo, walkthrough, evidence, contribution/license/limitations | Public publication separately authorized |
 
 ## Integration evidence

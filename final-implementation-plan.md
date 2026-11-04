@@ -174,24 +174,36 @@ Recommended prompts:
   credible project documentation with reproducible evidence and explicit
   limitations.”
 
-## Execution order
+## Accelerated execution schedule
 
-Default sequence:
+User-authorized parallel execution replaces the default serial sequence. The
+two-hour throughput target runs **2026-11-04 22:31–2026-11-05 00:31 UTC**; it is
+not a release deadline or permission to omit any acceptance criterion above.
+All package dependencies, scientific/product approvals and release gates remain.
+Bounded engineering slices may start early; their completion is not full-package
+acceptance. Current ownership, commits, tests and blockers live in
+`docs/implementation/progress.md`.
 
-1. **6A → 6B → 6C**: make setup reliable, resolve choices, establish
-   compatibility.
-2. **7A → 7B → 7C**: complete accounts and manager workflow.
-3. **8A → 8B**: make invitations usable from the browser.
-4. **9A → 9B → 9C**: complete recovery, progress/context, and report evidence.
-5. **10A → 10B**: close lifecycle and administrative gaps.
-6. **11A → 11B → 11C → 10C**: deploy, bound, observe, and schedule cleanup.
-7. **12A → 12B → 12C → 12D**: finish verification, rehearsal, and handoff.
+| Parallel workstream | First wave: minutes 0–30 | Contract handoff / next wave: minutes 30–75 | Integration and acceptance: minutes 75–120 |
+| --- | --- | --- | --- |
+| Foundation and accounts: **6A, 6B, 6C, 7A, 7B, 7C** | Fix independently reproduced local-auth boundaries; resolve smallest user choices; finish version backend and assigned-definition UI in separate worktrees | Agree version envelope, migration and compatibility fixtures before API/UI integration. Provider/session implementation follows identity choice; provisioning follows membership choice; manager states follow product choice | Recheck local login, populated migrations and historical readers. Accounts/manager acceptance remains pending until actual end-to-end and permission checks pass |
+| Invitations and candidate/report flow: **8A, 8B, 9A, 9B, 9C** | Local capture delivery adapter against existing interface; preserve storage fixes; traceability mapping without new interpretation | Integrate 6C before lifecycle issuance changes. Agree delivery/idempotency API before 8B UI; approve resume/context promise before 9B; approve interpretation before changing 9C semantics | Run synthetic invitation/candidate/report and failure tests; historical v1 remains unchanged. Configured-provider/staging evidence remains separate |
+| Privacy and operations: **10A, 10B, 10C, 11A, 11B, 11C** | Inventory lifecycle and prepare privacy contract; review packaging; implement disjoint readiness/body bounds and extraction transport limits | Approve privacy contract before migration/UI split. Integrate delivery/drafts into 10A, provisioning into 10B; scheduler/restore/deletion replay connects 10C with 11A/11C | Verify isolated PostgreSQL races and packaged runtime. Hosted secrets, backup objectives, responders and actual restore rehearsal remain explicit gates |
+| Verification and handoff: **12A, 12B, 12C, 12D** | Expand production browser/axe coverage; independent integration review; security dependency and CI remediation; use prepared accessibility/runbooks | Refill reviewers after each merge; adapt fixtures to agreed contracts; prepare controlled local rehearsal and factual handoff evidence | Reserve final 45 minutes for combined lint/types/tests/build, PostgreSQL/browser checks and fixes. Manual accessibility, intended-user studies, staging, content/privacy sign-off and public-demo authorization are not inferred |
 
-Dependencies in the tables govern eligibility. Decision preparation, deployment
-packaging, test-runner scaffolding, and incremental audits can begin earlier
-where their stated dependencies are satisfied. This plan does not require
-parallel agents; use separate tasks only when requested and coordinate shared
-contracts and migrations before integration.
+Coordinator alone integrates and allocates migrations/shared contracts; one
+worker owns dependency manifests/lockfile. Use isolated child worktrees, unique
+ports/databases, synthetic data and controlled local mail. Scale useful workers
+to measured memory/provider capacity, not an arbitrary cap; avoid duplicate full
+suites and idle workers. Start downstream workers from the latest integrated
+commit, verify Fast mode per session, acknowledge reports and refill promptly.
+
+The realistic two-hour result is a substantially expanded, reviewed and locally
+tested technical implementation, with precise partial/full evidence and remaining
+gates—not a guaranteed hosted release or real-participant authorization. Missing
+decisions, credentials, external/manual reviews and any unfinished implementation
+remain recorded work. No pushing, public deployment, purchases or real email is
+authorized by this schedule.
 
 ## Release gates
 
