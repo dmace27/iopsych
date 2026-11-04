@@ -1,0 +1,305 @@
+{
+  "implementation_revision": "b06453c2ce26eee95553c7609379395aadb7f0af",
+  "integration_revision": "b8434fe2037d1b986743990bdfa87a0bc1beef95",
+  "command": "bash scripts/browser-e2e.sh",
+  "exit_code": 0,
+  "browser_tests": {
+    "passed": 11,
+    "failed": 0,
+    "skipped": 0
+  },
+  "axe_scans": [
+    {
+      "test": "public sign-in is accessible and rejects invalid credentials",
+      "engine": "4.14.0",
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "nodes": 3
+        }
+      ]
+    },
+    {
+      "test": "consent gates questions and decline survives refresh",
+      "engine": "4.14.0",
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "nodes": 5
+        }
+      ]
+    },
+    {
+      "test": "consent gates questions and decline survives refresh",
+      "engine": "4.14.0",
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "nodes": 5
+        }
+      ]
+    },
+    {
+      "test": "recruiter creates and extracts a synthetic draft with immutable revision",
+      "engine": "4.14.0",
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "nodes": 6
+        }
+      ]
+    },
+    {
+      "test": "recruiter creates and extracts a synthetic draft with immutable revision",
+      "engine": "4.14.0",
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "nodes": 6
+        }
+      ]
+    },
+    {
+      "test": "recruiter creates and extracts a synthetic draft with immutable revision",
+      "engine": "4.14.0",
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "nodes": 3
+        }
+      ]
+    },
+    {
+      "test": "separate manager tenant cannot read or mutate recruiter resources",
+      "engine": "4.14.0",
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "nodes": 6
+        }
+      ]
+    },
+    {
+      "test": "separate manager tenant cannot read or mutate recruiter resources",
+      "engine": "4.14.0",
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "nodes": 1
+        }
+      ]
+    },
+    {
+      "test": "separate manager tenant cannot read or mutate recruiter resources",
+      "engine": "4.14.0",
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "nodes": 3
+        }
+      ]
+    },
+    {
+      "test": "separate manager tenant cannot read or mutate recruiter resources",
+      "engine": "4.14.0",
+      "violations": [],
+      "incomplete": []
+    },
+    {
+      "test": "candidate completes with complete device storage",
+      "engine": "4.14.0",
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "nodes": 10
+        }
+      ]
+    },
+    {
+      "test": "candidate completes with complete device storage",
+      "engine": "4.14.0",
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "nodes": 8
+        }
+      ]
+    },
+    {
+      "test": "candidate completes with complete device storage",
+      "engine": "4.14.0",
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "nodes": 8
+        }
+      ]
+    },
+    {
+      "test": "candidate completes with denied device storage",
+      "engine": "4.14.0",
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "nodes": 10
+        }
+      ]
+    },
+    {
+      "test": "candidate completes with denied device storage",
+      "engine": "4.14.0",
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "nodes": 8
+        }
+      ]
+    },
+    {
+      "test": "candidate completes with denied device storage",
+      "engine": "4.14.0",
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "nodes": 8
+        }
+      ]
+    },
+    {
+      "test": "candidate completes with quota device storage",
+      "engine": "4.14.0",
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "nodes": 10
+        }
+      ]
+    },
+    {
+      "test": "candidate completes with quota device storage",
+      "engine": "4.14.0",
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "nodes": 8
+        }
+      ]
+    },
+    {
+      "test": "candidate completes with quota device storage",
+      "engine": "4.14.0",
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "nodes": 8
+        }
+      ]
+    },
+    {
+      "test": "candidate completes with clear device storage",
+      "engine": "4.14.0",
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "nodes": 10
+        }
+      ]
+    },
+    {
+      "test": "candidate completes with clear device storage",
+      "engine": "4.14.0",
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "nodes": 8
+        }
+      ]
+    },
+    {
+      "test": "candidate completes with clear device storage",
+      "engine": "4.14.0",
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "nodes": 8
+        }
+      ]
+    },
+    {
+      "test": "submitted responses generate a saved report and native evidence dialog",
+      "engine": "4.14.0",
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "nodes": 3
+        }
+      ]
+    },
+    {
+      "test": "submitted responses generate a saved report and native evidence dialog",
+      "engine": "4.14.0",
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "nodes": 8
+        }
+      ]
+    },
+    {
+      "test": "submitted responses generate a saved report and native evidence dialog",
+      "engine": "4.14.0",
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "nodes": 2
+        }
+      ]
+    },
+    {
+      "test": "synthetic administrator exports and anonymizes only the disposable candidate",
+      "engine": "4.14.0",
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "nodes": 5
+        }
+      ]
+    },
+    {
+      "test": "synthetic administrator exports and anonymizes only the disposable candidate",
+      "engine": "4.14.0",
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "nodes": 5
+        }
+      ]
+    }
+  ]
+}
