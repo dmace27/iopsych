@@ -8,9 +8,7 @@ const account = AccountPageSchema.parse(pageFixture).items[0];
 const canonicalUpdate = AccountUpdateSchema.parse(updateFixture);
 afterEach(() => vi.unstubAllGlobals());
 it("accepts the backend fixture and rejects extra sensitive fields, duplicates and invalid updates", () => {
-  expect(
-    AccountPageSchema.parse(pageFixture).items,
-  ).toEqual([account]);
+  expect(AccountPageSchema.parse(pageFixture).items).toEqual([account]);
   expect(
     AccountPageSchema.safeParse({
       items: [{ ...account, auth_subject: "secret" }],
@@ -23,9 +21,7 @@ it("accepts the backend fixture and rejects extra sensitive fields, duplicates a
       next_cursor: null,
     }).success,
   ).toBe(false);
-  expect(
-    canonicalUpdate.is_active,
-  ).toBe(false);
+  expect(canonicalUpdate.is_active).toBe(false);
   for (const input of [
     { expected_version: 1 },
     { expected_version: 0, role: "admin" },
@@ -104,7 +100,10 @@ it.each([
   const response = { ...account, ...mutation };
   vi.stubGlobal("fetch", vi.fn().mockResolvedValue(Response.json(response)));
   await expect(
-    updateAccount(account.id, { expected_version: account.version, ...mutation }),
+    updateAccount(account.id, {
+      expected_version: account.version,
+      ...mutation,
+    }),
   ).resolves.toEqual(response);
 });
 it.each([
@@ -115,7 +114,10 @@ it.each([
   const response = { ...account, ...mutation, version: account.version + 1 };
   vi.stubGlobal("fetch", vi.fn().mockResolvedValue(Response.json(response)));
   await expect(
-    updateAccount(account.id, { expected_version: account.version, ...mutation }),
+    updateAccount(account.id, {
+      expected_version: account.version,
+      ...mutation,
+    }),
   ).resolves.toEqual(response);
 });
 it.each([1, 2, 3, 4])(

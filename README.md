@@ -95,7 +95,9 @@ using synthetic login. A missing seed/policy produces an error on sign-in.
 
 ## Auth0 provider sign-in
 
-See [identity operations](docs/identity.md) for Auth0 Universal Login and explicit account provisioning. Hosted login uses Auth0; local synthetic login remains development-only.
+See [identity operations](docs/identity.md) for Auth0 Universal Login and
+explicit account provisioning. Hosted login uses Auth0; local synthetic login
+remains development-only.
 
 ## Database commands
 
