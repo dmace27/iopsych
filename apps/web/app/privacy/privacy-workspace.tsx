@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import {
   ApiClientError,
@@ -68,6 +68,13 @@ export function PrivacyWorkspace() {
   >(new Map());
   const [lookupLoading, setLookupLoading] = useState(false);
   const [lookupError, setLookupError] = useState<string | null>(null);
+  const auditRequestVersion = useRef(0);
+  const [auditLoadingMore, setAuditLoadingMore] = useState(false);
+
+  function invalidateAuditCallbacks() {
+    auditRequestVersion.current += 1;
+    setAuditLoadingMore(false);
+  }
 
   function selectAssessment(id: string) {
     setAssessmentId(id);
@@ -87,6 +94,7 @@ export function PrivacyWorkspace() {
 
   async function handleLookup(nextPage = false) {
     if (lookupLoading || working) return;
+    invalidateAuditCallbacks();
     const query: PrivacyAssessmentLookup =
       nextPage && lookupQuery && lookupResult?.next_cursor
         ? { ...lookupQuery, cursor: lookupResult.next_cursor }
@@ -108,9 +116,8 @@ export function PrivacyWorkspace() {
     }
   }
 
-  const [auditLoadingMore, setAuditLoadingMore] = useState(false);
-
   async function load(relatedAssessmentId?: string, afterMutation = false) {
+    invalidateAuditCallbacks();
     if (!afterMutation) setState({ status: "loading" });
     try {
       const user = await getCurrentUser();
@@ -183,6 +190,7 @@ export function PrivacyWorkspace() {
   }, [exported]);
 
   async function handleExport() {
+    invalidateAuditCallbacks();
     setWorking(true);
     setActionError(null);
     setDeletion(null);
@@ -198,6 +206,7 @@ export function PrivacyWorkspace() {
   }
 
   async function handleDeletion() {
+    invalidateAuditCallbacks();
     setWorking(true);
     setActionError(null);
     try {
@@ -218,6 +227,7 @@ export function PrivacyWorkspace() {
   }
 
   async function handleRetention() {
+    invalidateAuditCallbacks();
     setWorking(true);
     setActionError(null);
     try {
@@ -245,7 +255,9 @@ export function PrivacyWorkspace() {
   }
 
   async function handleLoadMoreAudit() {
-    if (state.status !== "ready" || auditLoadingMore) return;
+    if (state.status !== "ready" || auditLoadingMore || lookupLoading || working)
+      return;
+    const requestVersion = ++auditRequestVersion.current;
     setAuditLoadingMore(true);
     setActionError(null);
     try {
@@ -256,6 +268,7 @@ export function PrivacyWorkspace() {
         state.auditEvents.at(-1)?.id,
         AUDIT_PAGE_SIZE,
       );
+      if (requestVersion !== auditRequestVersion.current) return;
       setState((current) =>
         current.status === "ready" && current.auditEvents === state.auditEvents
           ? {
@@ -267,9 +280,13 @@ export function PrivacyWorkspace() {
       );
       setAnnouncement(`Loaded ${nextEvents.length} additional audit events.`);
     } catch (error) {
-      setActionError(errorMessage(error));
+      if (requestVersion === auditRequestVersion.current) {
+        setActionError(errorMessage(error));
+      }
     } finally {
-      setAuditLoadingMore(false);
+      if (requestVersion === auditRequestVersion.current) {
+        setAuditLoadingMore(false);
+      }
     }
   }
 
@@ -612,6 +629,13 @@ export function PrivacyWorkspace() {
             ? `Related history for assessment ${state.auditAssessmentId}, including linked invitation, consent, and report events.`
             : "Organization-wide audit history, newest events first."}
         </p>
+        {state.auditAssessmentId ? (
+          <p className="mt-2 text-sm text-slate-600">
+            Related history includes currently linked records. Events for
+            deleted reports remain in organization-wide history but are not
+            included here.
+          </p>
+        ) : null}
         {state.auditEvents.length === 0 ? (
           <p className="mt-4 rounded-xl border border-slate-200 bg-white p-5 text-sm text-slate-600">
             No matching audit events.
@@ -643,7 +667,7 @@ export function PrivacyWorkspace() {
         {state.auditHasMore ? (
           <button
             className="mt-4 min-h-11 rounded-xl border border-slate-400 px-5 py-2.5 text-sm font-bold text-slate-700 disabled:opacity-50"
-            disabled={auditLoadingMore || working}
+            disabled={auditLoadingMore || working || lookupLoading}
             onClick={() => void handleLoadMoreAudit()}
             type="button"
           >
