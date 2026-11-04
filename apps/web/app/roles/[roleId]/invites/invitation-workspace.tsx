@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import {
   ApiClientError,
   getCurrentUser,
@@ -62,6 +62,24 @@ function Invitations({ roleId }: { roleId: string }) {
   const [error, setError] = useState<Failure | null>(null);
   const [attempt, setAttempt] = useState(0);
   const [announcement, setAnnouncement] = useState("");
+  const cards = useRef(new Map<string, HTMLLIElement>());
+  const status = useRef<HTMLDivElement>(null);
+  const focusAfterUpdate = useRef<{
+    id: string | null;
+    origin: Element | null;
+  } | null>(null);
+  useLayoutEffect(() => {
+    const destination = focusAfterUpdate.current;
+    focusAfterUpdate.current = null;
+    if (
+      destination &&
+      destination.origin instanceof HTMLButtonElement &&
+      (document.activeElement === destination.origin ||
+        document.activeElement === document.body)
+    ) {
+      (cards.current.get(destination.id ?? "") ?? status.current)?.focus();
+    }
+  }, [items, cursor]);
   const lock = useRef(false);
   const generation = useRef(0);
   const retry = useRef<() => void>(() => {});
@@ -105,6 +123,7 @@ function Invitations({ roleId }: { roleId: string }) {
       )
     )
       return;
+    const origin = document.activeElement;
     lock.current = true;
     setBusy(true);
     setError(null);
@@ -116,6 +135,9 @@ function Invitations({ roleId }: { roleId: string }) {
       if (invitation) {
         const updated = await revokeInvitation(roleId, invitation.id);
         if (version !== generation.current) return;
+        if (updated.status === "revoked") {
+          focusAfterUpdate.current = { id: updated.id, origin };
+        }
         setItems((rows) =>
           rows.map((row) => (row.id === updated.id ? updated : row)),
         );
@@ -123,6 +145,15 @@ function Invitations({ roleId }: { roleId: string }) {
       } else if (cursor) {
         const list = await getInvitations(roleId, cursor);
         if (version !== generation.current) return;
+        if (list.next_cursor === null) {
+          focusAfterUpdate.current = {
+            id:
+              list.items.find(
+                (item) => !items.some((row) => row.id === item.id),
+              )?.id ?? null,
+            origin,
+          };
+        }
         setItems((rows) => [
           ...rows,
           ...list.items.filter(
@@ -163,7 +194,13 @@ function Invitations({ roleId }: { roleId: string }) {
         submission are not reported here. Expiry dates do not change the
         displayed status.
       </p>
-      <div role="status" aria-live="polite">
+      <div
+        ref={status}
+        role="status"
+        aria-live="polite"
+        tabIndex={-1}
+        className="rounded-lg focus:ring-2 focus:ring-teal-700"
+      >
         {announcement}
       </div>
       {!ready && !error ? <LoadingState label="Loading invitations" /> : null}
@@ -207,7 +244,16 @@ function Invitations({ roleId }: { roleId: string }) {
           ) : (
             <ul className="divide-y divide-slate-200">
               {items.map((item) => (
-                <li key={item.id} className="space-y-3 py-5">
+                <li
+                  key={item.id}
+                  ref={(node) => {
+                    if (node) cards.current.set(item.id, node);
+                    else cards.current.delete(item.id);
+                  }}
+                  tabIndex={-1}
+                  aria-label={`${item.email}: ${labels[item.status]}`}
+                  className="space-y-3 rounded-lg py-5 focus:ring-2 focus:ring-teal-700"
+                >
                   <h2 className="break-all text-lg font-bold">{item.email}</h2>
                   <p>
                     Stored status: <strong>{labels[item.status]}</strong>
