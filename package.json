@@ -4,7 +4,7 @@
   "private": true,
   "description": "IOPsych MVP monorepo",
   "engines": {
-    "node": ">=22",
+    "node": "^22.22.2 || ^24.15.0 || >=26.0.0",
     "npm": ">=10"
   },
   "workspaces": [
@@ -17,7 +17,10 @@
     "@next/eslint-plugin-next": {
       "fast-glob": "$fast-glob"
     },
-    "eslint": "9.39.5"
+    "eslint": "9.39.5",
+    "@typescript-eslint/typescript-estree": {
+      "minimatch": "11.0.1"
+    }
   },
   "scripts": {
     "setup": "bash scripts/bootstrap.sh",
