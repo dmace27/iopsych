@@ -60,6 +60,7 @@ def _internal_service(
         token_codec=request.app.state.invite_token_codec,
         delivery=request.app.state.invitation_delivery,
         queue_cipher=cipher,
+        privacy_settings=request.app.state.privacy_settings,
     )
 
 
@@ -154,6 +155,7 @@ async def revoke_invitation(
 @router.get(
     "/v1/candidate/invites/{token}",
     response_model=CandidateInviteResponse,
+    response_model_exclude_unset=True,
 )
 async def read_candidate_invitation(
     token: str,
@@ -163,12 +165,13 @@ async def read_candidate_invitation(
     """Show consent information without exposing assessment questions or PII."""
 
     _candidate_rate_limit(request, token, action="read")
-    return _candidate_service(request, session).read(token)
+    return _notice_capability(request, _candidate_service(request, session).read(token))
 
 
 @router.post(
     "/v1/candidate/invites/{token}/consent",
     response_model=CandidateInviteResponse,
+    response_model_exclude_unset=True,
 )
 async def record_candidate_consent(
     token: str,
@@ -179,7 +182,21 @@ async def record_candidate_consent(
     """Record explicit affirmative consent or decline without requiring an account."""
 
     _candidate_rate_limit(request, token, action="consent")
-    return _candidate_service(request, session).record_consent(token, payload)
+    return _notice_capability(
+        request, _candidate_service(request, session).record_consent(token, payload)
+    )
+
+
+def _notice_capability(
+    request: Request, response: CandidateInviteResponse
+) -> CandidateInviteResponse:
+    """Keep the original response keys unless the client opts into snapshot metadata."""
+
+    if request.headers.get("X-IOPsych-Notice-Snapshot") == "1":
+        return response
+    return CandidateInviteResponse.model_validate(
+        response.model_dump(exclude={"notice_sha256", "notice_history"})
+    )
 
 
 @router.get("/v1/candidate/invites/{token}/definition", response_model=AssignedDefinitionResponse)

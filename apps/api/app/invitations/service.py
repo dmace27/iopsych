@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
+from typing import Any
 from uuid import UUID
 
 from sqlalchemy import select
@@ -62,9 +63,17 @@ from app.invitations.schemas import (
     ConsentNotice,
     ConsentRequest,
     InvitationCreateRequest,
+    NoticeHistory,
 )
 from app.invitations.tokens import InvalidInviteTokenError, InviteTokenCodec
 from app.privacy.config import PrivacySettings
+from app.privacy.notice_snapshot import (
+    InvalidNoticeSnapshotError,
+    NoticeReviewRequiredError,
+    build_notice_snapshot,
+    notice_snapshot_hash,
+    require_presented_notice,
+)
 from iopsych_contracts.assessment import (
     AssessmentResponseSet,
     AssessmentScoringError,
@@ -94,6 +103,7 @@ class InternalInvitationService:
         token_codec: InviteTokenCodec | None,
         delivery: InvitationDeliveryAdapter,
         queue_cipher: LocalCredentialCipher | None = None,
+        privacy_settings: PrivacySettings | None = None,
     ) -> None:
         self._session = session
         self._context = context
@@ -101,6 +111,7 @@ class InternalInvitationService:
         self._token_codec = token_codec
         self._delivery = delivery
         self._queue_cipher = queue_cipher
+        self._privacy_settings = privacy_settings or PrivacySettings()
         self._data = OrganizationDataAccess(session, context.organization.organization_id)
 
     def create(
@@ -159,6 +170,7 @@ class InternalInvitationService:
             status=AssessmentInviteStatus.PENDING_DELIVERY,
         )
         self._session.add(invite)
+        freeze_notice(invite, self._settings, self._privacy_settings, origin="issued")
         self._session.flush()
 
         organization = self._session.get(Organization, self._context.organization.organization_id)
@@ -213,6 +225,7 @@ class InternalInvitationService:
                     status=AssessmentInviteStatus.PENDING_DELIVERY,
                 )
                 self._session.add(invite)
+                freeze_notice(invite, self._settings, self._privacy_settings, origin="issued")
                 self._session.flush()
                 stage_delivery(
                     self._session,
@@ -278,10 +291,21 @@ class CandidateInvitationService:
     def read(self, raw_token: str) -> CandidateInviteResponse:
         """Return consent content and public context, never assessment questions."""
 
-        candidate_invite = self._resolve(raw_token, lock=False)
+        candidate_invite = self._resolve(raw_token, lock=True)
+        consent = self._session.scalar(
+            select(CandidateConsent).where(CandidateConsent.invite_id == candidate_invite.invite.id)
+        )
+        if consent is None:
+            freeze_notice(
+                candidate_invite.invite,
+                self._settings,
+                self._privacy_settings,
+                origin="first_presented",
+            )
+        response = self._response(candidate_invite, consent=consent)
         self._append_audit(candidate_invite, "candidate_invite.accessed")
         commit_or_flush(self._session)
-        return self._response(candidate_invite)
+        return response
 
     def record_consent(self, raw_token: str, request: ConsentRequest) -> CandidateInviteResponse:
         """Record one explicit choice; repeated identical choices are idempotent."""
@@ -291,16 +315,35 @@ class CandidateInvitationService:
         existing = self._session.scalar(
             select(CandidateConsent).where(CandidateConsent.invite_id == invite.id)
         )
+        snapshot = read_notice_snapshot(invite)
+        if request.presented_notice_sha256 is not None:
+            if snapshot is None:
+                raise notice_review_required()
+            try:
+                require_presented_notice(
+                    snapshot,
+                    stored_sha256=invite.notice_sha256,
+                    presented_sha256=request.presented_notice_sha256,
+                )
+            except NoticeReviewRequiredError as exc:
+                raise notice_review_required() from exc
         if existing is not None and existing.decision is not request.decision:
             raise resource_conflict(
                 code="consent_already_recorded",
                 detail="A different consent decision has already been recorded.",
             )
         if existing is None:
+            if snapshot is None:
+                freeze_notice(
+                    invite, self._settings, self._privacy_settings, origin="legacy_decision"
+                )
+                snapshot = read_notice_snapshot(invite)
+            assert snapshot is not None
             existing = CandidateConsent(
                 invite_id=invite.id,
                 decision=request.decision,
-                notice_version=self._settings.consent_notice_version,
+                notice_version=snapshot["consent_notice"]["version"],
+                presented_notice_sha256=request.presented_notice_sha256,
             )
             self._session.add(existing)
             self._session.flush()
@@ -338,7 +381,9 @@ class CandidateInvitationService:
             .where(AssessmentInvite.token_hash == token_hash)
         )
         if lock:
-            statement = statement.with_for_update()
+            statement = statement.with_for_update(of=AssessmentInvite).execution_options(
+                populate_existing=True
+            )
         row = self._session.execute(statement).one_or_none()
         if row is None:
             raise organization_resource_not_found()
@@ -391,12 +436,17 @@ class CandidateInvitationService:
                 code="invalid_assessment_responses", detail=str(exc)
             ) from exc
         submitted_at = datetime.now(UTC)
+        snapshot = read_notice_snapshot(invite)
+        retention_days = (
+            snapshot["retention_days"]
+            if snapshot is not None
+            else self._privacy_settings.retention_days
+        )
         assessment = Assessment(
             invite_id=invite.id,
             consent_id=consent.id,
             submitted_at=submitted_at,
-            retention_expires_at=submitted_at
-            + timedelta(days=self._privacy_settings.retention_days),
+            retention_expires_at=submitted_at + timedelta(days=retention_days),
             definition_json=definition.model_dump(mode="json"),
             responses_json=canonical_responses,
             scores_json=scores.model_dump(mode="json"),
@@ -456,6 +506,7 @@ class CandidateInvitationService:
                 )
             )
         decision = consent.decision if consent is not None else None
+        snapshot = read_notice_snapshot(candidate_invite.invite)
         assessment = self._session.scalar(
             select(Assessment).where(
                 Assessment.invite_id == candidate_invite.invite.id,
@@ -468,16 +519,13 @@ class CandidateInvitationService:
             role_title=candidate_invite.role_title,
             expires_at=candidate_invite.invite.expires_at,
             status=candidate_invite.invite.status,
-            consent_notice=ConsentNotice(
-                version=self._settings.consent_notice_version,
-                purpose=self._settings.purpose_statement,
-                data_use=self._settings.data_use_statement,
-                retention=self._settings.retention_statement.format(
-                    retention_days=self._privacy_settings.retention_days
-                ),
-                accommodation_contact_email=self._settings.accommodation_contact_email,
-                privacy_contact_email=self._settings.privacy_contact_email,
+            consent_notice=(
+                ConsentNotice.model_validate(snapshot["consent_notice"])
+                if snapshot is not None
+                else current_notice(self._settings, self._privacy_settings)
             ),
+            notice_sha256=candidate_invite.invite.notice_sha256,
+            notice_history=notice_history(candidate_invite.invite, consent),
             decision=decision,
             decision_recorded_at=consent.created_at if consent is not None else None,
             can_start_assessment=decision is ConsentDecision.CONSENT,
@@ -503,6 +551,88 @@ class CandidateInvitationService:
                 metadata_json=metadata or {},
             )
         )
+
+
+def current_notice(settings: InvitationSettings, privacy: PrivacySettings) -> ConsentNotice:
+    """Render the existing notice without changing its content or defaults."""
+
+    return ConsentNotice(
+        version=settings.consent_notice_version,
+        purpose=settings.purpose_statement,
+        data_use=settings.data_use_statement,
+        retention=settings.retention_statement.format(retention_days=privacy.retention_days),
+        accommodation_contact_email=settings.accommodation_contact_email,
+        privacy_contact_email=settings.privacy_contact_email,
+    )
+
+
+def read_notice_snapshot(invite: AssessmentInvite) -> dict[str, Any] | None:
+    """Reject partial or corrupt evidence instead of replacing it with current content."""
+
+    if all(
+        value is None
+        for value in (
+            invite.notice_snapshot_json,
+            invite.notice_sha256,
+            invite.notice_snapshot_origin,
+            invite.notice_snapshot_recorded_at,
+        )
+    ):
+        return None
+    try:
+        if (
+            invite.notice_snapshot_origin not in {"issued", "first_presented", "legacy_decision"}
+            or invite.notice_snapshot_recorded_at is None
+        ):
+            raise InvalidNoticeSnapshotError("Invalid snapshot provenance")
+        return require_presented_notice(
+            invite.notice_snapshot_json,
+            stored_sha256=invite.notice_sha256,
+            presented_sha256=invite.notice_sha256,
+        )
+    except (InvalidNoticeSnapshotError, NoticeReviewRequiredError) as exc:
+        raise resource_conflict(
+            code="notice_snapshot_invalid", detail="The saved notice is unavailable."
+        ) from exc
+
+
+def freeze_notice(
+    invite: AssessmentInvite,
+    settings: InvitationSettings,
+    privacy: PrivacySettings,
+    *,
+    origin: str,
+) -> None:
+    """Set the first snapshot only while issuing or holding the invitation lock."""
+
+    if read_notice_snapshot(invite) is not None:
+        return
+    snapshot = build_notice_snapshot(
+        current_notice(settings, privacy).model_dump(mode="json"),
+        retention_days=privacy.retention_days,
+    )
+    invite.notice_snapshot_json = snapshot
+    invite.notice_sha256 = notice_snapshot_hash(snapshot)
+    invite.notice_snapshot_origin = origin
+    invite.notice_snapshot_recorded_at = datetime.now(UTC)
+
+
+def notice_history(invite: AssessmentInvite, consent: CandidateConsent | None) -> NoticeHistory:
+    """Describe protocol evidence without claiming that a person read the notice."""
+
+    if consent is None:
+        return "not_recorded"
+    if invite.notice_snapshot_json is None:
+        return "legacy_unknown"
+    return "digest_recorded" if consent.presented_notice_sha256 is not None else "legacy_unverified"
+
+
+def notice_review_required() -> Exception:
+    """Require explicit review when a client advertises different notice content."""
+
+    return resource_conflict(
+        code="notice_review_required", detail="Reload and review the notice before deciding."
+    )
 
 
 def require_consented_invite(session: Session, invite_id: UUID) -> AssessmentInvite:

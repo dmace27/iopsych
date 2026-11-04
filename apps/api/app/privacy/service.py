@@ -76,6 +76,8 @@ class PrivacyService:
     ) -> CandidateDataExportResponse:
         """Return every retained candidate datum in a portable JSON envelope."""
 
+        from app.invitations.service import notice_history, read_notice_snapshot
+
         record = self._get_record(assessment_id, lock=True)
         if record.assessment.anonymized_at is not None:
             raise resource_unavailable(
@@ -122,6 +124,12 @@ class PrivacyService:
                 decision=record.consent.decision,
                 notice_version=record.consent.notice_version,
                 recorded_at=record.consent.created_at,
+                notice_snapshot=read_notice_snapshot(record.invite),
+                notice_sha256=record.invite.notice_sha256,
+                notice_snapshot_origin=record.invite.notice_snapshot_origin,
+                notice_snapshot_recorded_at=record.invite.notice_snapshot_recorded_at,
+                presented_notice_sha256=record.consent.presented_notice_sha256,
+                notice_history=notice_history(record.invite, record.consent),
             ),
             assessment=ExportAssessment(
                 id=record.assessment.id,

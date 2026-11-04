@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import re
 from datetime import datetime
-from typing import Annotated
+from typing import Annotated, Literal
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints, field_validator
@@ -13,6 +13,8 @@ from app.database.models import AssessmentInviteStatus, ConsentDecision
 from app.invitations.recovery import DeliveryState
 
 EmailText = Annotated[str, StringConstraints(strip_whitespace=True, min_length=3, max_length=320)]
+NoticeHistory = Literal["not_recorded", "digest_recorded", "legacy_unverified", "legacy_unknown"]
+NoticeDigest = Annotated[str, StringConstraints(pattern=r"^[0-9a-f]{64}$", strict=True)]
 _EMAIL_SHAPE = re.compile(r"[^@\s]+@[^@\s]+\.[^@\s]+")
 
 
@@ -84,6 +86,8 @@ class CandidateInviteResponse(BaseModel):
     expires_at: datetime
     status: AssessmentInviteStatus
     consent_notice: ConsentNotice
+    notice_sha256: str | None = None
+    notice_history: NoticeHistory = "not_recorded"
     decision: ConsentDecision | None
     decision_recorded_at: datetime | None
     can_start_assessment: bool
@@ -96,3 +100,4 @@ class ConsentRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     decision: ConsentDecision
+    presented_notice_sha256: NoticeDigest | None = None
