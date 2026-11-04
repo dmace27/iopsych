@@ -11,7 +11,7 @@ from uuid import uuid4
 
 import pytest
 from alembic import command
-from sqlalchemy import MetaData, create_engine, select, text
+from sqlalchemy import Engine, MetaData, create_engine, select, text
 from sqlalchemy.engine import URL, make_url
 from sqlalchemy.exc import ArgumentError, DBAPIError
 from sqlalchemy.orm import Session
@@ -24,7 +24,6 @@ from app.assignments.registry import (
     read_report,
     score_assignment,
 )
-from app.database.models import RoleConstructRating
 from app.database.seed import ALPHA_PROFILE_ID, seed_database
 from iopsych_contracts import RoleConstructRating as RatingContract
 from iopsych_contracts.assessment import AssessmentResponseSet, score_assessment
@@ -84,6 +83,7 @@ def upgrade_url(request: pytest.FixtureRequest, tmp_path: Path) -> Generator[str
 
 def test_populated_upgrade_preserves_assignments_and_original_interpretation(
     upgrade_url: str,
+    database_engine: Engine,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setenv("DATABASE_URL", upgrade_url)
@@ -93,30 +93,49 @@ def test_populated_upgrade_preserves_assignments_and_original_interpretation(
     definition = legacy_definition()
     saved_draft = responses()
     scores = score_assessment(definition, AssessmentResponseSet.model_validate(saved_draft))
-    with Session(engine) as session:
+    with Session(database_engine) as session:
         seed_database(session)
         session.commit()
-        ratings = session.scalars(
-            select(RoleConstructRating).where(RoleConstructRating.profile_id == ALPHA_PROFILE_ID)
-        ).all()
+    metadata = MetaData()
+    metadata.reflect(engine)
+    seed_metadata = MetaData()
+    seed_metadata.reflect(database_engine)
+    with database_engine.connect() as source, engine.begin() as target:
+        for table in metadata.sorted_tables:
+            if table.name not in seed_metadata.tables:
+                continue
+            seed_table = seed_metadata.tables[table.name]
+            rows = (
+                source.execute(select(*(seed_table.c[column.name] for column in table.c)))
+                .mappings()
+                .all()
+            )
+            if rows:
+                target.execute(table.insert(), [dict(row) for row in rows])
+        ratings_table = metadata.tables["role_construct_ratings"]
+        ratings = (
+            target.execute(
+                select(ratings_table).where(ratings_table.c.profile_id == ALPHA_PROFILE_ID.hex)
+            )
+            .mappings()
+            .all()
+        )
         result = match_role_profile(
             MatchingRoleProfile(
                 approved=True,
                 constructs=tuple(
                     RatingContract(
-                        key=r.construct_key,
-                        rating=r.rating,
-                        confidence=r.confidence,
-                        rationale=r.rationale,
-                        evidence=r.evidence_json,
+                        key=r["construct_key"],
+                        rating=r["rating"],
+                        confidence=r["confidence"],
+                        rationale=r["rationale"],
+                        evidence=r["evidence_json"],
                     )
                     for r in ratings
                 ),
             ),
             scores,
         ).model_dump(mode="json")
-    metadata = MetaData()
-    metadata.reflect(engine)
     invites = metadata.tables["assessment_invites"]
     consents = metadata.tables["candidate_consents"]
     assessments = metadata.tables["assessments"]
