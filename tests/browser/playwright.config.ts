@@ -14,6 +14,7 @@ if (
     "RECRUITER",
     "MANAGER",
     "ADMIN",
+    "ACCOUNT",
   ].some((key) => !process.env[`BROWSER_E2E_${key}`])
 ) {
   throw new Error(

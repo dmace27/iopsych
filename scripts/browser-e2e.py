@@ -25,6 +25,14 @@ API = "http://127.0.0.1:8116"
 MAIL = "http://127.0.0.1:8136"
 
 
+def selected_specs(arguments):
+    """Allow only checked-in spec basenames, never Playwright override flags."""
+    allowed = {path.name for path in BROWSER.glob("*.spec.ts")}
+    if any(argument not in allowed for argument in arguments):
+        raise ValueError("Select only existing browser spec basenames")
+    return list(dict.fromkeys(arguments))
+
+
 def preflight():
     # No inherited destination, proxy, credentials, or dotenv can redirect this run.
     protected = (
@@ -95,6 +103,7 @@ def redact(output, secrets_to_redact):
 
 
 def main():
+    specs = selected_specs(sys.argv[1:])
     signal.signal(signal.SIGTERM, lambda *_: sys.exit(143))
     preflight()
     environment = {
@@ -257,7 +266,16 @@ def main():
             tempfile.TemporaryDirectory(prefix="iopsych-e2e-artifacts-")
         )
         result = subprocess.run(
-            ["npm", "--prefix", "tests/browser", "test", "--", "--output", artifacts],
+            [
+                "npm",
+                "--prefix",
+                "tests/browser",
+                "test",
+                "--",
+                *specs,
+                "--output",
+                artifacts,
+            ],
             cwd=ROOT,
             env=environment,
             check=False,

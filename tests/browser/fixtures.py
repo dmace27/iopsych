@@ -86,6 +86,7 @@ def synthetic_credentials(environment):
         ("RECRUITER", "synthetic-alpha-recruiter", ALPHA_ORGANIZATION_ID),
         ("MANAGER", "synthetic-beacon-manager", BEACON_ORGANIZATION_ID),
         ("ADMIN", "synthetic-browser-admin", ALPHA_ORGANIZATION_ID),
+        ("ACCOUNT", "synthetic-browser-account", ALPHA_ORGANIZATION_ID),
     ):
         now = int(time.time())
         content = (
@@ -119,6 +120,16 @@ def seed_browser_admin(session):
     from app.database.models import InternalUserRole, User
     from app.database.seed import ALPHA_ORGANIZATION_ID
 
+    session.add(
+        User(
+            id=UUID("00000000-0000-4000-8000-000000000098"),
+            organization_id=ALPHA_ORGANIZATION_ID,
+            email="account@example.invalid",
+            name="Synthetic account target",
+            auth_subject="synthetic-browser-account",
+            role=InternalUserRole.RECRUITER,
+        )
+    )
     session.add(
         User(
             id=UUID("00000000-0000-4000-8000-000000000099"),

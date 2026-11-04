@@ -15,6 +15,30 @@ runner = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(runner)
 
 
+def test_spec_selection_preserves_default_and_deduplicates():
+    assert runner.selected_specs([]) == []
+    assert runner.selected_specs(["accounts.spec.ts", "accounts.spec.ts"]) == ["accounts.spec.ts"]
+
+
+@pytest.mark.parametrize(
+    "argument",
+    [
+        "--config=other.ts",
+        "--workers=8",
+        "--retries=2",
+        "--pass-with-no-tests",
+        "../accounts.spec.ts",
+        "*.spec.ts",
+        "missing.spec.ts",
+        "--grep",
+        "",
+    ],
+)
+def test_spec_selection_rejects_flags_paths_and_patterns(argument):
+    with pytest.raises(ValueError, match="spec basenames"):
+        runner.selected_specs([argument])
+
+
 @pytest.mark.parametrize(
     "key,value",
     [
