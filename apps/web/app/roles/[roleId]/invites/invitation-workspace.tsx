@@ -18,6 +18,8 @@ import {
 import { formatDate } from "../../../../lib/role-ui";
 import { EmptyState, LoadingState } from "../../../ui/workspace-states";
 
+import { ProviderDelivery } from "./provider-delivery";
+
 import { InvitationIssueForm } from "./invitation-issue-form";
 
 const labels: Record<Invitation["status"], string> = {
@@ -370,6 +372,36 @@ function Invitations({ roleId }: { roleId: string }) {
                       Revoke invitation
                     </button>
                   ) : null}
+                  <ProviderDelivery
+                    roleId={roleId}
+                    invitation={item}
+                    disabled={busy || issuing}
+                    archived={archived}
+                    onBusyChange={setBusy}
+                    onReissued={(replacement) => {
+                      focusAfterUpdate.current = {
+                        id: replacement.id,
+                        origin: document.activeElement,
+                      };
+                      setItems((rows) => [
+                        replacement,
+                        ...rows
+                          .filter((row) => row.id !== replacement.id)
+                          .map((row) =>
+                            row.id === item.id
+                              ? {
+                                  ...row,
+                                  status: "revoked" as const,
+                                  delivery_state: "cancelled" as const,
+                                }
+                              : row,
+                          ),
+                      ]);
+                      setAnnouncement(
+                        "Replacement invitation queued. Provider delivery and recipient consent are not confirmed.",
+                      );
+                    }}
+                  />
                 </li>
               ))}
             </ul>

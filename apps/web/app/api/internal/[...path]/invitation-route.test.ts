@@ -69,3 +69,60 @@ it("allows invitation list/revoke, preserves pagination and rejects create/extra
   ).toBe(403);
   expect(fetch).toHaveBeenCalledTimes(2);
 });
+
+it("allows provider delivery and same-origin reissue while denying wrong methods and cross-site mutations", async () => {
+  headers.cookies.mockResolvedValue({
+    get: () => ({ value: "synthetic-session" }),
+  });
+  vi.stubGlobal(
+    "fetch",
+    vi.fn().mockImplementation(async () => Response.json({})),
+  );
+  const context = (action: string) => ({
+    params: Promise.resolve({ path: ["roles", "r", "invites", "i", action] }),
+  });
+  expect(
+    (await GET(new Request("http://web.test/api/test"), context("delivery")))
+      .status,
+  ).toBe(200);
+  const body = JSON.stringify({
+    request_id: "00000000-0000-4000-8000-000000000001",
+  });
+  expect(
+    (
+      await POST(
+        new Request("http://web.test/api/test", {
+          method: "POST",
+          headers: {
+            Origin: "http://web.test",
+            "Content-Type": "application/json",
+          },
+          body,
+        }),
+        context("reissue"),
+      )
+    ).status,
+  ).toBe(200);
+  expect(
+    new TextDecoder().decode(
+      vi.mocked(fetch).mock.calls[1]![1]!.body as ArrayBuffer,
+    ),
+  ).toBe(body);
+  expect(
+    (await GET(new Request("http://web.test/api/test"), context("reissue")))
+      .status,
+  ).toBe(404);
+  expect(
+    (
+      await POST(
+        new Request("http://web.test/api/test", {
+          method: "POST",
+          headers: { Origin: "https://other.invalid" },
+          body,
+        }),
+        context("reissue"),
+      )
+    ).status,
+  ).toBe(403);
+  expect(fetch).toHaveBeenCalledTimes(2);
+});

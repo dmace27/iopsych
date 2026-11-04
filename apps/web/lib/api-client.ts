@@ -1,3 +1,8 @@
+import {
+  InvitationSchema,
+  InvitationReissueSchema,
+  ProviderInvitationDeliverySchema,
+} from "./invitation-contracts";
 import { ApiProblemSchema, type ApiFieldError } from "@iopsych/shared";
 import type { z } from "zod";
 
@@ -321,4 +326,24 @@ export function updateManagedUser(
       expected_version: expectedVersion,
     }),
   });
+}
+
+export function getInvitationDelivery(roleId: string, invitationId: string) {
+  return requestJson(
+    `/roles/${encodeURIComponent(roleId)}/invites/${encodeURIComponent(invitationId)}/delivery`,
+    ProviderInvitationDeliverySchema,
+  );
+}
+
+export function reissueInvitation(
+  roleId: string,
+  invitationId: string,
+  input: z.infer<typeof InvitationReissueSchema>,
+) {
+  const body = InvitationReissueSchema.parse(input);
+  return requestJson(
+    `/roles/${encodeURIComponent(roleId)}/invites/${encodeURIComponent(invitationId)}/reissue`,
+    InvitationSchema,
+    { method: "POST", body: JSON.stringify(body) },
+  );
 }

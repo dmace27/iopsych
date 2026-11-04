@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import "@testing-library/jest-dom/vitest";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { ApiClientError } from "../../../../lib/api-client";
@@ -225,6 +225,10 @@ it("moves keyboard focus to the revoked card and continues to the next action", 
   expect(card).toHaveFocus();
   expect(card).toHaveAttribute("tabindex", "-1");
   expect(card).toHaveClass("focus:ring-2");
+  await user.tab();
+  expect(
+    within(card).getByRole("button", { name: "Check provider delivery" }),
+  ).toHaveFocus();
   await user.tab();
   expect(
     screen.getByRole("button", {

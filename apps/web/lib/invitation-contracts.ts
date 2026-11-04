@@ -31,3 +31,30 @@ export type InvitationList = z.infer<typeof InvitationListSchema>;
 export function canManageInvitations(role: InternalUserRole): boolean {
   return role === "admin" || role === "recruiter";
 }
+
+export const ProviderInvitationDeliverySchema = z.strictObject({
+  id: z.uuid(),
+  invite_id: z.uuid(),
+  status: z.enum([
+    "queued",
+    "retrying",
+    "sent",
+    "delivered",
+    "failed",
+    "bounced",
+    "complained",
+    "reissue_required",
+    "cancelled",
+  ]),
+  attempt_count: z.number().int().nonnegative(),
+  next_attempt_at: z.iso.datetime({ offset: true }),
+  retry_until: z.iso.datetime({ offset: true }),
+  last_error_code: z.string().nullable(),
+});
+export type ProviderInvitationDelivery = z.infer<
+  typeof ProviderInvitationDeliverySchema
+>;
+export const InvitationReissueSchema = z.strictObject({
+  request_id: z.uuid(),
+  expires_in_hours: z.number().int().min(1).max(720).optional(),
+});
