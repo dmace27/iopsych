@@ -69,6 +69,10 @@ describe("SiteHeader", () => {
     expect(
       await screen.findByRole("link", { name: "Accounts" }),
     ).toHaveAttribute("href", "/accounts");
+    expect(screen.getByRole("link", { name: "Accounts" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
     cleanup();
     vi.mocked(getCurrentUser).mockResolvedValue(account);
     render(<SiteHeader />);
@@ -77,6 +81,26 @@ describe("SiteHeader", () => {
       screen.queryByRole("link", { name: "Accounts" }),
     ).not.toBeInTheDocument();
   });
+
+  it.each([
+    ["/roles", "Roles", "page"],
+    ["/roles/12345678-1234-4234-8234-123456789abc", "Roles", "location"],
+    ["/reports/12345678-1234-4234-8234-123456789abc", "Roles", "location"],
+    ["/privacy", "Privacy", "page"],
+    ["/sign-in", "Sign in", "page"],
+  ])(
+    "identifies the navigation location on %s",
+    async (path, name, current) => {
+      navigation.pathname = path;
+      render(<SiteHeader />);
+      if (path !== "/sign-in") await screen.findByText(/Synthetic Manager/);
+      expect(screen.getByRole("link", { name })).toHaveAttribute(
+        "aria-current",
+        current,
+      );
+      expect(document.querySelectorAll("[aria-current]")).toHaveLength(1);
+    },
+  );
 
   it("removes internal navigation from bearer-token candidate pages", () => {
     navigation.pathname = "/candidate/invites/signed-token";
@@ -140,6 +164,12 @@ describe("account session controls", () => {
       expect(screen.getByText(/Synthetic Manager/)).toBeInTheDocument();
       expect(screen.getByRole("button", { name: "Sign out" })).toBeEnabled();
       expect(navigation.replace).not.toHaveBeenCalled();
+      vi.mocked(getCurrentUser).mockRejectedValue(
+        new ApiClientError("expired", { status: 401, code: "unauthorized" }),
+      );
+      fireEvent(window, new Event("focus"));
+      await screen.findByRole("link", { name: "Sign in to continue" });
+      expect(screen.queryByRole("alert")).not.toBeInTheDocument();
     },
   );
 
