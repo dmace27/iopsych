@@ -5,6 +5,7 @@ from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.assignments.registry import match_assignment, read_assignment, read_report, read_scores
 from app.auth.context import AuthorizationContext
 from app.auth.errors import (
     organization_resource_not_found,
@@ -27,12 +28,8 @@ from app.database.models import (
 from app.database.session import commit_or_flush
 from app.reports.schemas import ReportCreateRequest, ReportResponse, SubmittedAssessmentResponse
 from iopsych_contracts import RoleConstructRating as RatingContract
-from iopsych_contracts.assessment import AssessmentScoreResult
 from iopsych_contracts.matching import (
-    MATCHING_ALGORITHM_VERSION,
-    MatchingResult,
     MatchingRoleProfile,
-    match_role_profile,
 )
 
 
@@ -102,18 +99,20 @@ class ReportService:
                 code="profile_not_approved",
                 detail="Reports require a human-approved profile version.",
             )
+        assignment = read_assignment(invite.assignment_json)
         report = self.session.scalar(
             select(AlignmentReport).where(
                 AlignmentReport.assessment_id == assessment.id,
                 AlignmentReport.role_profile_id == profile.id,
-                AlignmentReport.algorithm_version == MATCHING_ALGORITHM_VERSION,
+                AlignmentReport.algorithm_version == assignment.matching_algorithm_version,
             )
         )
         if report is None:
             ratings = self.session.scalars(
                 select(RoleConstructRating).where(RoleConstructRating.profile_id == profile.id)
             ).all()
-            result = match_role_profile(
+            result = match_assignment(
+                assignment,
                 MatchingRoleProfile(
                     approved=True,
                     constructs=tuple(
@@ -127,7 +126,7 @@ class ReportService:
                         for r in ratings
                     ),
                 ),
-                AssessmentScoreResult.model_validate(assessment.scores_json),
+                read_scores(assessment.scores_json),
             )
             report = AlignmentReport(
                 assessment_id=assessment.id,
@@ -192,7 +191,7 @@ class ReportService:
             role_profile_id=profile.id,
             role_profile_version=profile.version,
             generated_at=report.created_at,
-            result=MatchingResult.model_validate(report.result_json),
+            result=read_report(report.algorithm_version, report.result_json),
         )
 
     def list_submissions(
@@ -217,7 +216,12 @@ class ReportService:
                 (
                     (AlignmentReport.assessment_id == Assessment.id)
                     & (AlignmentReport.role_profile_id == RoleProfile.id)
-                    & (AlignmentReport.algorithm_version == MATCHING_ALGORITHM_VERSION)
+                    & (
+                        AlignmentReport.algorithm_version
+                        == AssessmentInvite.assignment_json[
+                            "matching_algorithm_version"
+                        ].as_string()
+                    )
                 ),
             )
             .where(

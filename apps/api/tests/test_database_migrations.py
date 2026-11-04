@@ -58,6 +58,7 @@ def test_migration_upgrades_and_downgrades_empty_database(
             connection.scalars(text("SELECT name FROM sqlite_master WHERE type = 'trigger'"))
         )
     assert trigger_names == {
+        "trg_assessment_invites_assignment_immutable",
         "trg_audit_events_no_delete",
         "trg_audit_events_no_update",
     }

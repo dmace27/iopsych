@@ -1,0 +1,238 @@
+"""Populate revision 0007 before upgrading; never use an existing database/schema."""
+
+import os
+from collections.abc import Generator
+from copy import deepcopy
+from datetime import UTC, datetime, timedelta
+from pathlib import Path
+from typing import Any
+from uuid import uuid4
+
+import pytest
+from alembic import command
+from sqlalchemy import MetaData, create_engine, select, text
+from sqlalchemy.engine import make_url
+from sqlalchemy.exc import DBAPIError
+from sqlalchemy.orm import Session
+from sqlalchemy.schema import CreateSchema, DropSchema
+
+from app.assignments.registry import (
+    definition_response,
+    legacy_definition,
+    read_assignment,
+    read_report,
+    score_assignment,
+)
+from app.database.models import RoleConstructRating
+from app.database.seed import ALPHA_PROFILE_ID, seed_database
+from iopsych_contracts import RoleConstructRating as RatingContract
+from iopsych_contracts.assessment import AssessmentResponseSet, score_assessment
+from iopsych_contracts.matching import MatchingRoleProfile, match_role_profile
+from tests.test_database_migrations import alembic_config
+from tests.test_reports import responses
+
+
+@pytest.fixture(params=["sqlite", "postgresql"])
+def upgrade_url(request: pytest.FixtureRequest, tmp_path: Path) -> Generator[str]:
+    if request.param == "sqlite":
+        yield f"sqlite+pysqlite:///{tmp_path / 'populated-upgrade.db'}"
+        return
+    database_url = os.environ.get("TEST_POSTGRES_URL", "")
+    if not database_url:
+        pytest.skip("Isolated PostgreSQL requires explicit TEST_POSTGRES_URL")
+    url = make_url(database_url)
+    # This slice must never connect to existing app ports/databases.
+    if url.port != 5550 or url.database != "iopsych_6c":
+        pytest.fail("6C upgrade tests require port 5550 / database iopsych_6c")
+    schema = f"assignment_upgrade_{uuid4().hex}"
+    admin = create_engine(url)
+    with admin.begin() as connection:
+        connection.execute(CreateSchema(schema))
+    try:
+        yield url.update_query_dict({"options": f"-csearch_path={schema}"}).render_as_string(
+            hide_password=False
+        )
+    finally:
+        with admin.begin() as connection:
+            connection.execute(DropSchema(schema, cascade=True))
+        admin.dispose()
+
+
+def test_populated_upgrade_preserves_assignments_and_original_interpretation(
+    upgrade_url: str,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("DATABASE_URL", upgrade_url)
+    config = alembic_config(upgrade_url)
+    command.upgrade(config, "20260929_0007")
+    engine = create_engine(upgrade_url)
+    definition = legacy_definition()
+    saved_draft = responses()
+    scores = score_assessment(definition, AssessmentResponseSet.model_validate(saved_draft))
+    with Session(engine) as session:
+        seed_database(session)
+        session.commit()
+        ratings = session.scalars(
+            select(RoleConstructRating).where(RoleConstructRating.profile_id == ALPHA_PROFILE_ID)
+        ).all()
+        result = match_role_profile(
+            MatchingRoleProfile(
+                approved=True,
+                constructs=tuple(
+                    RatingContract(
+                        key=r.construct_key,
+                        rating=r.rating,
+                        confidence=r.confidence,
+                        rationale=r.rationale,
+                        evidence=r.evidence_json,
+                    )
+                    for r in ratings
+                ),
+            ),
+            scores,
+        ).model_dump(mode="json")
+    metadata = MetaData()
+    metadata.reflect(engine)
+    invites = metadata.tables["assessment_invites"]
+    consents = metadata.tables["candidate_consents"]
+    assessments = metadata.tables["assessments"]
+    reports = metadata.tables["alignment_reports"]
+    # Reflected SQLite CHAR UUID columns expect hex strings; PostgreSQL UUID accepts these.
+    ids = {
+        state: uuid4().hex
+        for state in (
+            "unopened",
+            "consented",
+            "expired",
+            "submitted",
+            "unknown",
+            "malformed",
+            "anonymized",
+        )
+    }
+    now = datetime.now(UTC)
+    before: dict[str, Any] = {}
+    report_id = uuid4().hex
+    with engine.begin() as connection:
+        for state, invite_id in ids.items():
+            connection.execute(
+                invites.insert().values(
+                    id=invite_id,
+                    role_profile_id=ALPHA_PROFILE_ID.hex,
+                    email=f"{state}@example.invalid",
+                    token_hash=uuid4().hex * 2,
+                    expires_at=now + timedelta(days=-1 if state == "expired" else 7),
+                    status="active" if state == "unopened" else "consented",
+                )
+            )
+            if state == "unopened":
+                continue
+            consent_id = uuid4().hex
+            connection.execute(
+                consents.insert().values(
+                    id=consent_id,
+                    invite_id=invite_id,
+                    decision="consent",
+                    notice_version="pilot-v1",
+                )
+            )
+            if state in {"consented", "expired"}:
+                continue
+            assessment_id = uuid4().hex
+            definition_payload = definition.model_dump(mode="json")
+            if state == "unknown":
+                definition_payload["version"] = "99.0.0"
+            if state in {"malformed", "anonymized"}:
+                definition_payload = {}
+            response_payload = {} if state == "anonymized" else deepcopy(saved_draft)
+            score_payload = {} if state == "anonymized" else scores.model_dump(mode="json")
+            before[state] = (definition_payload, response_payload, score_payload)
+            connection.execute(
+                assessments.insert().values(
+                    id=assessment_id,
+                    invite_id=invite_id,
+                    consent_id=consent_id,
+                    submitted_at=now,
+                    definition_json=definition_payload,
+                    responses_json=response_payload,
+                    scores_json=score_payload,
+                    anonymized_at=now if state == "anonymized" else None,
+                )
+            )
+            if state == "submitted":
+                connection.execute(
+                    reports.insert().values(
+                        id=report_id,
+                        assessment_id=assessment_id,
+                        role_profile_id=ALPHA_PROFILE_ID.hex,
+                        algorithm_version="1.0.0",
+                        result_json=result,
+                    )
+                )
+    engine.dispose()
+    command.upgrade(config, "head")
+    engine = create_engine(upgrade_url)
+    metadata = MetaData()
+    metadata.reflect(engine)
+    invites = metadata.tables["assessment_invites"]
+    with engine.connect() as connection:
+        for state, invite_id in ids.items():
+            assignment = connection.scalar(
+                select(invites.c.assignment_json).where(invites.c.id == invite_id)
+            )
+            if state in {"unknown", "malformed", "anonymized"}:
+                assert assignment is None
+            else:
+                assert definition_response(assignment).definition == definition
+                assert (
+                    score_assignment(
+                        read_assignment(assignment),
+                        AssessmentResponseSet.model_validate(saved_draft),
+                    )
+                    == scores
+                )
+            if state in before:
+                row = connection.execute(
+                    select(
+                        assessments.c.definition_json,
+                        assessments.c.responses_json,
+                        assessments.c.scores_json,
+                    ).where(assessments.c.invite_id == invite_id)
+                ).one()
+                assert tuple(row) == before[state]
+        stored_report = connection.scalar(
+            select(reports.c.result_json).where(reports.c.id == report_id)
+        )
+        assert stored_report == result
+        assert read_report("1.0.0", stored_report).model_dump(mode="json") == result
+    with engine.begin() as connection:
+        connection.execute(
+            invites.update().where(invites.c.id == ids["consented"]).values(status="revoked")
+        )
+    for value in (None, {"replacement": True}):
+        with (
+            pytest.raises(DBAPIError, match="assignments are immutable"),
+            engine.begin() as connection,
+        ):
+            connection.execute(
+                invites.update()
+                .where(invites.c.id == ids["submitted"])
+                .values(assignment_json=value)
+            )
+    # NULL history must not silently acquire a guessed assignment either.
+    with pytest.raises(DBAPIError, match="assignments are immutable"), engine.begin() as connection:
+        connection.execute(
+            invites.update()
+            .where(invites.c.id == ids["unknown"])
+            .values(assignment_json={"replacement": True})
+        )
+    engine.dispose()
+    command.downgrade(config, "20260929_0007")
+    engine = create_engine(upgrade_url)
+    with engine.connect() as connection:
+        assert connection.scalar(text("SELECT count(*) FROM assessment_invites")) == len(ids)
+        assert (
+            connection.scalar(select(reports.c.result_json).where(reports.c.id == report_id))
+            == result
+        )
+    engine.dispose()

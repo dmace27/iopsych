@@ -12,6 +12,7 @@ from httpx import ASGITransport, AsyncClient
 from sqlalchemy import Engine, func, select
 from sqlalchemy.orm import Session, sessionmaker
 
+from app.assignments.registry import new_assignment
 from app.auth.config import AuthenticationSettings
 from app.database.models import (
     AlignmentReport,
@@ -101,6 +102,7 @@ def invitation(factory: sessionmaker[Session]) -> tuple[str, UUID]:
     with factory() as session:
         invite = AssessmentInvite(
             role_profile_id=ALPHA_PROFILE_ID,
+            assignment_json=new_assignment(allow_synthetic=True),
             email="candidate@example.invalid",
             token_hash=token.token_hash,
             expires_at=datetime.now(UTC) + timedelta(days=1),

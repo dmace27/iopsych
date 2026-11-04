@@ -23,6 +23,8 @@ class InvitationSettings(BaseSettings):
         extra="ignore",
     )
 
+    allow_synthetic_definitions: bool = False
+
     token_signing_secret: SecretStr | None = None
     candidate_base_url: str = "http://localhost:3000/candidate/invites"
     default_expiry_hours: int = Field(default=168, ge=1, le=720)

@@ -14,6 +14,7 @@ from pydantic import ValidationError
 from sqlalchemy import Engine, func, select
 from sqlalchemy.orm import Session, sessionmaker
 
+from app.assignments.registry import new_assignment
 from app.auth.config import AuthenticationSettings
 from app.database.models import (
     AlignmentReport,
@@ -407,6 +408,7 @@ async def test_submission_stores_configured_retention_deadline(
     with privacy_factory() as session:
         invite = AssessmentInvite(
             role_profile_id=ALPHA_PROFILE_ID,
+            assignment_json=new_assignment(allow_synthetic=True),
             email="deadline-candidate@example.invalid",
             token_hash=generated.token_hash,
             expires_at=datetime.now(UTC) + timedelta(days=1),

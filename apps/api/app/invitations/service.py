@@ -4,12 +4,19 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
-from pathlib import Path
 from uuid import UUID
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.assignments.registry import (
+    LEGACY_DEFINITION_PATH,
+    AssignedDefinitionResponse,
+    definition_response,
+    new_assignment,
+    read_assignment,
+    score_assignment,
+)
 from app.auth.context import AuthorizationContext
 from app.auth.errors import (
     organization_resource_not_found,
@@ -49,15 +56,11 @@ from app.invitations.schemas import (
 from app.invitations.tokens import InvalidInviteTokenError, InviteTokenCodec
 from app.privacy.config import PrivacySettings
 from iopsych_contracts.assessment import (
-    AssessmentDefinition,
     AssessmentResponseSet,
     AssessmentScoringError,
-    score_assessment,
 )
 
-PILOT_DEFINITION_PATH = (
-    Path(__file__).resolve().parents[4] / "packages/shared/definitions/v1/pilot-assessment.json"
-)
+PILOT_DEFINITION_PATH = LEGACY_DEFINITION_PATH
 
 
 @dataclass(frozen=True)
@@ -112,10 +115,12 @@ class InternalInvitationService:
                 code="invite_expiry_exceeds_policy",
                 detail="The requested invitation expiry exceeds organization policy.",
             )
+        assignment = new_assignment(allow_synthetic=self._settings.allow_synthetic_definitions)
         now = datetime.now(UTC)
         generated = codec.generate()
         invite = AssessmentInvite(
             role_profile_id=profile.id,
+            assignment_json=assignment,
             email=request.email,
             token_hash=generated.token_hash,
             expires_at=now + timedelta(hours=expiry_hours),
@@ -268,11 +273,21 @@ class CandidateInvitationService:
         self._require_available(candidate_invite)
         return candidate_invite
 
+    def read_definition(self, raw_token: str) -> AssignedDefinitionResponse:
+        """Serve only the invitation's frozen content after affirmative consent."""
+        candidate = self._resolve(raw_token, lock=False)
+        invite = require_consented_invite(self._session, candidate.invite.id)
+        response = definition_response(invite.assignment_json)
+        self._append_audit(candidate, "assessment_definition.accessed")
+        commit_or_flush(self._session)
+        return response
+
     def submit(self, raw_token: str, responses: AssessmentResponseSet) -> UUID:
         """Validate and score a complete response set once, after explicit consent."""
 
         candidate = self._resolve(raw_token, lock=True)
         invite = require_consented_invite(self._session, candidate.invite.id)
+        assignment = read_assignment(invite.assignment_json)
         canonical_responses = _canonical_response_payload(responses)
         existing = self._session.scalar(select(Assessment).where(Assessment.invite_id == invite.id))
         if existing is not None:
@@ -290,11 +305,9 @@ class CandidateInvitationService:
             )
         )
         assert consent is not None
-        definition = AssessmentDefinition.model_validate_json(
-            PILOT_DEFINITION_PATH.read_text(encoding="utf-8")
-        )
+        definition = assignment.definition
         try:
-            scores = score_assessment(definition, responses)
+            scores = score_assignment(assignment, responses)
         except AssessmentScoringError as exc:
             raise resource_validation_failed(
                 code="invalid_assessment_responses", detail=str(exc)

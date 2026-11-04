@@ -9,6 +9,7 @@ from fastapi import APIRouter, Depends, Request, status
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
+from app.assignments.registry import AssignedDefinitionResponse
 from app.audit import audited, set_audit_entity
 from app.auth.context import AuthorizationContext
 from app.auth.dependencies import get_database_session, require_roles
@@ -147,6 +148,15 @@ async def record_candidate_consent(
 
     _candidate_rate_limit(request, token, action="consent")
     return _candidate_service(request, session).record_consent(token, payload)
+
+
+@router.get("/v1/candidate/invites/{token}/definition", response_model=AssignedDefinitionResponse)
+def read_assigned_definition(
+    token: str, request: Request, session: DatabaseSession
+) -> AssignedDefinitionResponse:
+    """Read frozen questions only for this valid consented bearer invitation."""
+    _candidate_rate_limit(request, token, action="definition")
+    return _candidate_service(request, session).read_definition(token)
 
 
 class SubmissionResponse(BaseModel):

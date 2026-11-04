@@ -205,6 +205,7 @@ class AssessmentInvite(UuidPrimaryKeyMixin, CreatedAtMixin, Base):
         ForeignKey("role_profiles.id", ondelete="RESTRICT"),
         nullable=False,
     )
+    assignment_json: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
     email: Mapped[str] = mapped_column(String(320), nullable=False)
     token_hash: Mapped[str] = mapped_column(String(64), nullable=False)
     expires_at: Mapped[datetime] = mapped_column(UtcDateTime(), nullable=False)
@@ -386,3 +387,33 @@ event.listen(
         "EXECUTE FUNCTION reject_audit_event_mutation()"
     ).execute_if(dialect="postgresql"),
 )
+
+
+# The complete envelope is frozen, including for unsupported legacy NULL rows.
+# Normal lifecycle updates and privacy deletion remain permitted.
+for assignment_dialect, assignment_ddl in (
+    (
+        "sqlite",
+        "CREATE TRIGGER trg_assessment_invites_assignment_immutable BEFORE UPDATE "
+        "OF assignment_json ON assessment_invites "
+        "WHEN OLD.assignment_json IS NOT NEW.assignment_json BEGIN "
+        "SELECT RAISE(ABORT, 'assignments are immutable'); END",
+    ),
+    (
+        "postgresql",
+        "CREATE OR REPLACE FUNCTION reject_assignment_mutation() RETURNS trigger "
+        "LANGUAGE plpgsql AS $$ BEGIN IF OLD.assignment_json::text IS DISTINCT FROM "
+        "NEW.assignment_json::text THEN RAISE EXCEPTION 'assignments are immutable'; "
+        "END IF; RETURN NEW; END; $$",
+    ),
+    (
+        "postgresql",
+        "CREATE TRIGGER trg_assessment_invites_assignment_immutable BEFORE UPDATE "
+        "ON assessment_invites FOR EACH ROW EXECUTE FUNCTION reject_assignment_mutation()",
+    ),
+):
+    event.listen(
+        AssessmentInvite.__table__,
+        "after_create",
+        DDL(assignment_ddl).execute_if(dialect=assignment_dialect),  # type: ignore[no-untyped-call]
+    )

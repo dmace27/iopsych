@@ -160,6 +160,7 @@ def invitation_settings(**overrides: Any) -> InvitationSettings:
     """Build secure deterministic settings with focused overrides."""
 
     values: dict[str, Any] = {
+        "allow_synthetic_definitions": True,
         "token_signing_secret": INVITE_SECRET,
         "candidate_base_url": "https://candidate.example.invalid/invites/",
         "default_expiry_hours": 24,
