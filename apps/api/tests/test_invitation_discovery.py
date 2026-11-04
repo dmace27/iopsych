@@ -86,6 +86,7 @@ async def test_pages_ties_insertions_and_safe_shape(
         "email",
         "expires_at",
         "status",
+        "delivery_state",
         "sent_at",
         "revoked_at",
         "created_at",

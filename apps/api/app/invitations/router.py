@@ -15,7 +15,7 @@ from app.auth.context import AuthorizationContext
 from app.auth.dependencies import get_database_session, require_roles
 from app.auth.errors import rate_limit_exceeded, service_unavailable
 from app.database.models import InternalUserRole
-from app.invitations.discovery import discover_invitations
+from app.invitations.discovery import discover_invitations, invitation_responses
 from app.invitations.queue import local_cipher
 from app.invitations.rate_limit import InMemoryRateLimiter
 from app.invitations.schemas import (
@@ -125,7 +125,7 @@ async def create_invitation(
         role_id, payload, idempotency_key=request.headers.get("Idempotency-Key")
     )
     set_audit_entity(request, invite.id)
-    return InvitationResponse.model_validate(invite)
+    return invitation_responses(session, context, [invite])[0]
 
 
 @router.post(
@@ -148,7 +148,7 @@ async def revoke_invitation(
 
     _enforce_rate_limit(request, f"invite-revoke:{context.user_id}", internal=True)
     invite = _internal_service(request, session, context).revoke(role_id, invite_id)
-    return InvitationResponse.model_validate(invite)
+    return invitation_responses(session, context, [invite])[0]
 
 
 @router.get(

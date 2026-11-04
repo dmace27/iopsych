@@ -10,6 +10,7 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints, field_validator
 
 from app.database.models import AssessmentInviteStatus, ConsentDecision
+from app.invitations.recovery import DeliveryState
 
 EmailText = Annotated[str, StringConstraints(strip_whitespace=True, min_length=3, max_length=320)]
 _EMAIL_SHAPE = re.compile(r"[^@\s]+@[^@\s]+\.[^@\s]+")
@@ -45,6 +46,7 @@ class InvitationResponse(BaseModel):
     email: str
     expires_at: datetime
     status: AssessmentInviteStatus
+    delivery_state: DeliveryState | None = None
     sent_at: datetime | None
     revoked_at: datetime | None
     created_at: datetime

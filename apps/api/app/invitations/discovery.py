@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import base64
 import re
+from collections.abc import Sequence
 from datetime import UTC, datetime
 from uuid import UUID
 
@@ -12,12 +13,44 @@ from sqlalchemy.orm import Session
 
 from app.auth.context import AuthorizationContext
 from app.auth.errors import organization_resource_not_found, resource_validation_failed
-from app.database.models import AssessmentInvite, Role, RoleProfile
+from app.database.models import AssessmentInvite, InvitationDelivery, Role, RoleProfile
 from app.database.repositories import OrganizationDataAccess
 from app.invitations.schemas import InvitationListResponse, InvitationResponse
 
 # Version byte + three UUIDs + a fixed-width UTC timestamp, base64url without padding.
 _CURSOR_SHAPE = re.compile(r"[A-Za-z0-9_-]{102}")
+
+
+def invitation_responses(
+    session: Session,
+    context: AuthorizationContext,
+    invites: Sequence[AssessmentInvite],
+) -> list[InvitationResponse]:
+    """Hydrate one bounded page with tenant-verified, credential-free queue state."""
+
+    if not invites:
+        return []
+    organization_id = context.organization.organization_id
+    states = {
+        invite_id: state
+        for invite_id, state in session.execute(
+            select(InvitationDelivery.invite_id, InvitationDelivery.state)
+            .join(AssessmentInvite, AssessmentInvite.id == InvitationDelivery.invite_id)
+            .join(RoleProfile, RoleProfile.id == AssessmentInvite.role_profile_id)
+            .join(Role, Role.id == RoleProfile.role_id)
+            .where(
+                InvitationDelivery.invite_id.in_([invite.id for invite in invites]),
+                InvitationDelivery.organization_id == organization_id,
+                Role.organization_id == organization_id,
+            )
+        ).all()
+    }
+    responses = []
+    for invite in invites:
+        response = InvitationResponse.model_validate(invite)
+        response.delivery_state = states.get(invite.id)
+        responses.append(response)
+    return responses
 
 
 def _timestamp(value: datetime) -> bytes:
@@ -100,7 +133,7 @@ def discover_invitations(
     ).all()
     items = rows[:limit]
     return InvitationListResponse(
-        items=[InvitationResponse.model_validate(invite) for invite in items],
+        items=invitation_responses(session, context, items),
         next_cursor=(
             _encode_cursor(organization_id, role_id, items[-1]) if len(rows) > limit else None
         ),
