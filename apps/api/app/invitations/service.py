@@ -6,14 +6,9 @@ import json
 import re
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
-<<<<<<< HEAD
 from hashlib import sha256
-from typing import cast
+from typing import Any, cast
 from uuid import NAMESPACE_URL, UUID, uuid5
-=======
-from typing import Any
-from uuid import UUID
->>>>>>> 1aec159 (Freeze consent notices and preserve compatible digest evidence)
 
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
@@ -78,11 +73,8 @@ from app.invitations.schemas import (
     ConsentNotice,
     ConsentRequest,
     InvitationCreateRequest,
-<<<<<<< HEAD
     InvitationReissueRequest,
-=======
     NoticeHistory,
->>>>>>> 1aec159 (Freeze consent notices and preserve compatible digest evidence)
 )
 from app.invitations.tokens import InvalidInviteTokenError, InviteTokenCodec
 from app.privacy.config import PrivacySettings
@@ -376,6 +368,7 @@ class InternalInvitationService:
             expires_at=now + timedelta(hours=expiry_hours),
             status=AssessmentInviteStatus.ACTIVE,
         )
+        freeze_notice(invite, self._settings, self._privacy_settings, origin="issued")
         self._session.add(invite)
         self._session.flush()
         message = build_invitation_email(

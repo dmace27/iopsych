@@ -2,8 +2,9 @@
 
 Reviewed integration `b77567c`, remote `646201a` decision/MVP, and semantic change
 `c2313fd` in the isolated review worktree. Read the applicable web AGENTS and
-accelerated plan. Application files are unchanged; implementation belongs to the
-branch reconciler. Initial collision guidance was sent to lead dispatch
+accelerated plan. The initial review changed no application files; the coordinator
+subsequently expanded ownership to backend compatibility (see addendum below).
+Initial collision guidance was sent to lead dispatch
 `ctx_9a9c76cc5c41` and coordinator (`msg_d61d75a23677`, `msg_5a32a070bb4a`).
 
 ## Decision and adoption boundary
@@ -66,3 +67,35 @@ The reconciliation owner's minimum acceptance checks:
 Implementation and merged-HEAD verification remain with the reconciler and
 coordinator. Protect the accelerated plan's final checks; this receipt claims no
 scientific validation, full-package completion, or release readiness.
+
+## Authorized implementation addendum
+
+Coordinator message `msg_f9b3659fa3d0` and lead message `msg_bfd7c90bfe41`
+expanded this lane to registry, report service, trace/schema and focused tests.
+Remote shared semantics were imported as a separate local validation baseline,
+`97294b6`; **do not cherry-pick that baseline** because the lead owns remote shared
+integration. The compatibility commit following it contains only owned backend
+changes, a dedicated pure test module, and this receipt update.
+
+The registry now binds both algorithms explicitly, retaining default assignment
+replay and fail-closed content eligibility. Report generation explicitly selects
+current v2 after checking frozen assignment/score provenance; no assignment is
+rewritten and new assignment metadata remains v1. Discovery prefers supported
+v2 then v1 without duplicate submission rows. Trace accepts a distinct supported
+report algorithm while retaining all definition/hash/score/source checks and
+privacy locks; its schema version remains v1. Historical report reads still use
+the row/payload algorithm guard and never call a matcher.
+
+Validation: 26 focused pure compatibility/assignment/historical-trace checks passed
+with `--no-cov`; after adding the score-version mismatch assertion, 56 compatibility
+and shared Python matching tests passed. The first 12-test focused run passed its
+tests but returned failure because default whole-application coverage requires
+100%; that coverage gate was not represented as met. Ruff lint/format and diff
+checks cover changed backend files. No DB or full-suite run was performed.
+
+Remaining integration responsibilities: adapt/run remote API upgrade/idempotency/
+discovery tests against merged assignment fixtures; widen the two frontend trace
+algorithm fields; run merged TS/generated-schema checks and privacy/API checks.
+The lead may take this lane's complete `reports/service.py` if its independently
+merged correlated discovery causes a cherry-pick conflict; it preserves current
+integration assignment validation, read guards and trace privacy locking.

@@ -31,6 +31,7 @@ from app.reports.trace import build_trace
 from app.reports.trace_schemas import ReportTraceV1
 from iopsych_contracts import RoleConstructRating as RatingContract
 from iopsych_contracts.matching import (
+    MATCHING_ALGORITHM_VERSION,
     MatchingAlgorithmVersion,
     MatchingRoleProfile,
 )
@@ -107,7 +108,7 @@ class ReportService:
             select(AlignmentReport).where(
                 AlignmentReport.assessment_id == assessment.id,
                 AlignmentReport.role_profile_id == profile.id,
-                AlignmentReport.algorithm_version == assignment.matching_algorithm_version,
+                AlignmentReport.algorithm_version == MATCHING_ALGORITHM_VERSION,
             )
         )
         if report is None:
@@ -130,6 +131,7 @@ class ReportService:
                     ),
                 ),
                 read_scores(assessment.scores_json),
+                algorithm=MATCHING_ALGORITHM_VERSION,
             )
             report = AlignmentReport(
                 assessment_id=assessment.id,
@@ -267,8 +269,6 @@ class ReportService:
         )
         if role is None:
             raise organization_resource_not_found()
-        # Prefer the current report, falling back to a supported historical one.
-        # A version upgrade must not hide existing reports or duplicate rows.
         report_id = (
             select(AlignmentReport.id)
             .where(

@@ -101,7 +101,7 @@ class ConsentRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     decision: ConsentDecision
-<<<<<<< HEAD
+    presented_notice_sha256: NoticeDigest | None = None
 
 
 class InvitationReissueRequest(BaseModel):
@@ -123,6 +123,3 @@ class InvitationDeliveryResponse(BaseModel):
     next_attempt_at: datetime
     retry_until: datetime
     last_error_code: str | None
-=======
-    presented_notice_sha256: NoticeDigest | None = None
->>>>>>> 1aec159 (Freeze consent notices and preserve compatible digest evidence)
