@@ -18,7 +18,17 @@ Future launches must inherit the verified Fast default and have their own live s
 
 ## Current scheduling and critical path
 
-### Latest checkpoint: 22:53 UTC
+### Latest checkpoint: 23:00 UTC
+
+Current integration `e137028` includes privacy discovery backend/UI/proxy (`9c8783b`, `39d0d72`, `c060fec`), invitation UI (`82d6687`), a11y corrections (`8865f8d`), strict typing (`447da48`), safe invite return path (`0d31bd0`), telemetry migration logging correction (`ba2759a`), delivery policy (`42228c3`), credential cipher (`6e6b6ca`) and report boundary tests (`e137028`). Coordinator independently passed privacy API22, privacy UI/proxy41, invitation UI/client/proxy22, focus/candidate25, safe return34, recovery53 and credential/report-boundary195 tests. API strict typing passed99 files before the newest test additions.
+
+Production browser owner now reports29/29 passing, zero skips, at `9de7fd4`, including both previously failing accessibility checks. Expanded trace/invitation/account/privacy browser checks continue. Manual screen-reader/device/user-study acceptance is still absent. Local restore script `9de7fd4` independently reran successfully: both synthetic snapshots restore schema/head0008, post-deletion data stays erased, control/audit trigger survives; pre-deletion snapshot demonstrably resurrects data without later journal, so replay remains unresolved. All owned rehearsal containers were removed.
+
+Frozen broad checkpoint `e6a39f4` is recorded as failed in `69b9376`: API529 passed/19 failed/11 skipped, coverage99.82%; all11 skipped cases separately passed on isolated PostgreSQL/readiness/Mailpit. Formatting/import/typing corrections are integrated. Telemetry root-cause fix is integrated but coordinator found a further test-hermeticity issue (ambient signing config changes expected503 to404; migration logging leaves captured stream closed). Dedicated correction is active; do not call this checkpoint green.
+
+Current useful workers: delivery runtime `ctx_d834fe802560` (exclusive0009, PG5586); role maintenance UI `ctx_860fac91684e` (3152/8172/5592); browser current `ctx_36af9fc73f17` (exclusive3116 suite); discovery review `ctx_dcfcf6ac7104` (3153/8173/5593); telemetry hermetic tests `iopsych-telemetry-hermetic`. All older completed ownership entries below are historical. Crypto, trace-coverage, privacy UI, matrix, restore, regression and typing workers have reported and been released. Latest new screens show Fast; verify hermetic session after startup. Memory47% free; no provider/capacity blocker. Next critical handoff is durable runtime → independent queue/security review and fresh combined regression, while browser and metadata work proceed independently.
+
+### Historical checkpoint: 22:53 UTC
 
 This checkpoint supersedes all older live ownership and package-status rows below. Accelerated schedule is committed as `3cf79c2`; all original acceptance criteria remain. Integration is `cd113de`. Main is unchanged. The two-hour target still ends 00:31 UTC; reserve 23:46–00:31 for final combined checks, repairs and truthful handoff rather than adding speculative scope.
 
