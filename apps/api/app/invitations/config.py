@@ -24,6 +24,9 @@ class InvitationSettings(BaseSettings):
     )
 
     allow_synthetic_definitions: bool = False
+    local_queue_enabled: bool = False
+    local_queue_key: SecretStr | None = None
+    local_queue_key_id: str = Field(default="local-v1", pattern=r"^[A-Za-z0-9_-]{1,64}$")
 
     token_signing_secret: SecretStr | None = None
     candidate_base_url: str = "http://localhost:3000/candidate/invites"

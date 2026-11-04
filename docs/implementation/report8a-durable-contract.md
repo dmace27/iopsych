@@ -1,6 +1,11 @@
 # 8A durable invitation delivery engineering contract
 
-Date: 2026-11-04. Base: `19e5844`. Proposal, not an approved migration or API change.
+Date: 2026-11-04. Base: `19e5844`. Original proposal below.
+
+Coordinator subsequently approved the local synthetic opt-in and allocated migration
+`20261104_0009`; PostgreSQL-only enforcement was separately approved after SQLite
+rollback testing. See `report8a-local-recovery.md` for implemented scope and evidence.
+Production key isolation/provider decisions remain unapproved.
 
 ## Existing behavior and compatibility
 

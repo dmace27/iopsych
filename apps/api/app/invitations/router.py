@@ -13,9 +13,10 @@ from app.assignments.registry import AssignedDefinitionResponse
 from app.audit import audited, set_audit_entity
 from app.auth.context import AuthorizationContext
 from app.auth.dependencies import get_database_session, require_roles
-from app.auth.errors import rate_limit_exceeded
+from app.auth.errors import rate_limit_exceeded, service_unavailable
 from app.database.models import InternalUserRole
 from app.invitations.discovery import discover_invitations
+from app.invitations.queue import local_cipher
 from app.invitations.rate_limit import InMemoryRateLimiter
 from app.invitations.schemas import (
     CandidateInviteResponse,
@@ -38,16 +39,27 @@ DatabaseSession = Annotated[Session, Depends(get_database_session)]
 
 
 def _internal_service(
-    request: Request, session: Session, context: AuthorizationContext
+    request: Request, session: Session, context: AuthorizationContext, *, issuance: bool = False
 ) -> InternalInvitationService:
     """Build the internal service from application-owned secure dependencies."""
 
+    cipher = None
+    if issuance and request.app.state.invitation_settings.local_queue_enabled:
+        try:
+            cipher = local_cipher(
+                request.app.state.invitation_settings, request.app.state.authentication_settings
+            )
+        except ValueError:
+            raise service_unavailable(
+                code="invitation_service_unavailable", detail="Local delivery is unavailable."
+            ) from None
     return InternalInvitationService(
         session=session,
         context=context,
         settings=request.app.state.invitation_settings,
         token_codec=request.app.state.invite_token_codec,
         delivery=request.app.state.invitation_delivery,
+        queue_cipher=cipher,
     )
 
 
@@ -109,7 +121,9 @@ async def create_invitation(
     """Email a signed, expiring invitation for an approved profile."""
 
     _enforce_rate_limit(request, f"invite-create:{context.user_id}", internal=True)
-    invite = _internal_service(request, session, context).create(role_id, payload)
+    invite = _internal_service(request, session, context, issuance=True).create(
+        role_id, payload, idempotency_key=request.headers.get("Idempotency-Key")
+    )
     set_audit_entity(request, invite.id)
     return InvitationResponse.model_validate(invite)
 

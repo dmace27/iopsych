@@ -7,6 +7,7 @@ from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.assignments.registry import (
@@ -42,10 +43,19 @@ from app.database.models import (
 from app.database.repositories import OrganizationDataAccess
 from app.database.session import commit_or_flush
 from app.invitations.config import InvitationSettings
+from app.invitations.credentials import LocalCredentialCipher
 from app.invitations.delivery import (
     InvitationDeliveryAdapter,
     InvitationDeliveryError,
     build_invitation_email,
+)
+from app.invitations.queue import (
+    cancel_delivery,
+    issuance_digests,
+    replay_invitation,
+    require_queue_database,
+    require_resolved_prior_delivery,
+    stage_delivery,
 )
 from app.invitations.schemas import (
     CandidateInviteResponse,
@@ -83,15 +93,19 @@ class InternalInvitationService:
         settings: InvitationSettings,
         token_codec: InviteTokenCodec | None,
         delivery: InvitationDeliveryAdapter,
+        queue_cipher: LocalCredentialCipher | None = None,
     ) -> None:
         self._session = session
         self._context = context
         self._settings = settings
         self._token_codec = token_codec
         self._delivery = delivery
+        self._queue_cipher = queue_cipher
         self._data = OrganizationDataAccess(session, context.organization.organization_id)
 
-    def create(self, role_id: UUID, request: InvitationCreateRequest) -> AssessmentInvite:
+    def create(
+        self, role_id: UUID, request: InvitationCreateRequest, *, idempotency_key: str | None = None
+    ) -> AssessmentInvite:
         """Create, deliver, and activate an invite for an approved profile only."""
 
         codec = self._require_codec()
@@ -99,6 +113,22 @@ class InternalInvitationService:
         profile = self._data.get_role_profile_for_role(role_id, request.role_profile_id)
         if role is None or profile is None:
             raise organization_resource_not_found()
+        digests = None
+        if self._settings.local_queue_enabled:
+            require_queue_database(self._session)
+            if self._queue_cipher is None:
+                raise service_unavailable(
+                    code="invitation_service_unavailable", detail="Local delivery is unavailable."
+                )
+            digests = issuance_digests(role_id, request, idempotency_key)
+            replay = replay_invitation(
+                self._session, self._context.organization.organization_id, role_id, digests
+            )
+            if replay is not None:
+                return replay
+            require_resolved_prior_delivery(
+                self._session, self._context.organization.organization_id, role_id, request.email
+            )
         if role.status is RoleStatus.ARCHIVED:
             raise resource_conflict(
                 code="role_archived", detail="Archived roles cannot issue invitations."
@@ -115,6 +145,8 @@ class InternalInvitationService:
                 code="invite_expiry_exceeds_policy",
                 detail="The requested invitation expiry exceeds organization policy.",
             )
+        if digests is not None:
+            return self._create_queued(role_id, request, expiry_hours, digests, codec)
         assignment = new_assignment(allow_synthetic=self._settings.allow_synthetic_definitions)
         now = datetime.now(UTC)
         generated = codec.generate()
@@ -157,13 +189,62 @@ class InternalInvitationService:
         commit_or_flush(self._session)
         return invite
 
+    def _create_queued(
+        self,
+        role_id: UUID,
+        request: InvitationCreateRequest,
+        expiry_hours: int,
+        digests: tuple[str, str],
+        codec: InviteTokenCodec,
+    ) -> AssessmentInvite:
+        assert self._queue_cipher is not None
+        organization_id = self._context.organization.organization_id
+        try:
+            # A competing dedupe insert rolls back only this savepoint, preserving
+            # request/audit ownership of the outer transaction.
+            with self._session.begin_nested():
+                generated = codec.generate()
+                invite = AssessmentInvite(
+                    role_profile_id=request.role_profile_id,
+                    assignment_json=new_assignment(
+                        allow_synthetic=self._settings.allow_synthetic_definitions
+                    ),
+                    email=request.email,
+                    token_hash=generated.token_hash,
+                    expires_at=datetime.now(UTC) + timedelta(hours=expiry_hours),
+                    status=AssessmentInviteStatus.PENDING_DELIVERY,
+                )
+                self._session.add(invite)
+                self._session.flush()
+                stage_delivery(
+                    self._session,
+                    invite=invite,
+                    organization_id=organization_id,
+                    actor_id=self._context.user_id,
+                    digests=digests,
+                    raw_token=generated.raw_token,
+                    cipher=self._queue_cipher,
+                    key_id=self._settings.local_queue_key_id,
+                )
+        except IntegrityError:
+            replay = replay_invitation(self._session, organization_id, role_id, digests)
+            if replay is None:
+                raise
+            return replay
+        commit_or_flush(self._session)
+        return invite
+
     def revoke(self, role_id: UUID, invite_id: UUID) -> AssessmentInvite:
         """Revoke a tenant-owned invite without revealing foreign identifiers."""
 
         invite = self._data.get_assessment_invite_for_role(role_id, invite_id)
         if invite is None:
             raise organization_resource_not_found()
+        # Serialize against worker completion before changing/re-reading lifecycle.
+        self._session.refresh(invite, with_for_update=True)
+        cancel_delivery(self._session, invite.id)
         if invite.status is AssessmentInviteStatus.REVOKED:
+            commit_or_flush(self._session)
             return invite
         invite.status = AssessmentInviteStatus.REVOKED
         invite.revoked_at = datetime.now(UTC)
