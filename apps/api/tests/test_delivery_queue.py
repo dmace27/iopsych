@@ -923,3 +923,46 @@ def test_audit_rejects_unresolvable_owner(queue_factory: sessionmaker[Session]) 
             _audit(session, orphan)
         session.commit()
         assert session.scalar(select(func.count()).select_from(AuditEvent)) == before
+
+
+@pytest.mark.parametrize("disappeared", [True, False])
+def test_cleanup_rechecks_selected_delivery(
+    queue_factory: sessionmaker[Session], monkeypatch: pytest.MonkeyPatch, disappeared: bool
+) -> None:
+    from app.invitations import worker as worker_module
+
+    with queue_factory() as session:
+        identifier = issue(session).id
+        audit_count = session.scalar(select(func.count()).select_from(AuditEvent))
+    locked_job = worker_module._locked_job
+    inspected: list[UUID] = []
+
+    def changed_job(session: Session, invite_id: UUID) -> InvitationDelivery | None:
+        inspected.append(invite_id)
+        job = locked_job(session, invite_id)
+        assert job is not None
+        if disappeared:
+            session.delete(job)
+            session.flush()
+            return None
+        job.state = DeliveryState.CANCELLED
+        job.credential_ciphertext = None
+        job.credential_key_id = None
+        session.flush()
+        return job
+
+    monkeypatch.setattr(worker_module, "_locked_job", changed_job)
+    assert cleanup_deliveries(queue_factory, now=datetime.now(UTC) + timedelta(minutes=16)) == 0
+    assert inspected == [identifier]
+    with queue_factory() as session:
+        assert session.scalar(select(func.count()).select_from(AuditEvent)) == audit_count
+        invite = session.get(AssessmentInvite, identifier)
+        assert invite is not None and invite.status is AssessmentInviteStatus.PENDING_DELIVERY
+        assert invite.sent_at is None
+        job = session.scalar(select(InvitationDelivery))
+        if disappeared:
+            assert job is None
+        else:
+            assert job is not None and job.state is DeliveryState.CANCELLED
+            assert job.attempt_count == 0
+            assert job.credential_ciphertext is None and job.credential_key_id is None
