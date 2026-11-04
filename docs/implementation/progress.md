@@ -34,6 +34,18 @@ Initial dispatches `ctx_8f1ba11ba1d4`, `ctx_30f32ea5ece7`, `ctx_c6e202ebf48d` fa
 
 ## Package ledger
 
+Expanded wave confirmed eight active workers, all with `turn_started` and requested/effective `gpt-6-astra`. New four worktrees branch from `3602cb0`; runner branched from `8450a09`. Branch names below have `AbhiNutakki/` prefix.
+
+| Slice | Branch | Task / dispatch | Exclusive ownership | Runtime allocation |
+| --- | --- | --- | --- | --- |
+| 12A early runner | `iopsych-12a-runner` | `task_39bfc496bb85` / `ctx_1102016053c8` | `tests/browser/**`, `scripts/browser-e2e*`, `12a-scaffold.md` | 3104/8104/5544, local mail 1124/8124 |
+| 9A compatible storage fixes | `iopsych-9a-storage` | `task_23dde4095af6` / `ctx_75b5d5c7e879` | candidate-storage helper/tests, candidate-assessment component/tests, `9a-report.md` | 3105/8105/5545, `iopsych_9a` |
+| 11A packaging preparation | `iopsych-11a-packaging` | `task_1147cce72e78` / `ctx_4d2b01907bbf` | `deploy/**`, app Dockerfiles, `.dockerignore`, `11a-report.md` | 3106/8106/5546, `iopsych_11a` |
+| 12B preparation | `iopsych-12b-a11y` | `task_e6bd8f0e591f` / `ctx_2e6f574be424` | `docs/accessibility/**`, `12b-preparation.md`; no app edits | 3107/8107/5547, `iopsych_a11y` |
+| 12C preparation | `iopsych-12c-runbooks` | `task_04ff3171b77a` / `ctx_dbef9130a02e` | `docs/operations/**`, `12c-preparation.md` only | 3108/8108/5548, `iopsych_runbooks` |
+
+All report basenames above live under `docs/implementation/`. Setup hooks run concurrently; workers verify completion before tests. Root package/lock files remain 6A/coordinator owned; runner uses an isolated test-tool manifest/lock. Automated axe tooling belongs to runner, manual protocol/evidence to 12B, and current gap inventory to the read-only auditor. Full package acceptance remains pending despite these slices running.
+
 Pending means no acceptance claimed. A prepared decision or scaffold never closes the full package. Revision-linked reports will record exact commands, results, failures/skips and external limitations.
 
 | Package | Dependencies | Owner / status | Acceptance evidence required | Branch / commit / blockers |
