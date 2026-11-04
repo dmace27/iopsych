@@ -50,6 +50,13 @@ class InvitationResponse(BaseModel):
     created_at: datetime
 
 
+class InvitationListResponse(BaseModel):
+    """A bounded page of existing internal invitation representations."""
+
+    items: list[InvitationResponse]
+    next_cursor: str | None
+
+
 class ConsentNotice(BaseModel):
     """Versioned plain-language content shown before any assessment questions."""
 

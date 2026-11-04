@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Request, status
+from fastapi import APIRouter, Depends, Query, Request, status
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
@@ -15,11 +15,13 @@ from app.auth.context import AuthorizationContext
 from app.auth.dependencies import get_database_session, require_roles
 from app.auth.errors import rate_limit_exceeded
 from app.database.models import InternalUserRole
+from app.invitations.discovery import discover_invitations
 from app.invitations.rate_limit import InMemoryRateLimiter
 from app.invitations.schemas import (
     CandidateInviteResponse,
     ConsentRequest,
     InvitationCreateRequest,
+    InvitationListResponse,
     InvitationResponse,
 )
 from app.invitations.service import CandidateInvitationService, InternalInvitationService
@@ -73,6 +75,22 @@ def _enforce_rate_limit(request: Request, key: str, *, internal: bool) -> None:
     )
     if not result.allowed:
         raise rate_limit_exceeded(retry_after_seconds=result.retry_after_seconds)
+
+
+@router.get("/v1/roles/{role_id}/invites", response_model=InvitationListResponse)
+@audited("assessment_invite.listed", "role", entity_id_path_parameter="role_id")
+async def list_invitations(
+    role_id: UUID,
+    request: Request,
+    context: InviteContext,
+    session: DatabaseSession,
+    limit: Annotated[int, Query(ge=1, le=100)] = 25,
+    cursor: str | None = None,
+) -> InvitationListResponse:
+    """Discover tenant-owned invitation history, including archived roles."""
+
+    _enforce_rate_limit(request, f"invite-list:{context.user_id}", internal=True)
+    return discover_invitations(session, context, role_id, limit=limit, cursor=cursor)
 
 
 @router.post(
