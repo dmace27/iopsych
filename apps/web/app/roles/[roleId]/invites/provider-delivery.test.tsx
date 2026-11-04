@@ -100,6 +100,48 @@ it("requires confirmation and retries unknown outcomes with the identical reques
   expect(confirm).toHaveBeenCalledTimes(2);
   expect(onReissued).toHaveBeenCalledTimes(1);
 });
+it.each([401, 403, 404, 409, 422, 429])(
+  "retains an unknown outcome after a same-key retry returns %s",
+  async (status) => {
+    api.getInvitationDelivery.mockResolvedValue(delivery);
+    api.reissueInvitation
+      .mockRejectedValueOnce(new Error("Connection lost"))
+      .mockRejectedValueOnce(
+        new ApiClientError("Rejected retry", { status, code: "retry_rejected" }),
+      )
+      .mockResolvedValueOnce({ ...invitation, id: "replacement" });
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+    const onBusyChange = vi.fn();
+    const onReissued = vi.fn();
+    render(
+      <ProviderDelivery
+        roleId="role"
+        invitation={invitation}
+        archived={false}
+        disabled={false}
+        onReissued={onReissued}
+        onBusyChange={onBusyChange}
+      />,
+    );
+    await userEvent.click(screen.getByText("Check provider delivery"));
+    await userEvent.click(await screen.findByText("Reissue invitation"));
+    await userEvent.click(await screen.findByText("Retry same reissue request"));
+    expect(screen.getByText(/Replacement outcome is unknown/)).toBeVisible();
+    expect(screen.getByText("Check provider delivery")).toBeDisabled();
+    expect(onBusyChange).not.toHaveBeenCalledWith(false);
+    expect(onReissued).not.toHaveBeenCalled();
+    await userEvent.click(screen.getByText("Retry same reissue request"));
+    expect(api.reissueInvitation).toHaveBeenCalledTimes(3);
+    expect(api.reissueInvitation.mock.calls[1]).toEqual(
+      api.reissueInvitation.mock.calls[0],
+    );
+    expect(api.reissueInvitation.mock.calls[2]).toEqual(
+      api.reissueInvitation.mock.calls[0],
+    );
+    expect(onReissued).toHaveBeenCalledTimes(1);
+    expect(onBusyChange).toHaveBeenLastCalledWith(false);
+  },
+);
 it.each(["consented", "declined"] as const)(
   "never offers reissue for %s invitations",
   async (status) => {

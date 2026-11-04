@@ -102,6 +102,7 @@ export function ProviderDelivery({
       onReissued(replacement);
     } catch (error) {
       const unknown =
+        uncertain ||
         !(error instanceof ApiClientError) ||
         error.status === 0 ||
         error.status >= 500 ||
