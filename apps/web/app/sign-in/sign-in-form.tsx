@@ -8,14 +8,41 @@ import { safeReturnTo } from "../../lib/safe-return-to";
 /** Exchange a short-lived provider token for the server-managed session cookie. */
 export function SignInForm({
   localLogin = false,
+  tokenLogin = false,
+  providerError,
   returnTo,
 }: {
   localLogin?: boolean;
+  tokenLogin?: boolean;
+  providerError?: string;
   returnTo?: string;
 }) {
   const router = useRouter();
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  if (!localLogin && !tokenLogin) {
+    return (
+      <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
+        {providerError ? (
+          <p role="alert" className="mb-4 text-rose-900">
+            {providerError === "configuration"
+              ? "Sign-in is not configured. Contact your administrator."
+              : "Sign-in could not be completed. Try again or ask your administrator to check your access."}
+          </p>
+        ) : null}
+        <a
+          className="inline-block min-h-11 rounded-xl bg-teal-800 px-5 py-3 font-bold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-700 focus-visible:ring-offset-2"
+          href={`/api/auth/login?${new URLSearchParams({ returnTo: safeReturnTo(returnTo) })}`}
+        >
+          Sign in with Auth0
+        </a>
+        <p className="mt-4 text-sm text-slate-600">
+          Use the account provided by your administrator.
+        </p>
+      </div>
+    );
+  }
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();

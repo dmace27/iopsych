@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { ProvisionAccount } from "./provision-account";
 import { useEffect, useRef, useState } from "react";
 import { ApiClientError, getCurrentUser } from "../../lib/api-client";
 import { getAccounts, updateAccount } from "../../lib/account-client";
@@ -184,6 +185,12 @@ export function AccountsWorkspace() {
         >
           Refresh accounts
         </button>
+      ) : null}
+      {page && user?.role === "admin" && !expired && !denied ? (
+        <ProvisionAccount
+          disabled={saving || !!pending || loading}
+          onCreated={() => void load()}
+        />
       ) : null}
       {page && !expired && !denied ? (
         <>

@@ -153,12 +153,14 @@ Use an explainable rule engine—not a black-box classifier.
 
 Let `R` be the approved role rating and `C` be the candidate rating, both 1–5.
 
-- **Aligned:** `abs(R - C) <= 1`, unless the construct is `structure`, where the role rating represents availability rather than demand; use the inverse `abs((6 - R) - C) <= 1`.
-- **Worth discussing:** `abs(R - C) == 2`, using the same structure inversion.
-- **Potential friction:** `abs(R - C) >= 3`, using the same structure inversion.
+- **Aligned:** `abs(R - C) <= 1`.
+- **Worth discussing:** `abs(R - C) == 2`.
+- **Potential friction:** `abs(R - C) >= 3`.
 - **Insufficient evidence:** candidate skipped enough items or the role rating was not approved.
 
-For `structure`, high role structure satisfies high candidate structure preference; a low role-structure rating means the role demands greater comfort with ambiguity. Store an explicit `comparison_target` in code so this interpretation is inspectable.
+For `structure`, `R` measures available clarity and routines, from largely undefined (1) to clearly defined (5); `C` measures preference for predictable direction, from low (1) to high (5). Compare these directly: 5/5 and 1/1 align, while 1/5 and 5/1 flag potential friction for discussion when evidence is sufficient. Structure and ambiguity are assessed separately. Store `comparison_target: role_rating` so the interpretation is inspectable.
+
+This policy is matching algorithm `2.0.0`, approved as a product interpretation on November 3, 2026. Historical algorithm `1.0.0` used the inverse structure target; retain its reader, explicit replay, and original stored reports. See [the decision record](docs/decisions/structure-comparison.md). Complete the remaining assessment-version lifecycle work in `finish.md` Task 7 before deploying over existing data; independent I/O review is still required for real candidate use.
 
 ### Confidence
 
@@ -468,7 +470,7 @@ The matching engine must be completed and reviewed before the recruiter report i
 
 | Package | Agent task | Depends on | Done when |
 | --- | --- | --- | --- |
-| 3A — Matching engine | Implement a pure domain module for role/candidate comparisons, confidence rules, classifications, explanation payloads, and approved interview-question selection. | 0B, 1B, 2A | Boundary tests cover all constructs, including the inverse structure rule, low-confidence behavior, and unapproved profiles. |
+| 3A — Matching engine | Implement a pure domain module for role/candidate comparisons, confidence rules, classifications, explanation payloads, and approved interview-question selection. | 0B, 1B, 2A | Boundary tests cover all constructs, including direct structure comparison in v2 and historical v1 replay, low-confidence behavior, and unapproved profiles. |
 | 3B — Report API | Persist report and report-item records; permit generation only for submitted, consented assessments and approved role-profile versions; add report access audits. | 3A, 1A, 1B, 2B | API response contains traceable evidence, rule explanation, confidence, and question IDs for each item. |
 | 3C — Recruiter report UI | Build the construct comparison cards, evidence drawer, uncertainty states, interview guide, and responsible-use warning. | 3B | Recruiter can read an accessible report with no hidden composite or candidate ranking. |
 

@@ -19,6 +19,9 @@ EXPECTED_TABLES = {
     "alignment_items",
     "alembic_version",
     "assessment_invites",
+    "invitation_deliveries",
+    "provider_invitation_deliveries",
+    "provider_invitation_delivery_events",
     "audit_events",
     "candidate_consents",
     "invitation_deliveries",
@@ -169,6 +172,9 @@ def test_auth_migration_backfills_existing_user_subject(
     command.upgrade(config, "head")
     engine = create_engine(database_url)
     with engine.connect() as connection:
+        assert connection.scalar(
+            text("SELECT is_active FROM users WHERE id = :id"), {"id": existing_user_id}
+        )
         auth_subject = connection.scalar(
             text("SELECT auth_subject FROM users WHERE id = :id"),
             {"id": existing_user_id},

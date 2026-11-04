@@ -61,7 +61,7 @@ function validateFixture(fixture: FixtureCase): boolean {
 describe("construct contract", () => {
   it("matches the canonical language-neutral definitions", async () => {
     const contents = await readFile(
-      path.join(packageRoot, "definitions", "v1", "constructs.json"),
+      path.join(packageRoot, "definitions", "v2", "constructs.json"),
       "utf8",
     );
     const document = JSON.parse(contents) as {
@@ -85,9 +85,9 @@ describe("construct contract", () => {
     expect(CONSTRUCT_DEFINITIONS).toHaveLength(6);
   });
 
-  it("keeps the exceptional structure comparison target explicit", () => {
+  it("compares available structure directly with candidate preference", () => {
     expect(CONSTRUCT_DEFINITIONS_BY_KEY.structure.comparison_target).toBe(
-      "inverse_role_rating",
+      "role_rating",
     );
     expect(
       CONSTRUCT_DEFINITIONS.filter(({ key }) => key !== "structure").every(

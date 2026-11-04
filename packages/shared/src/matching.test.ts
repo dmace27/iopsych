@@ -22,6 +22,8 @@ import {
   type ConfidenceLevel,
   type ConstructKey,
   type MatchingRoleProfile,
+  type MatchingResult,
+  type AlignmentClassification,
   type RoleConstructRating,
 } from "./index";
 
@@ -104,7 +106,7 @@ describe("matching classification boundaries", () => {
   );
 
   it.each(CONSTRUCT_KEYS)("applies common boundaries to %s", (key) => {
-    // Three is its own inverse, so this also isolates structure's shared rule.
+    // All constructs share these distance boundaries.
     expect(
       matchConstruct(roleRating(key, 3), candidateScore(key, 3), true)
         .classification,
@@ -119,22 +121,26 @@ describe("matching classification boundaries", () => {
     ).toBe("worth_discussing");
   });
 
-  it.each([1, 2, 3, 4, 5])("inverts structure role rating %i", (roleValue) => {
-    const target = 6 - roleValue;
-    const result = matchConstruct(
-      roleRating("structure", roleValue),
-      candidateScore("structure", target),
-      true,
-    );
+  it.each([1, 2, 3, 4, 5])(
+    "replays legacy structure role rating %i",
+    (roleValue) => {
+      const target = 6 - roleValue;
+      const result = matchConstruct(
+        roleRating("structure", roleValue),
+        candidateScore("structure", target),
+        true,
+        "1.0.0",
+      );
 
-    expect(comparisonRating("structure", roleValue)).toBe(target);
-    expect(result.classification).toBe("aligned");
-    expect(result.explanation.role).toMatchObject({
-      comparison_target: "inverse_role_rating",
-      comparison_rating: target,
-    });
-    expect(result.explanation.applied_rule.absolute_difference).toBe(0);
-  });
+      expect(comparisonRating("structure", roleValue, "1.0.0")).toBe(target);
+      expect(result.classification).toBe("aligned");
+      expect(result.explanation.role).toMatchObject({
+        comparison_target: "inverse_role_rating",
+        comparison_rating: target,
+      });
+      expect(result.explanation.applied_rule.absolute_difference).toBe(0);
+    },
+  );
 
   it.each(CONSTRUCT_KEYS.filter((key) => key !== "structure"))(
     "uses the direct role rating for %s",
@@ -144,6 +150,101 @@ describe("matching classification boundaries", () => {
       ).toEqual([1, 2, 3, 4, 5]);
     },
   );
+});
+
+describe("historical matching readers", () => {
+  it("reads the frozen v1 snapshot without reinterpreting structure", async () => {
+    const contents = await readFile(
+      path.resolve(
+        import.meta.dirname,
+        "../fixtures/v1/matching-result/legacy-structure.json",
+      ),
+      "utf8",
+    );
+    const fixture = JSON.parse(contents) as {
+      payload: MatchingResult;
+      context: {
+        role_profile: MatchingRoleProfile;
+        candidate_scores: AssessmentScoreResult;
+      };
+    };
+    const result = MatchingResultSchema.parse(fixture.payload);
+    expect(result).toEqual(fixture.payload);
+    expect(result.algorithm_version).toBe("1.0.0");
+    expect(result.items[1]).toMatchObject({
+      construct_key: "structure",
+      classification: "potential_friction",
+      explanation: {
+        role: {
+          rating: 5,
+          comparison_target: "inverse_role_rating",
+          comparison_rating: 1,
+        },
+        candidate_response: { rating: 5 },
+      },
+    });
+    expect(
+      matchRoleProfile(
+        fixture.context.role_profile,
+        fixture.context.candidate_scores,
+        "1.0.0",
+      ),
+    ).toEqual(fixture.payload);
+    expect(
+      MatchingResultSchema.safeParse({
+        ...fixture.payload,
+        algorithm_version: "2.0.0",
+      }).success,
+    ).toBe(false);
+    expect(
+      MatchingResultSchema.safeParse({
+        ...fixture.payload,
+        algorithm_version: "9.0.0",
+      }).success,
+    ).toBe(false);
+  });
+});
+
+describe("structure availability policy", () => {
+  it("matches the four meaning-based cases shared with Python", async () => {
+    const fixture = JSON.parse(
+      await readFile(
+        path.resolve(
+          import.meta.dirname,
+          "../fixtures/v2/matching/structure-extremes.json",
+        ),
+        "utf8",
+      ),
+    ) as {
+      payload: Array<{
+        description: string;
+        role_rating: number;
+        candidate_rating: number;
+        classification: AlignmentClassification;
+        absolute_difference: number;
+      }>;
+    };
+    for (const example of fixture.payload) {
+      const result = matchConstruct(
+        roleRating("structure", example.role_rating),
+        candidateScore("structure", example.candidate_rating),
+        true,
+      );
+      expect(result.classification, example.description).toBe(
+        example.classification,
+      );
+      expect(result.explanation.role).toMatchObject({
+        comparison_target: "role_rating",
+        comparison_rating: example.role_rating,
+      });
+      expect(result.explanation.applied_rule.absolute_difference).toBe(
+        example.absolute_difference,
+      );
+      expect(result.explanation.applied_rule.description).toContain(
+        "compared directly",
+      );
+    }
+  });
 });
 
 describe("confidence and approval gates", () => {
@@ -218,7 +319,7 @@ describe("explanations and interview questions", () => {
     const result = matchRoleProfile(roleProfile(), scoreResult());
 
     expect(result).toMatchObject({
-      algorithm_version: "1.0.0",
+      algorithm_version: "2.0.0",
       assessment_definition_id: "synthetic-assessment",
       assessment_definition_version: "2.1.0",
       scoring_version: "3.0.0",

@@ -54,8 +54,8 @@ export type ConstructDefinition = z.infer<typeof ConstructDefinitionSchema>;
 /**
  * Behaviorally worded construct metadata from section 5 of the MVP specification.
  *
- * The structure target follows section 7's explicit inverse formula. Keeping the
- * target in metadata makes this exceptional rule inspectable by later matchers.
+ * Current matching compares available structure directly with the candidate's
+ * preference. Historical algorithm policies are retained by the matcher.
  */
 export const CONSTRUCT_DEFINITIONS = [
   {
@@ -71,7 +71,7 @@ export const CONSTRUCT_DEFINITIONS = [
     role_prompt: "How defined goals, routines, and requirements are",
     candidate_prompt:
       "How strongly the candidate prefers predictable direction",
-    comparison_target: "inverse_role_rating",
+    comparison_target: "role_rating",
   },
   {
     key: "ambiguity",

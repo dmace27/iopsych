@@ -18,6 +18,8 @@ const ALLOWED_INTERNAL_ROUTES = [
   /^GET \/accounts\/users$/,
   /^PATCH \/accounts\/users\/[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
   /^GET \/auth\/me$/,
+  /^(?:GET|POST) \/users$/,
+  /^PATCH \/users\/[^/]+$/,
   /^(?:GET|POST) \/roles$/,
   /^(?:GET|PATCH|DELETE) \/roles\/[^/]+$/,
   /^(?:GET|POST) \/roles\/[^/]+\/profiles$/,
@@ -141,6 +143,8 @@ async function proxyInternalApi(
       body: body.byteLength > 0 ? body : undefined,
       cache: "no-store",
     });
+    if (upstream.status === 401)
+      (await cookies()).delete(INTERNAL_SESSION_COOKIE);
     if (upstream.status === 204) {
       return new Response(null, {
         status: 204,

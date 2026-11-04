@@ -201,7 +201,7 @@ class RoleConstructRating(Base):
 
 
 class AssessmentInvite(UuidPrimaryKeyMixin, CreatedAtMixin, Base):
-    """An expiring bearer invitation whose raw token is never persisted."""
+    """An expiring bearer invitation storing only its one-way token hash."""
 
     __tablename__ = "assessment_invites"
     __table_args__ = (
@@ -264,6 +264,65 @@ class InvitationDelivery(UuidPrimaryKeyMixin, CreatedAtMixin, Base):
     credential_expires_at: Mapped[datetime] = mapped_column(UtcDateTime(), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(UtcDateTime(), nullable=False)
     attempt_started_at: Mapped[datetime | None] = mapped_column(UtcDateTime(), nullable=True)
+
+
+class InvitationDeliveryStatus(StrEnum):
+    """Delivery progress is separate from candidate consent and link validity."""
+
+    QUEUED = "queued"
+    RETRYING = "retrying"
+    SENT = "sent"
+    DELIVERED = "delivered"
+    FAILED = "failed"
+    BOUNCED = "bounced"
+    COMPLAINED = "complained"
+    REISSUE_REQUIRED = "reissue_required"
+    CANCELLED = "cancelled"
+
+
+class ProviderInvitationDelivery(UuidPrimaryKeyMixin, CreatedAtMixin, Base):
+    """Durable encrypted email; request keys remain as non-secret deduplication tombstones."""
+
+    __tablename__ = "provider_invitation_deliveries"
+    __table_args__ = (
+        UniqueConstraint("organization_id", "request_id", name="uq_invitation_delivery_request"),
+        UniqueConstraint("invite_id", name="uq_invitation_delivery_invite"),
+        UniqueConstraint("provider_message_id", name="uq_invitation_delivery_provider_message"),
+        Index("ix_provider_invitation_deliveries_due", "status", "next_attempt_at"),
+    )
+    organization_id: Mapped[UUID] = mapped_column(
+        Uuid, ForeignKey("organizations.id"), nullable=False
+    )
+    invite_id: Mapped[UUID] = mapped_column(
+        Uuid, ForeignKey("assessment_invites.id"), nullable=False
+    )
+    requested_by: Mapped[UUID] = mapped_column(Uuid, ForeignKey("users.id"), nullable=False)
+    request_id: Mapped[UUID] = mapped_column(Uuid, nullable=False)
+    request_fingerprint: Mapped[str] = mapped_column(String(64), nullable=False)
+    replaces_invite_id: Mapped[UUID | None] = mapped_column(
+        Uuid, ForeignKey("assessment_invites.id")
+    )
+    encrypted_message: Mapped[str | None] = mapped_column(Text)
+    status: Mapped[InvitationDeliveryStatus] = mapped_column(
+        enum_type(InvitationDeliveryStatus, "invitation_delivery_status", 32), nullable=False
+    )
+    attempt_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    next_attempt_at: Mapped[datetime] = mapped_column(UtcDateTime(), nullable=False)
+    retry_until: Mapped[datetime] = mapped_column(UtcDateTime(), nullable=False)
+    provider_message_id: Mapped[str | None] = mapped_column(String(255))
+    last_error_code: Mapped[str | None] = mapped_column(String(40))
+
+
+class InvitationDeliveryEvent(Base):
+    """Deduplicated webhook metadata; never retain the incoming body or recipients."""
+
+    __tablename__ = "provider_invitation_delivery_events"
+    provider_event_id: Mapped[str] = mapped_column(String(255), primary_key=True)
+    delivery_id: Mapped[UUID] = mapped_column(
+        Uuid, ForeignKey("provider_invitation_deliveries.id"), nullable=False
+    )
+    event_type: Mapped[str] = mapped_column(String(80), nullable=False)
+    occurred_at: Mapped[datetime] = mapped_column(UtcDateTime(), nullable=False)
 
 
 class CandidateConsent(UuidPrimaryKeyMixin, CreatedAtMixin, Base):

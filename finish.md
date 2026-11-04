@@ -1,4 +1,4 @@
-# IOPsych: remaining work before release
+#: remaining work before release
 
 Reviewed October 11, 2026. This is a code-and-documentation readiness review,
 not a record of a deployed release. Tasks below are ordered by dependency and
@@ -8,8 +8,8 @@ existing tests alone does not close it.
 ## Release assessment
 
 **The project has a substantial functional core, but it is not yet a
-self-service, deployable product.** The largest gaps are production identity
-integration, working invitation delivery and management, complete browser
+self-service, deployable product.** The largest gaps are live production identity
+verification, working invitation delivery and management, complete browser
 end-to-end coverage, and deployment/operations. There are also specific setup,
 browser persistence, privacy, and versioning defects to address.
 
@@ -35,7 +35,7 @@ or unit tests exist.
 Preserve these capabilities rather than rebuilding them:
 
 - Next.js/FastAPI monorepo, shared Zod/Pydantic/JSON Schema contracts,
-  reproducible scripts, and seven Alembic migrations.
+  reproducible scripts, and nine Alembic migrations.
 - Database-backed tenant/RBAC enforcement and HTTP-only internal session
   cookies, same-origin mutation checks, CSP nonces, response hardening, and
   credential redaction.
@@ -61,8 +61,10 @@ That distinction is central to the remaining plan.
 Reviewed the root product/specification/research documents, app/package READMEs,
 security threat model and verification documentation, workflows, environment
 templates, migrations, shared domain modules, API services/routes, browser
-workspaces/proxies/storage, setup/smoke scripts, and test coverage. `notes.md` is exploratory conversation and `test.md` contains greeting text; neither is an acceptance test plan. Treat
-`mvp-spec.md` as the product authority where older ideas conflict with it.
+workspaces/proxies/storage, setup/smoke scripts, and test coverage. `notes.md`
+is exploratory conversation and `test.md` contains greeting text; neither is an
+acceptance test plan. Treat `mvp-spec.md` as the product authority where older
+ideas conflict with it.
 
 Checks run against the existing local installations during this review:
 
@@ -91,126 +93,198 @@ incidents.
 
 ## Ordered completion plan
 
-### 1. Fi x the documented first-run environment loading — P0, confirmed defect
+### 1. Fix the documented first-run environment loading — P0, completed
 
 **Evidence:** [API environment template](apps/api/.env.example),
 [API launcher](scripts/run-api.sh), [setup instructions](README.md).
 
-The README instructs copying the template to `apps/api/.env`. The launcher then
-sources that file as shell code.
-`INVITE_RETENTION_STATEMENT=Pilot data is retained ...` is unquoted, so Bash
-attempts to execute `data` and the launcher exits under `set -e`. The advertised
-first-run path therefore fails even though the build/test gates pass.
+The reviewed launcher sourced `apps/api/.env` as shell code. The unquoted
+`INVITE_RETENTION_STATEMENT=Pilot data is retained ...` caused Bash to execute
+`data` and exit under `set -e`, breaking the advertised first-run path.
 
-- [ ] Quote the template's free-text values and preferably replace shell
+- [x] Quote the template's free-text values and preferably replace shell
       sourcing with a dotenv-aware startup path. Preserve the API host/port
       configuration behavior and avoid executing configuration as shell code.
-- [ ] Make clean setup use the committed JavaScript lockfile (`npm ci` where
+- [x] Make clean setup use the committed JavaScript lockfile (`npm ci` where
       appropriate); document the supported runtimes and exact start commands.
-- [ ] Add a setup/startup regression that uses the example configuration and
+- [x] Add a setup/startup regression that uses the example configuration and
       does not require genuine provider credentials.
 
 **Done when:** a fresh clone following only the README starts both applications
 and reaches their health endpoints. Test the actual launcher, not just dotenv
 parsing.
 
-### 2. Resolve the contradictory structure comparison policy — P0, design/correctness blocker
+**Completed November 3, 2026:** the shell wrapper now starts
+`scripts/run_api.py`, which parses dotenv data without shell execution or
+variable interpolation. File values retain precedence over inherited variables;
+host, port, and log-level defaults are preserved. Setup now uses `npm ci`, and
+the README documents configuration behavior and startup commands.
+
+Verification: `npm run setup` succeeded in a clean temporary source copy with
+no existing `node_modules` or `.venv`; copied example configuration then started
+both applications through `npm run dev`, and both HTTP health endpoints returned
+their expected responses. Temporary ports were configured for isolation. This
+startup check requires no provider credentials or database connection; it did
+not repeat PostgreSQL provisioning, migration, or seed verification. The local
+runtimes were Node.js 26.0.0, npm 12.0.1, and Python 3.14.5; the pinned CI
+baselines remain Node.js 22 and Python 3.12.
+
+`npm run check` passed: 426 tests passed and two PostgreSQL tests were skipped
+without a configured test database. The three new launcher regressions cover
+the example configuration, legacy unquoted free text, and a missing `.env`,
+including file precedence and non-execution of command-like configuration.
+
+### 2. Resolve the contradictory structure comparison policy — P0, completed
 
 **Evidence:** `mvp-spec.md` sections 5 and 7;
 [construct metadata](packages/shared/src/constructs.ts);
 [TypeScript matcher](packages/shared/src/matching.ts);
 [Python matcher](packages/shared/python/iopsych_contracts/matching.py).
 
-The implementation follows the spec's explicit inverse formula. However, the
-spec also says high role structure satisfies high candidate preference for
-structure. Under the implemented formula, role structure **5** and candidate
-structure preference **5** compare as `abs((6 - 5) - 5) = 4`, producing
-potential friction; role **1**, candidate **5** produces alignment. These
-examples conflict with the behavioral definitions. Existing boundary tests
-verify the formula, not the intended meaning.
+The original implementation followed the spec's inverse formula, contradicting
+its behavioral definitions: role structure **5** and candidate preference **5**
+produced potential friction, while role **1** and candidate **5** aligned. This
+is now resolved by the approved direct-comparison policy below.
 
-- [ ] Record one approved interpretation with the product/I-O reviewer: either
+- [x] Record one approved interpretation with the product/I-O reviewer: either
       compare structure availability directly to preference, or redefine the
       role quantity so inversion has the intended meaning.
-- [ ] Align the spec, extraction instructions, labels, definitions, both
+- [x] Align the spec, extraction instructions, labels, definitions, both
       matchers, schemas, fixtures, and report explanations with that decision.
-- [ ] Add meaning-based examples for low/high structure and low/high preference,
+- [x] Add meaning-based examples for low/high structure and low/high preference,
       plus cross-language parity cases.
-- [ ] If matching behavior changes, publish a new algorithm version and preserve
-      old report interpretation; complete task 7 before deploying the change
-      over existing data.
+- [x] If matching behavior changes, publish a new algorithm version and preserve
+      old report interpretation.
 
 **Done when:** a reviewer can explain the four extreme cases in plain language
 and both implementations produce the approved outcomes. Do not silently change
 historical reports.
 
-### 3. Replace token-paste sign-in with an actual identity workflow — P0, missing implementation
+**Completed November 3, 2026:** the repository owner explicitly approved direct
+comparison of available role structure with candidate preference. Algorithm
+`2.0.0` uses `abs(R - C)`, so high/high and low/low align, while opposite
+extremes flag potential friction with sufficient evidence. The spec, provider
+instructions, current metadata, both matchers, generated reader schema, shared
+examples, and report wording now agree. See the
+[decision record](docs/decisions/structure-comparison.md) for the four examples
+and version policy. This product decision does not replace the independent
+I/O psychology review required by Task 16.
 
-**Evidence:** [sign-in form](apps/web/app/sign-in/sign-in-form.tsx),
-[session route](apps/web/app/api/session/route.ts),
-[JWT verifier](apps/api/app/auth/tokens.py),
-[user model](apps/api/app/database/models.py),
-[header](apps/web/app/ui/site-header.tsx).
+Version-aware readers and explicit v1 replay retain old classifications,
+explanations, and questions. The original v1 metadata and a frozen pre-change
+result remain unchanged. Discovery retains v1 reports until an explicitly
+generated v2 report exists, then prefers v2 without hiding direct v1 reads.
 
-Current sign-in requires an internal user to supply a JWT manually. The API
-verifies HS256 tokens, but there is no provider login/callback, user
-provisioning, or administrator account-management workflow. Users currently
-belong to one organization and have a globally unique `auth_subject`; a
-multi-organization switcher cannot simply be added to that model. The sign-out
-endpoint exists but there is no visible sign-out action. Report links supply
-`returnTo`, but successful sign-in always redirects to `/roles`.
+Verification: formatting, lint, type checks, and the production build passed.
+The web, shared TypeScript, shared Python, and API suites passed 432 tests in
+total; two PostgreSQL tests were skipped without a configured test database.
+Python application and shared-contract coverage gates remained at 100%.
 
-- [ ] Integrate a vetted identity provider and its actual claim/signature
-      verification contract. Keep database-authoritative permissions and tenant
-      isolation.
-- [ ] Provide a documented, controlled way to provision the pilot organization,
-      administrator, recruiter, and manager; deactivate users and change
-      permissions. Add explicit active/disabled state if using that policy.
-- [ ] Add account/organization context, visible sign-out, expired-session
-      recovery, and safe local-path `returnTo` handling.
-- [ ] Decide whether the first pilot intentionally supports one organization per
-      user. Document that limit or implement memberships and a tested tenant
-      switcher.
-- [ ] Test callback/session failures, revoked/disabled users, role changes,
-      token expiry, tenant switching if supported, and open-redirect prevention.
+**Deployment dependency:** complete the remaining assessment-definition
+assignment and lifecycle work in Task 7 before deploying over existing data.
+This completion records implementation and local verification, not deployment.
+
+### 3. Replace token-paste sign-in with an actual identity workflow — P0, implemented; live-provider acceptance pending
+
+**Evidence:** [provider flow](apps/web/lib/provider-auth.ts),
+[Auth0 verifier](apps/api/app/auth/auth0.py),
+[account endpoints](apps/api/app/auth/users.py),
+[account workspace](apps/web/app/accounts/accounts-workspace.tsx),
+[identity setup and operations](docs/identity.md).
+
+- [x] Integrate Auth0 Universal Login through `openid-client`, with authorization
+      code/PKCE, state, nonce, signed ID-token validation and RS256 API access-token
+      verification through PyJWT/JWKS. Permissions and tenants remain database-authoritative.
+- [x] Document controlled organization/administrator bootstrap; add tenant-scoped
+      administrator provision/list/role-change/deactivation controls and active state.
+- [x] Add account/organization context, visible sign-out, expired-session recovery,
+      and safe workspace-local `returnTo` handling.
+- [x] Intentionally support one organization per globally unique provider subject
+      for the first pilot; document the limit and provider revocation behavior.
+- [x] Test provider/callback/session failures, disabled/unknown users, fresh role
+      changes, expiry, wrong signatures/claims, key rotation, tenant denial and
+      open-redirect prevention using a simulated provider contract and real signatures.
+- [ ] Complete and record live Auth0 acceptance with controlled recruiter and
+      manager accounts in an HTTPS staging browser. No tenant credentials were
+      supplied, so the automated protocol tests do not close this operational gate.
 
 **Done when:** a nontechnical recruiter and manager can independently sign in
 and complete their permitted tasks without generating tokens or asking an
 engineer to edit the database.
 
-### 4. Implement production invitation delivery and reliable issuance — P0, missing implementation/reliability risk
+**Implementation November 3, 2026:** repository owner selected Auth0. The token
+paste form is replaced by provider login. The old manual exchange is disabled
+by default and enabled only in the isolated deterministic production smoke.
+Migration `20261103_0008` backfills existing users as active. Account mutations
+and audits commit atomically; tenant locking and actor rechecks protect concurrent
+administrator changes. Setup, bootstrap, account operations and the remaining
+live-provider acceptance procedure are documented in `docs/identity.md`.
 
-**Evidence:** [delivery interface](apps/api/app/invitations/delivery.py),
-[app factory](apps/api/app/main.py),
-[invitation service](apps/api/app/invitations/service.py).
+Verification: `npm run check` passed **478 tests with zero skips** using a
+throwaway PostgreSQL 16 container (142 web, 101 shared TypeScript, 95 shared
+Python, 140 API). This includes actual launcher tests, empty/populated migration
+upgrades and synchronized concurrent administrator mutations. API application
+coverage remains 100%. The production build and PostgreSQL-backed production
+HTTP smoke passed. A mandatory-audit commit failure regression also verifies
+that a provisioned account is rolled back. These are local working-tree checks,
+not hosted CI or live-provider evidence.
 
-The module-level application always defaults to
-`UnconfiguredInvitationDelivery`, which rejects sending. There is no
-environment-configured production email adapter. In addition, the service sends
-email before the request's database/audit transaction commits. A provider
-success followed by commit failure can deliver a link whose database record
-never exists; retries can send additional invitations. This is a code-derived
-failure scenario, not a reproduced provider incident.
+A fresh npm audit reports 25 advisories (21 moderate, 3 high, 1 critical), exactly
+the same totals/package set as an audit of the original lockfile and workspace
+manifests. None target `openid-client`, `jose`, or `oauth4webapi`. These existing
+dependency findings still require resolution under the later security/release gate.
 
-- [ ] Implement and configure a transactional delivery adapter with verified
-      sender identity, timeouts, safe errors, and delivery credentials in a
-      secret store.
-- [ ] Define issuance idempotency and recovery for uncertain provider outcomes
-      and database failures. Use a durable delivery design or an explicitly
-      documented minimal retry strategy.
-- [ ] Keep raw invite tokens out of database records, ordinary logs, audit
-      metadata, and API responses. If a queue needs delivery credentials,
-      explicitly design its encryption, access, expiry, and deletion policy
-      rather than persisting plaintext tokens in an outbox.
-- [ ] Handle failed delivery, reissue/resend, revocation, bounces, and provider
-      webhook authentication/deduplication where used. Reissuing must make the
-      old link's status clear.
-- [ ] Test provider failure, timeout after acceptance, duplicate requests, and
-      commit/audit failure after provider acceptance.
+### 4. Implement production invitation delivery and reliable issuance — P0, implemented; live mailbox acceptance pending
+
+**Evidence:** [Resend adapter](apps/api/app/invitations/provider.py),
+[encrypted queue and worker](apps/api/app/invitations/outbox.py),
+[webhooks](apps/api/app/invitations/webhooks.py),
+[issuance service](apps/api/app/invitations/service.py),
+[operations guide](docs/invitation-delivery.md).
+
+- [x] Implement environment-configured Resend delivery with a verified-sender
+      setup procedure, bounded HTTPS requests and safe errors. Actual sending,
+      encryption and webhook credentials must come from the deployment secret store.
+- [x] Commit invitation, encrypted outbox and issuance audit before delivery;
+      retain tenant-scoped request IDs and frozen provider payload/idempotency
+      keys for crash/timeout/duplicate recovery. Stop retries before the provider's
+      24-hour deduplication window and after any credential scope change.
+- [x] Keep plaintext tokens out of database records, logs, audits and API
+      responses. Document queue encryption, access, short lifetime, key rotation,
+      deletion, backup/deletion replay and provider data handling.
+- [x] Add delivery progress, idempotent explicit reissue, immediate revocation,
+      ciphertext cleanup, terminal failure/bounce/complaint handling, authenticated
+      bounded Svix webhooks, replay deduplication and monotonic event processing.
+- [x] Test provider failures, timeout after acceptance, repeated requests,
+      issuance/audit commit failure, worker/audit failure after acceptance,
+      encryption/key changes, webhook races and real PostgreSQL concurrency/upgrades.
+- [ ] Record a real staging issuance reaching a controlled mailbox with a valid
+      candidate link, configured verified sender, running scheduler and signed
+      live events. No provider credentials/domain/mailbox were supplied.
 
 **Done when:** an invite created in staging reaches a controlled mailbox, opens
 a valid candidate page, and failures have a recoverable state without token
 disclosure or uncontrolled duplicate email.
+
+**Implementation November 3, 2026:** repository owner selected Resend. Migration
+`20261103_0009` adds separate delivery/event tables without changing legacy
+links. Invitation creation acknowledges durable queuing, not successful sending;
+`npm run invitations:deliver` processes bounded batches. The operations guide
+records recovery, the 23-hour queue cutoff, immutable request/provider keys,
+credential scope checks, provider/webhook configuration and the remaining live
+acceptance procedure. Browser invitation management remains Task 5.
+
+Verification: `npm run check` passed **518 tests with zero skips** using disposable
+PostgreSQL 16 (142 web, 101 shared TypeScript, 95 shared Python, 180 API).
+Configured API application coverage remains 100%. The production build and
+PostgreSQL-backed production HTTP smoke passed. New tests verify protocol request
+shape, real encrypted payloads/Svix signatures, initial audit rollback, accepted
+mail followed by worker/audit failure, identical retry bodies/keys, synchronized
+concurrent issuance, busy-worker locks, reissue/revocation, webhook ordering and
+populated legacy migration upgrades. An existing keyboard/resume component test
+now waits for initial page focus before interacting, avoiding a focus-timing race.
+These are local working-tree checks; live sender/mailbox/webhook and deployed
+scheduler evidence remains pending.
 
 ### 5. Complete recruiter invitation management — P0, missing implementation
 
@@ -292,7 +366,7 @@ old stored reports unreadable.
       mode while retaining historical read/scoring compatibility. The current
       pilot definition is explicitly `draft` and is nevertheless rendered and
       scored.
-- [ ] Add version-aware report readers and an algorithm registry/dispatch
+- [x] Add version-aware report readers and an algorithm registry/dispatch
       policy. A new algorithm must not reinterpret old persisted output.
 - [ ] Test an upgrade with an outstanding invitation, saved draft, submitted
       assessment, and v1 report already present.

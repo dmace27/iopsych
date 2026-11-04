@@ -10,9 +10,10 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from app.accounts.router import router as accounts_router
 from app.audit import AuditMiddleware, audited
+from app.auth.auth0 import Auth0TokenVerifier
 from app.auth.config import AuthenticationSettings
 from app.auth.context import AuthorizationContext
-from app.auth.dependencies import require_roles
+from app.auth.dependencies import get_database_session, require_roles
 from app.auth.errors import (
     AccessProblemError,
     access_problem_handler,
@@ -20,7 +21,8 @@ from app.auth.errors import (
 )
 from app.auth.local_login import router as local_login_router
 from app.auth.tokens import HmacJwtVerifier, TokenVerifier
-from app.database.models import InternalUserRole
+from app.auth.users import router as users_router
+from app.database.models import InternalUserRole, Organization
 from app.database.session import create_database_engine, create_session_factory
 from app.extraction.config import RoleExtractionSettings
 from app.extraction.provider import (
@@ -30,12 +32,13 @@ from app.extraction.provider import (
 from app.invitations.config import InvitationSettings
 from app.invitations.delivery import (
     InvitationDeliveryAdapter,
-    UnconfiguredInvitationDelivery,
 )
 from app.invitations.logging import install_invite_token_log_filter
+from app.invitations.provider import build_invitation_delivery
 from app.invitations.rate_limit import InMemoryRateLimiter
 from app.invitations.router import router as invitations_router
 from app.invitations.tokens import InviteTokenCodec
+from app.invitations.webhooks import router as delivery_webhook_router
 from app.privacy.config import PrivacySettings
 from app.privacy.router import candidate_router as candidate_privacy_router
 from app.privacy.router import privacy_router
@@ -62,6 +65,7 @@ class CurrentUserResponse(BaseModel):
 
     id: UUID
     organization_id: UUID
+    organization_name: str
     email: str
     name: str
     role: InternalUserRole
@@ -90,6 +94,12 @@ def create_app(
     install_invite_token_log_filter()
     resolved_session_factory = session_factory or create_session_factory(create_database_engine())
     resolved_verifier = token_verifier
+    if resolved_verifier is None and settings.provider == "auth0":
+        resolved_verifier = Auth0TokenVerifier(
+            issuer=settings.jwt_issuer,
+            audience=settings.jwt_audience,
+            leeway_seconds=settings.jwt_leeway_seconds,
+        )
     if resolved_verifier is None and settings.jwt_secret is not None:
         resolved_verifier = HmacJwtVerifier(
             secret=settings.jwt_secret.get_secret_value(),
@@ -107,7 +117,9 @@ def create_app(
     application.state.session_factory = resolved_session_factory
     application.state.token_verifier = resolved_verifier
     application.state.invitation_settings = invite_settings
-    application.state.invitation_delivery = invitation_delivery or UnconfiguredInvitationDelivery()
+    application.state.invitation_delivery = invitation_delivery or build_invitation_delivery(
+        invite_settings
+    )
     application.state.invitation_rate_limiter = invitation_rate_limiter or InMemoryRateLimiter()
     application.state.role_extraction_settings = extraction_settings
     application.state.role_extraction_provider = (
@@ -129,8 +141,10 @@ def create_app(
     application.include_router(readiness_router)
     application.include_router(local_login_router)
     application.include_router(accounts_router)
+    application.include_router(users_router)
     application.include_router(roles_router)
     application.include_router(invitations_router)
+    application.include_router(delivery_webhook_router)
     application.include_router(reports_router)
     application.include_router(submission_router)
     application.include_router(candidate_privacy_router)
@@ -155,11 +169,15 @@ def create_app(
                 )
             ),
         ],
+        session: Annotated[Session, Depends(get_database_session)],
     ) -> CurrentUserResponse:
         """Return the current database-authoritative user and tenant context."""
 
+        organization = session.get(Organization, context.organization.organization_id)
+        assert organization is not None  # Guaranteed by the authenticated user's foreign key.
         return CurrentUserResponse(
             id=context.user_id,
+            organization_name=organization.name,
             organization_id=context.organization.organization_id,
             email=context.email,
             name=context.name,
@@ -170,5 +188,6 @@ def create_app(
 
 
 # The module-level ASGI app defers database connections and fails closed on
-# internal routes if AUTH_JWT_SECRET has not been configured.
+# internal routes if local HMAC authentication has no configured key.
+# Auth0 mode loads signing keys lazily and never falls back to HMAC.
 app = create_app()

@@ -20,6 +20,7 @@ from iopsych_contracts import (
     ComparisonTarget,
     ConfidenceLevel,
     ConstructKey,
+    MatchingAlgorithmVersion,
     MatchingError,
     MatchingErrorCode,
     MatchingResult,
@@ -36,6 +37,50 @@ from iopsych_contracts import (
 QUESTION_LIBRARY_PATH = (
     Path(__file__).parents[2] / "definitions" / "v1" / "interview-questions.json"
 )
+
+
+def test_historical_v1_reader_preserves_the_saved_interpretation() -> None:
+    """A high/high v1 structure report keeps its original inverse friction result."""
+
+    path = Path(__file__).parents[2] / "fixtures/v1/matching-result/legacy-structure.json"
+    fixture = json.loads(path.read_text(encoding="utf-8"))
+    result = MatchingResult.model_validate(fixture["payload"])
+    assert result.model_dump(mode="json") == fixture["payload"]
+    assert result.algorithm_version == "1.0.0"
+    structure = result.items[1]
+    assert structure.construct_key is ConstructKey.STRUCTURE
+    assert structure.classification is AlignmentClassification.POTENTIAL_FRICTION
+    assert structure.explanation.role.comparison_target is ComparisonTarget.INVERSE_ROLE_RATING
+    assert structure.explanation.role.comparison_rating == 1
+    assert (
+        match_role_profile(
+            MatchingRoleProfile.model_validate(fixture["context"]["role_profile"]),
+            AssessmentScoreResult.model_validate(fixture["context"]["candidate_scores"]),
+            algorithm_version=MatchingAlgorithmVersion.V1,
+        ).model_dump(mode="json")
+        == fixture["payload"]
+    )
+    for version in ("2.0.0", "9.0.0"):
+        with pytest.raises(ValidationError):
+            MatchingResult.model_validate({**fixture["payload"], "algorithm_version": version})
+
+
+def test_structure_availability_matches_the_four_shared_meaning_based_cases() -> None:
+    """Both runtimes must produce the behavioral outcomes independently of the formula."""
+
+    path = Path(__file__).parents[2] / "fixtures/v2/matching/structure-extremes.json"
+    fixture = json.loads(path.read_text(encoding="utf-8"))
+    for example in fixture["payload"]:
+        result = match_construct(
+            role_rating(ConstructKey.STRUCTURE, example["role_rating"]),
+            candidate_score(ConstructKey.STRUCTURE, example["candidate_rating"]),
+            role_profile_approved=True,
+        )
+        assert result.classification == example["classification"], example["description"]
+        assert result.explanation.role.comparison_target is ComparisonTarget.ROLE_RATING
+        assert result.explanation.role.comparison_rating == example["role_rating"]
+        assert result.explanation.applied_rule.absolute_difference == example["absolute_difference"]
+        assert "compared directly" in result.explanation.applied_rule.description
 
 
 def role_rating(
@@ -135,8 +180,7 @@ def test_every_distance_boundary_in_both_directions(
 def test_boundaries_apply_to_every_construct(key: ConstructKey) -> None:
     """Every construct uses the same distance boundaries after target derivation."""
 
-    # A role value of 3 is unchanged by structure inversion, isolating the
-    # common classification rule for this all-construct assertion.
+    # All constructs share the same classification boundaries.
     expected = {
         3: AlignmentClassification.ALIGNED,
         4: AlignmentClassification.ALIGNED,
@@ -152,7 +196,7 @@ def test_boundaries_apply_to_every_construct(key: ConstructKey) -> None:
 
 
 @pytest.mark.parametrize("role_value", range(1, 6))
-def test_structure_uses_the_explicit_inverse_target(role_value: int) -> None:
+def test_legacy_structure_uses_the_explicit_inverse_target(role_value: int) -> None:
     """Structure exposes and compares against 6 - R exactly as specified."""
 
     target = 6 - role_value
@@ -160,9 +204,12 @@ def test_structure_uses_the_explicit_inverse_target(role_value: int) -> None:
         role_rating(ConstructKey.STRUCTURE, role_value),
         candidate_score(ConstructKey.STRUCTURE, target),
         role_profile_approved=True,
+        algorithm_version=MatchingAlgorithmVersion.V1,
     )
 
-    assert comparison_rating(ConstructKey.STRUCTURE, role_value) == target
+    assert (
+        comparison_rating(ConstructKey.STRUCTURE, role_value, MatchingAlgorithmVersion.V1) == target
+    )
     assert aligned.classification is AlignmentClassification.ALIGNED
     assert aligned.explanation.role.comparison_target is ComparisonTarget.INVERSE_ROLE_RATING
     assert aligned.explanation.role.comparison_rating == target
@@ -234,7 +281,7 @@ def test_result_is_traceable_complete_and_canonically_ordered() -> None:
 
     result = match_role_profile(role_profile(), score_result())
 
-    assert result.algorithm_version == "1.0.0"
+    assert result.algorithm_version == "2.0.0"
     assert result.assessment_definition_id == "synthetic-assessment"
     assert result.assessment_definition_version == "2.1.0"
     assert result.scoring_version == "3.0.0"

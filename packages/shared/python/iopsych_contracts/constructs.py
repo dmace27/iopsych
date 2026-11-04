@@ -80,7 +80,7 @@ CONSTRUCT_DEFINITIONS: Final[tuple[ConstructDefinition, ...]] = (
         label="Structure",
         role_prompt="How defined goals, routines, and requirements are",
         candidate_prompt="How strongly the candidate prefers predictable direction",
-        comparison_target=ComparisonTarget.INVERSE_ROLE_RATING,
+        comparison_target=ComparisonTarget.ROLE_RATING,
     ),
     ConstructDefinition(
         key=ConstructKey.AMBIGUITY,

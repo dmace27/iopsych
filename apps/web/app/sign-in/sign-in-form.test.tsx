@@ -28,12 +28,43 @@ describe("SignInForm", () => {
     vi.unstubAllGlobals();
   });
 
+  it("defaults to provider navigation without a token field or browser token exchange", () => {
+    render(<SignInForm returnTo="/accounts" />);
+    expect(
+      screen.queryByLabelText(/internal access token/i),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: "Sign in with Auth0" }),
+    ).toHaveAttribute("href", "/api/auth/login?returnTo=%2Faccounts");
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it.each(["configuration", "provider-secret-error"])(
+    "shows safe provider feedback for %s",
+    (providerError) => {
+      render(
+        <SignInForm providerError={providerError} returnTo="//evil.test" />,
+      );
+      expect(screen.getByRole("alert")).toHaveTextContent(
+        providerError === "configuration"
+          ? "Sign-in is not configured."
+          : "Sign-in could not be completed.",
+      );
+      expect(screen.getByRole("alert")).not.toHaveTextContent(
+        "provider-secret-error",
+      );
+      expect(
+        screen.getByRole("link", { name: "Sign in with Auth0" }),
+      ).toHaveAttribute("href", "/api/auth/login?returnTo=%2Froles");
+    },
+  );
+
   it("establishes a server session and navigates to the roles workspace", async () => {
     vi.mocked(fetch).mockResolvedValue(
       new Response(JSON.stringify({ role: "recruiter" }), { status: 200 }),
     );
     const user = userEvent.setup();
-    render(<SignInForm />);
+    render(<SignInForm tokenLogin />);
 
     const tokenInput = screen.getByLabelText(/internal access token/i);
     await user.type(tokenInput, "provider-token");
@@ -83,7 +114,7 @@ describe("SignInForm", () => {
       }),
     );
     const user = userEvent.setup();
-    render(<SignInForm />);
+    render(<SignInForm tokenLogin />);
 
     await user.type(screen.getByLabelText(/internal access token/i), "bad");
     await user.click(screen.getByRole("button", { name: "Continue to roles" }));

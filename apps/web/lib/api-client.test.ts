@@ -10,6 +10,9 @@ import {
   exportCandidateData,
   extractRoleProfile,
   getCurrentUser,
+  getManagedUsers,
+  provisionUser,
+  updateManagedUser,
   getPrivacyAuditEvents,
   getPrivacyStatus,
   getPrivacyAssessments,
@@ -408,3 +411,56 @@ it.each([
     }
   },
 );
+it("wires account provisioning and permission updates through the browser proxy", async () => {
+  const account = {
+    id: IDS.user,
+    organization_id: IDS.organization,
+    name: "Manager",
+    email: "m@example.invalid",
+    role: "hiring_manager" as const,
+    auth_subject: "auth0|manager",
+    version: 1,
+    is_active: true,
+  };
+  const fetchMock = vi
+    .fn()
+    .mockResolvedValueOnce(Response.json([account]))
+    .mockResolvedValueOnce(Response.json([account]))
+    .mockResolvedValueOnce(Response.json(account))
+    .mockResolvedValueOnce(Response.json({ ...account, is_active: false }));
+  vi.stubGlobal("fetch", fetchMock);
+  try {
+    await expect(getManagedUsers()).resolves.toEqual([account]);
+    await expect(getManagedUsers(50)).resolves.toEqual([account]);
+    const input = {
+      auth_subject: account.auth_subject,
+      name: account.name,
+      email: account.email,
+      role: account.role,
+    };
+    await expect(provisionUser(input)).resolves.toEqual(account);
+    await expect(
+      updateManagedUser(account.id, "hiring_manager", false, 1),
+    ).resolves.toMatchObject({ is_active: false });
+    expect(fetchMock.mock.calls.map(([url]) => url)).toEqual([
+      "/api/internal/users?limit=50&offset=0",
+      "/api/internal/users?limit=50&offset=50",
+      "/api/internal/users",
+      `/api/internal/users/${IDS.user}`,
+    ]);
+    expect(fetchMock.mock.calls[2][1]).toMatchObject({
+      method: "POST",
+      body: JSON.stringify(input),
+    });
+    expect(fetchMock.mock.calls[3][1]).toMatchObject({
+      method: "PATCH",
+      body: JSON.stringify({
+        role: "hiring_manager",
+        is_active: false,
+        expected_version: 1,
+      }),
+    });
+  } finally {
+    vi.unstubAllGlobals();
+  }
+});

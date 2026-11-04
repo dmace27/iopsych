@@ -17,6 +17,7 @@ export type InternalUserRole = z.infer<typeof InternalUserRoleSchema>;
 export const CurrentUserSchema = z.strictObject({
   id: z.uuid(),
   organization_id: z.uuid(),
+  organization_name: z.string().min(1).optional(),
   // The backend contract exposes a non-empty string rather than an email type.
   email: z.string().min(1),
   name: z.string().min(1),
@@ -91,3 +92,15 @@ export type RoleCreateInput = Pick<
 export interface RoleProfileInput {
   constructs: RoleConstructRating[];
 }
+
+/** Administrator account management never exposes tokens or signing material. */
+export const ManagedUserSchema = CurrentUserSchema.extend({
+  auth_subject: z.string().min(1),
+  version: z.number().int().positive(),
+  is_active: z.boolean(),
+});
+export type ManagedUser = z.infer<typeof ManagedUserSchema>;
+export type ManagedUserInput = Pick<
+  ManagedUser,
+  "auth_subject" | "email" | "name" | "role"
+>;
