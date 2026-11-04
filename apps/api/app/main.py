@@ -41,6 +41,9 @@ from app.privacy.router import privacy_router
 from app.reports.router import router as reports_router
 from app.reports.router import submission_router
 from app.roles.router import router as roles_router
+from app.runtime.config import RuntimeSettings
+from app.runtime.health import router as readiness_router
+from app.runtime.middleware import RequestBodyLimitMiddleware
 from app.security import SecurityMiddleware, unexpected_problem_handler
 
 
@@ -71,6 +74,7 @@ def create_app(
     role_extraction_settings: RoleExtractionSettings | None = None,
     role_extraction_provider: RoleExtractionProvider | None = None,
     privacy_settings: PrivacySettings | None = None,
+    runtime_settings: RuntimeSettings | None = None,
     session_factory: sessionmaker[Session] | None = None,
     token_verifier: TokenVerifier | None = None,
 ) -> FastAPI:
@@ -80,6 +84,7 @@ def create_app(
     invite_settings = invitation_settings or InvitationSettings()
     extraction_settings = role_extraction_settings or RoleExtractionSettings()
     resolved_privacy_settings = privacy_settings or PrivacySettings()
+    resolved_runtime_settings = runtime_settings or RuntimeSettings()
     install_invite_token_log_filter()
     resolved_session_factory = session_factory or create_session_factory(create_database_engine())
     resolved_verifier = token_verifier
@@ -116,7 +121,9 @@ def create_app(
     application.add_exception_handler(AccessProblemError, access_problem_handler)
     application.add_exception_handler(RequestValidationError, request_validation_problem_handler)
     application.add_middleware(AuditMiddleware, session_factory=resolved_session_factory)
+    application.add_middleware(RequestBodyLimitMiddleware, settings=resolved_runtime_settings)
     application.add_middleware(SecurityMiddleware)
+    application.include_router(readiness_router)
     application.include_router(local_login_router)
     application.include_router(roles_router)
     application.include_router(invitations_router)
