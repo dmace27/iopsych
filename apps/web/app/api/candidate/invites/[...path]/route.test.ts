@@ -42,6 +42,34 @@ describe("candidate API proxy", () => {
     expect(response.headers.get("Content-Type")).toBe("application/json");
   });
 
+  it("allows only GET for definition and preserves consent errors and no-store", async () => {
+    vi.mocked(fetch).mockResolvedValue(
+      Response.json({ code: "candidate_consent_required" }, { status: 409 }),
+    );
+    const response = await GET(
+      new Request("http://web.test/api/candidate/invites/token/definition"),
+      context("token", "definition"),
+    );
+    expect(response.status).toBe(409);
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
+    expect(String(vi.mocked(fetch).mock.calls[0]![0])).toBe(
+      "http://localhost:8000/v1/candidate/invites/token/definition",
+    );
+    vi.mocked(fetch).mockClear();
+    expect(
+      (
+        await POST(
+          new Request(
+            "http://web.test/api/candidate/invites/token/definition",
+            { method: "POST" },
+          ),
+          context("token", "definition"),
+        )
+      ).status,
+    ).toBe(404);
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
   it("forwards a same-origin consent decision and content type", async () => {
     vi.mocked(fetch).mockResolvedValue(Response.json({ decision: "consent" }));
     const request = new Request(

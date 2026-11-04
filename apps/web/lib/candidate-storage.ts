@@ -3,6 +3,8 @@ import { z } from "zod";
 
 import {
   CandidateDraftSchema,
+  LEGACY_V1_DEFINITION_SHA256,
+  type CandidateDefinition,
   type CandidateDraft,
 } from "./candidate-contracts";
 
@@ -54,14 +56,19 @@ export function clearCandidateDevice(
 export function loadCandidateDraft(
   storage: Storage | null,
   id: string,
-  expiresAt?: string,
+  expiresAt: string | undefined,
+  assigned: CandidateDefinition,
 ): CandidateDraft | null {
   if (!storage) return null;
   try {
     const raw = storage.getItem(key(id, "draft"));
     if (raw === null) return null;
     const parsed = CandidateDraftSchema.safeParse(JSON.parse(raw));
-    if (parsed.success && fresh(parsed.data.saved_at, expiresAt))
+    if (
+      parsed.success &&
+      fresh(parsed.data.saved_at, expiresAt) &&
+      draftMatchesAssignment(parsed.data, assigned)
+    )
       return parsed.data;
   } catch {
     /* Invalid or inaccessible state must not block the invitation. */
@@ -78,11 +85,15 @@ export function saveCandidateDraft(
   storage: Storage | null,
   id: string,
   responseSet: AssessmentResponseSet,
+  assigned: CandidateDefinition,
 ): CandidateDraft {
   const draft = CandidateDraftSchema.parse({
+    definition_sha256: assigned.assignment.definition_sha256,
     response_set: responseSet,
     saved_at: new Date().toISOString(),
   });
+  if (!draftMatchesAssignment(draft, assigned))
+    throw new Error("Draft assignment mismatch");
   if (!storage) throw new Error("Device storage unavailable");
   // Remove first: a failed replacement must not resurrect older complete choices.
   storage.removeItem(key(id, "draft"));
@@ -133,4 +144,35 @@ export function loadCandidateCompletion(
     /* Best effort. */
   }
   return null;
+}
+
+/** Hashless drafts are recognized only as the exact frozen legacy assignment. */
+function draftMatchesAssignment(
+  draft: CandidateDraft,
+  { assignment, definition }: CandidateDefinition,
+): boolean {
+  const response = draft.response_set;
+  if (
+    response.assessment_definition_id !== assignment.assessment_definition_id ||
+    response.assessment_definition_version !==
+      assignment.assessment_definition_version
+  )
+    return false;
+  if (draft.definition_sha256 !== undefined) {
+    if (draft.definition_sha256 !== assignment.definition_sha256) return false;
+  } else if (
+    assignment.assessment_definition_id !== "work-preferences-pilot" ||
+    assignment.assessment_definition_version !== "1.0.0" ||
+    assignment.definition_sha256 !== LEGACY_V1_DEFINITION_SHA256
+  )
+    return false;
+  return response.responses.every((choice) => {
+    const block = definition.blocks.find(({ id }) => id === choice.block_id);
+    return (
+      block !== undefined &&
+      (choice.skipped ||
+        (block.items.some(({ id }) => id === choice.most_like_item_id) &&
+          block.items.some(({ id }) => id === choice.least_like_item_id)))
+    );
+  });
 }

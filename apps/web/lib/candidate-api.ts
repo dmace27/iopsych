@@ -4,6 +4,8 @@ import type { z } from "zod";
 import { ApiClientError } from "./api-client";
 import {
   CandidateInviteSchema,
+  CandidateDefinitionSchema,
+  type CandidateDefinition,
   SubmissionReceiptSchema,
   type CandidateInvite,
   type ConsentDecision,
@@ -88,4 +90,45 @@ export function submitCandidateAssessment(
     method: "POST",
     body: JSON.stringify(responses),
   });
+}
+
+/** Fetch only after affirmative consent; never substitute a bundled definition. */
+export async function getCandidateDefinition(
+  token: string,
+): Promise<CandidateDefinition> {
+  const assigned = await candidateRequest(
+    token,
+    CandidateDefinitionSchema,
+    "/definition",
+  );
+  const canonical = (value: unknown): string => {
+    if (Array.isArray(value)) return "[" + value.map(canonical).join(",") + "]";
+    if (value !== null && typeof value === "object")
+      return (
+        "{" +
+        Object.entries(value)
+          .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
+          .map(([key, child]) => JSON.stringify(key) + ":" + canonical(child))
+          .join(",") +
+        "}"
+      );
+    return JSON.stringify(value);
+  };
+  const digest = await crypto.subtle.digest(
+    "SHA-256",
+    new TextEncoder().encode(canonical(assigned.definition)),
+  );
+  const hash = Array.from(new Uint8Array(digest), (byte) =>
+    byte.toString(16).padStart(2, "0"),
+  ).join("");
+  if (hash !== assigned.assignment.definition_sha256) {
+    throw new ApiClientError(
+      "The assigned assessment could not be verified. Try reopening your invitation.",
+      {
+        code: "invalid_api_response",
+        status: 200,
+      },
+    );
+  }
+  return assigned;
 }

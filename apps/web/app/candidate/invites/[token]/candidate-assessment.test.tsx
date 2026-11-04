@@ -8,13 +8,17 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const apiMocks = vi.hoisted(() => ({
   getCandidateInvite: vi.fn(),
+  getCandidateDefinition: vi.fn(),
   recordCandidateConsent: vi.fn(),
   submitCandidateAssessment: vi.fn(),
 }));
 
 vi.mock("../../../../lib/candidate-api", () => apiMocks);
 
-import type { CandidateInvite } from "../../../../lib/candidate-contracts";
+import {
+  LEGACY_V1_DEFINITION_SHA256,
+  type CandidateInvite,
+} from "../../../../lib/candidate-contracts";
 import { CandidateAssessment } from "./candidate-assessment";
 
 const INVITATION_ID = "11111111-1111-4111-8111-111111111111";
@@ -48,6 +52,16 @@ function candidateInvite(
 describe("CandidateAssessment", () => {
   beforeEach(() => {
     apiMocks.getCandidateInvite.mockReset();
+    apiMocks.getCandidateDefinition.mockReset().mockResolvedValue({
+      assignment: {
+        assessment_definition_id: PILOT_ASSESSMENT_DEFINITION_V1.id,
+        assessment_definition_version: "1.0.0",
+        scoring_version: "1.0.0",
+        matching_algorithm_version: "1.0.0",
+        definition_sha256: LEGACY_V1_DEFINITION_SHA256,
+      },
+      definition: PILOT_ASSESSMENT_DEFINITION_V1,
+    });
     apiMocks.recordCandidateConsent.mockReset();
     apiMocks.submitCandidateAssessment.mockReset();
     apiMocks.submitCandidateAssessment.mockResolvedValue({
@@ -70,6 +84,7 @@ describe("CandidateAssessment", () => {
         name: "Your choice and your data",
       }),
     ).toBeInTheDocument();
+    expect(apiMocks.getCandidateDefinition).not.toHaveBeenCalled();
     expect(
       screen.getByText(/assessment questions remain hidden/i),
     ).toBeInTheDocument();
@@ -81,6 +96,128 @@ describe("CandidateAssessment", () => {
         name: /request a copy, correction, or deletion/i,
       }),
     ).toHaveAttribute("href", expect.stringContaining("privacy@pilot.example"));
+  });
+
+  it("does not fetch a definition before consent or after decline", async () => {
+    apiMocks.getCandidateInvite.mockResolvedValue(
+      candidateInvite({ decision: "decline", status: "declined" }),
+    );
+    render(<CandidateAssessment token="signed-token" />);
+    await screen.findByText("You declined the assessment");
+    expect(apiMocks.getCandidateDefinition).not.toHaveBeenCalled();
+  });
+
+  it("fails closed on unavailable assignments and retries without using bundled questions", async () => {
+    apiMocks.getCandidateInvite.mockResolvedValue(
+      candidateInvite({
+        decision: "consent",
+        can_start_assessment: true,
+        status: "consented",
+      }),
+    );
+    apiMocks.getCandidateDefinition.mockRejectedValueOnce(
+      new Error("Unsupported assessment version"),
+    );
+    render(<CandidateAssessment token="signed-token" />);
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Unsupported assessment version",
+    );
+    expect(screen.queryByRole("radio")).not.toBeInTheDocument();
+    expect(localStorage.length).toBe(0);
+    const pinned = structuredClone(PILOT_ASSESSMENT_DEFINITION_V1);
+    pinned.blocks[0]!.items[0]!.statement = "The pinned historical statement.";
+    apiMocks.getCandidateDefinition.mockResolvedValue({
+      definition: pinned,
+      assignment: {
+        assessment_definition_id: pinned.id,
+        assessment_definition_version: pinned.version,
+        scoring_version: "1.0.0",
+        matching_algorithm_version: "1.0.0",
+        definition_sha256: "c".repeat(64),
+      },
+    });
+    await userEvent
+      .setup()
+      .click(screen.getByRole("button", { name: "Try again" }));
+    expect(
+      await screen.findByText("The pinned historical statement."),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText(
+        PILOT_ASSESSMENT_DEFINITION_V1.blocks[0]!.items[0]!.statement,
+      ),
+    ).not.toBeInTheDocument();
+    await userEvent.setup().click(screen.getByRole("checkbox"));
+    expect(
+      JSON.parse(
+        localStorage.getItem(`iopsych.candidate.v1.${INVITATION_ID}.draft`)!,
+      ).definition_sha256,
+    ).toBe("c".repeat(64));
+  });
+
+  it("restores a hashless historical v1 draft and upgrades its envelope", async () => {
+    const response = {
+      block_id: "block-1",
+      skipped: true,
+      most_like_item_id: null,
+      least_like_item_id: null,
+    };
+    localStorage.setItem(
+      `iopsych.candidate.v1.${INVITATION_ID}.draft`,
+      JSON.stringify({
+        saved_at: new Date().toISOString(),
+        response_set: {
+          assessment_definition_id: "work-preferences-pilot",
+          assessment_definition_version: "1.0.0",
+          responses: [response],
+        },
+      }),
+    );
+    apiMocks.getCandidateInvite.mockResolvedValue(
+      candidateInvite({
+        decision: "consent",
+        can_start_assessment: true,
+        status: "consented",
+      }),
+    );
+    render(<CandidateAssessment token="signed-token" />);
+    expect(await screen.findByText("Block 2 of 6")).toBeInTheDocument();
+    await waitFor(() =>
+      expect(
+        JSON.parse(
+          localStorage.getItem(`iopsych.candidate.v1.${INVITATION_ID}.draft`)!,
+        ).definition_sha256,
+      ).toBe(LEGACY_V1_DEFINITION_SHA256),
+    );
+    await userEvent
+      .setup()
+      .click(screen.getByRole("button", { name: "Previous block" }));
+    expect(screen.getByRole("checkbox")).toBeChecked();
+  });
+
+  it("does not render questions when the definition fetch fails after consent", async () => {
+    apiMocks.getCandidateInvite.mockResolvedValue(candidateInvite());
+    apiMocks.recordCandidateConsent.mockResolvedValue(
+      candidateInvite({
+        decision: "consent",
+        can_start_assessment: true,
+        status: "consented",
+      }),
+    );
+    apiMocks.getCandidateDefinition.mockRejectedValue(
+      new Error("Definition unavailable"),
+    );
+    render(<CandidateAssessment token="signed-token" />);
+    await userEvent.setup().click(
+      await screen.findByRole("button", {
+        name: "I consent and want to begin",
+      }),
+    );
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Definition unavailable",
+    );
+    expect(screen.queryByRole("radio")).not.toBeInTheDocument();
+    expect(localStorage.length).toBe(0);
   });
 
   it("records a keyboard consent choice and completes all blocks by keyboard", async () => {
@@ -217,6 +354,13 @@ describe("CandidateAssessment", () => {
     render(<CandidateAssessment token="signed-token" />);
 
     expect(await screen.findByText("Saved on this device")).toBeInTheDocument();
+    await waitFor(() =>
+      expect(
+        screen.getByRole("heading", {
+          name: /which statements are most and least like you/i,
+        }),
+      ).toHaveFocus(),
+    );
     const previous = screen.getByRole("button", { name: "Previous block" });
     previous.focus();
     await user.keyboard("{Enter}");

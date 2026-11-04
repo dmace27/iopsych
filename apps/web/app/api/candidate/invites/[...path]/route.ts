@@ -10,7 +10,8 @@ interface RouteContext {
 /** Expose only implemented anonymous invitation and submission endpoints. */
 function isAllowedCandidatePath(path: string[], method: string): boolean {
   return (
-    (method === "GET" && path.length === 1) ||
+    (method === "GET" &&
+      (path.length === 1 || (path.length === 2 && path[1] === "definition"))) ||
     (method === "POST" &&
       path.length === 2 &&
       (path[1] === "consent" || path[1] === "submit"))

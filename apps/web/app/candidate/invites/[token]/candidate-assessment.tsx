@@ -2,7 +2,7 @@
 
 import {
   AssessmentResponseSetSchema,
-  PILOT_ASSESSMENT_DEFINITION_V1,
+  type AssessmentDefinition,
   type AssessmentBlock,
   type AssessmentBlockResponse,
   type AssessmentItem,
@@ -12,11 +12,13 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 import {
   getCandidateInvite,
+  getCandidateDefinition,
   recordCandidateConsent,
   submitCandidateAssessment,
 } from "../../../../lib/candidate-api";
 import type {
   CandidateInvite,
+  CandidateDefinition,
   ConsentDecision,
 } from "../../../../lib/candidate-contracts";
 import {
@@ -51,8 +53,6 @@ type LoadState =
       status: "ready";
       view: View;
     };
-
-const assessment = PILOT_ASSESSMENT_DEFINITION_V1;
 
 /** Produce a stable per-invitation statement order without extra stored state. */
 function orderedItems(
@@ -90,7 +90,10 @@ function choicesFromResponses(responses: AssessmentBlockResponse[]): Choices {
 }
 
 /** Include only complete choices so persisted snapshots stay contract-valid. */
-function responseSetFromChoices(choices: Choices): AssessmentResponseSet {
+function responseSetFromChoices(
+  choices: Choices,
+  assessment: AssessmentDefinition,
+): AssessmentResponseSet {
   const responses: AssessmentBlockResponse[] = [];
   for (const block of assessment.blocks) {
     const choice = choices[block.id];
@@ -134,6 +137,8 @@ function formatExpiry(value: string): string {
 /** Public, consent-gated candidate journey for one bearer invitation. */
 export function CandidateAssessment({ token }: CandidateAssessmentProps) {
   const [state, setState] = useState<LoadState>({ status: "loading" });
+  const [assigned, setAssigned] = useState<CandidateDefinition | null>(null);
+  const assessment = assigned?.definition;
   const [choices, setChoices] = useState<Choices>({});
   const [currentBlockIndex, setCurrentBlockIndex] = useState(0);
   const [submittingConsent, setSubmittingConsent] = useState(false);
@@ -147,12 +152,15 @@ export function CandidateAssessment({ token }: CandidateAssessmentProps) {
   const headingRef = useRef<HTMLHeadingElement>(null);
   const firstMostRef = useRef<HTMLInputElement>(null);
 
-  const responseSet = useMemo(() => responseSetFromChoices(choices), [choices]);
+  const responseSet = useMemo(
+    () => (assessment ? responseSetFromChoices(choices, assessment) : null),
+    [choices, assessment],
+  );
 
   useEffect(() => {
     let active = true;
     void getCandidateInvite(token)
-      .then((invite) => {
+      .then(async (invite) => {
         if (!active) return;
         const storage = candidateStorage();
         loadCandidateCompletion(
@@ -170,7 +178,7 @@ export function CandidateAssessment({ token }: CandidateAssessmentProps) {
           });
           return;
         }
-        if (invite.can_start_assessment) {
+        if (invite.can_start_assessment && invite.decision === "consent") {
           if (invite.assessment_id) {
             clearCandidateDevice(storage, invite.invitation_id);
             setState({
@@ -181,10 +189,17 @@ export function CandidateAssessment({ token }: CandidateAssessmentProps) {
             });
             return;
           }
+          const pinned = await getCandidateDefinition(token);
+          if (!active) return;
+          const assessment = pinned.definition;
+          setAssigned(pinned);
+          setChoices({});
+          setCurrentBlockIndex(0);
           const draft = loadCandidateDraft(
             storage,
             invite.invitation_id,
             invite.expires_at,
+            pinned,
           );
           if (
             draft?.response_set.assessment_definition_id === assessment.id &&
@@ -241,7 +256,7 @@ export function CandidateAssessment({ token }: CandidateAssessmentProps) {
   // external write result, which cannot be derived from render state alone.
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
-    if (persistedInvitationId === null) {
+    if (persistedInvitationId === null || !responseSet || !assigned) {
       return;
     }
     try {
@@ -249,6 +264,7 @@ export function CandidateAssessment({ token }: CandidateAssessmentProps) {
         candidateStorage(),
         persistedInvitationId,
         responseSet,
+        assigned,
       );
       setSaveStatus(
         Object.values(choices).some(
@@ -264,7 +280,7 @@ export function CandidateAssessment({ token }: CandidateAssessmentProps) {
     } catch {
       setSaveStatus("Not saved on this device. Keep this page open to finish.");
     }
-  }, [persistedInvitationId, responseSet, choices]);
+  }, [persistedInvitationId, responseSet, choices, assigned]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
   const currentView = state.status === "ready" ? state.view : null;
@@ -277,13 +293,33 @@ export function CandidateAssessment({ token }: CandidateAssessmentProps) {
     setActionError(null);
     try {
       const invite = await recordCandidateConsent(token, decision);
-      setState({
-        completion: null,
-        invite,
-        status: "ready",
-        view: decision === "consent" ? "assessment" : "declined",
-      });
+      if (decision === "consent") {
+        if (invite.decision !== "consent" || !invite.can_start_assessment) {
+          throw new Error(
+            "Consent was not confirmed. Reopen your invitation to try again.",
+          );
+        }
+        setState({ status: "loading" });
+        const pinned = await getCandidateDefinition(token);
+        setAssigned(pinned);
+        setState({
+          completion: null,
+          invite,
+          status: "ready",
+          view: "assessment",
+        });
+      } else {
+        clearCandidateDevice(candidateStorage(), invite.invitation_id);
+        setState({
+          completion: null,
+          invite,
+          status: "ready",
+          view: "declined",
+        });
+      }
     } catch (error) {
+      if (decision === "consent")
+        setState({ message: inviteErrorMessage(error), status: "error" });
       setActionError(inviteErrorMessage(error));
       setSubmittingConsent(false);
     }
@@ -332,6 +368,7 @@ export function CandidateAssessment({ token }: CandidateAssessmentProps) {
   }
 
   function goForward(block: AssessmentBlock) {
+    if (!assessment) return;
     const choice = choices[block.id];
     if (
       !choice?.skipped &&
@@ -353,7 +390,13 @@ export function CandidateAssessment({ token }: CandidateAssessmentProps) {
   }
 
   async function submitAssessment() {
-    if (state.status !== "ready" || submissionPending.current) return;
+    if (
+      state.status !== "ready" ||
+      submissionPending.current ||
+      !assessment ||
+      !responseSet
+    )
+      return;
     if (responseSet.responses.length !== assessment.blocks.length) {
       setValidationError(
         "Review every block before submitting. Each block must be answered or skipped.",
@@ -495,10 +538,12 @@ export function CandidateAssessment({ token }: CandidateAssessmentProps) {
           disabled={submittingAssessment}
           onClick={() => {
             try {
+              if (!responseSet || !assigned) return;
               saveCandidateDraft(
                 candidateStorage(),
                 invite.invitation_id,
                 responseSet,
+                assigned,
               );
               setDeviceMessage(
                 "Completed blocks saved. Partial block choices are not saved. You can close this window and reopen your invitation on this browser.",
@@ -695,6 +740,8 @@ export function CandidateAssessment({ token }: CandidateAssessmentProps) {
       </CandidateFrame>
     );
   }
+
+  if (!assessment) return null;
 
   if (view === "review") {
     return (

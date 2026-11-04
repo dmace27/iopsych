@@ -1,7 +1,10 @@
+import { PILOT_ASSESSMENT_DEFINITION_V1 as definition } from "@iopsych/shared";
+import { LEGACY_V1_DEFINITION_SHA256 } from "./candidate-contracts";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   getCandidateInvite,
+  getCandidateDefinition,
   recordCandidateConsent,
   submitCandidateAssessment,
 } from "./candidate-api";
@@ -29,6 +32,54 @@ const response = {
 describe("candidate API client", () => {
   beforeEach(() => vi.stubGlobal("fetch", vi.fn()));
   afterEach(() => vi.unstubAllGlobals());
+
+  it("fetches and verifies the frozen assigned definition without caching", async () => {
+    const payload = {
+      definition,
+      assignment: {
+        assessment_definition_id: definition.id,
+        assessment_definition_version: definition.version,
+        scoring_version: definition.scoring.version,
+        matching_algorithm_version: "1.0.0",
+        definition_sha256: LEGACY_V1_DEFINITION_SHA256,
+      },
+    };
+    vi.mocked(fetch).mockResolvedValue(Response.json(payload));
+    await expect(getCandidateDefinition("signed/token")).resolves.toEqual(
+      payload,
+    );
+    expect(fetch).toHaveBeenCalledWith(
+      "/api/candidate/invites/signed%2Ftoken/definition",
+      expect.objectContaining({ cache: "no-store" }),
+    );
+    for (const assignment of [
+      { ...payload.assignment, assessment_definition_id: "unknown" },
+      { ...payload.assignment, assessment_definition_version: "99.0.0" },
+      { ...payload.assignment, scoring_version: "99.0.0" },
+      { ...payload.assignment, matching_algorithm_version: "99.0.0" },
+      { ...payload.assignment, definition_sha256: "a".repeat(64) },
+    ]) {
+      vi.mocked(fetch).mockResolvedValue(
+        Response.json({ ...payload, assignment }),
+      );
+      await expect(getCandidateDefinition("token")).rejects.toMatchObject({
+        code: "invalid_api_response",
+      });
+    }
+    vi.mocked(fetch).mockResolvedValue(
+      Response.json({
+        ...payload,
+        definition: { ...definition, version: "2.0.0" },
+      }),
+    );
+    await expect(getCandidateDefinition("token")).rejects.toMatchObject({
+      code: "invalid_api_response",
+    });
+    vi.mocked(fetch).mockRejectedValue(new Error("unavailable"));
+    await expect(getCandidateDefinition("token")).rejects.toMatchObject({
+      code: "network_error",
+    });
+  });
 
   it("loads and validates a candidate-safe invite", async () => {
     vi.mocked(fetch).mockResolvedValue(Response.json(response));
