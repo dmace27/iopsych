@@ -177,19 +177,30 @@ Recommended prompts:
 ## Accelerated execution schedule
 
 User-authorized parallel execution replaces the default serial sequence. The
-two-hour throughput target runs **2026-11-04 22:31–2026-11-05 00:31 UTC**; it is
-not a release deadline or permission to omit any acceptance criterion above.
+latest remaining-work target is **30–45 minutes from 2026-11-04 23:21 UTC**
+(23:51–00:06 UTC), superseding the earlier two-hour target. It is not a release
+deadline or permission to omit any acceptance criterion above.
 All package dependencies, scientific/product approvals and release gates remain.
 Bounded engineering slices may start early; their completion is not full-package
 acceptance. Current ownership, commits, tests and blockers live in
 `docs/implementation/progress.md`.
 
-| Parallel workstream | First wave: minutes 0–30 | Contract handoff / next wave: minutes 30–75 | Integration and acceptance: minutes 75–120 |
+| Parallel workstream | Immediate parallel work: minutes 0–15 | Contract/merge handoffs: minutes 15–30 | Protected verification: minutes 30–45 |
 | --- | --- | --- | --- |
-| Foundation and accounts: **6A, 6B, 6C, 7A, 7B, 7C** | Fix independently reproduced local-auth boundaries; resolve smallest user choices; finish version backend and assigned-definition UI in separate worktrees | Agree version envelope, migration and compatibility fixtures before API/UI integration. Provider/session implementation follows identity choice; provisioning follows membership choice; manager states follow product choice | Recheck local login, populated migrations and historical readers. Accounts/manager acceptance remains pending until actual end-to-end and permission checks pass |
-| Invitations and candidate/report flow: **8A, 8B, 9A, 9B, 9C** | Local capture delivery adapter against existing interface; preserve storage fixes; traceability mapping without new interpretation | Integrate 6C before lifecycle issuance changes. Agree delivery/idempotency API before 8B UI; approve resume/context promise before 9B; approve interpretation before changing 9C semantics | Run synthetic invitation/candidate/report and failure tests; historical v1 remains unchanged. Configured-provider/staging evidence remains separate |
-| Privacy and operations: **10A, 10B, 10C, 11A, 11B, 11C** | Inventory lifecycle and prepare privacy contract; review packaging; implement disjoint readiness/body bounds and extraction transport limits | Approve privacy contract before migration/UI split. Integrate delivery/drafts into 10A, provisioning into 10B; scheduler/restore/deletion replay connects 10C with 11A/11C | Verify isolated PostgreSQL races and packaged runtime. Hosted secrets, backup objectives, responders and actual restore rehearsal remain explicit gates |
-| Verification and handoff: **12A, 12B, 12C, 12D** | Expand production browser/axe coverage; independent integration review; security dependency and CI remediation; use prepared accessibility/runbooks | Refill reviewers after each merge; adapt fixtures to agreed contracts; prepare controlled local rehearsal and factual handoff evidence | Reserve final 45 minutes for combined lint/types/tests/build, PostgreSQL/browser checks and fixes. Manual accessibility, intended-user studies, staging, content/privacy sign-off and public-demo authorization are not inferred |
+| Foundation and accounts: **6A, 6B, 6C, 7A, 7B, 7C** | Isolated remote reconciliation adopts existing Auth0/account implementation rather than duplicating it; preserve safe setup/local login/versioned access. Parallel shell and role UI owners implement the committed design brief | Resolve migration collisions before DDL integration; retain populated assignment/history and stronger account locking/version contracts. Manager states still require an actual decision | Focused Auth0/mock-provider, account/tenant, local login and populated-upgrade checks; complete manager/hosted acceptance remains pending |
+| Invitations and candidate/report flow: **8A, 8B, 9A, 9B, 9C** | Reconcile existing Resend encrypted outbox/idempotency with tested local queue; separate candidate, report/evidence and invitation visual owners preserve current behavior | Agree request-key/delivery-state adapters before merging UI. Adopt recorded product decision for direct structure algorithm2 while preserving explicit v1 replay/readers and immutable assignments. Draft/context decisions remain separate | Synthetic invitation/reissue/consent/report journeys, semantic parity and historical fixtures; no real mail, credentials or scientific approval inferred |
+| Privacy and operations: **10A, 10B, 10C, 11A, 11B, 11C** | Finish bounded notice-snapshot checkpoint, related audit/race fixes and local command; account/privacy UI works separately. Preserve completed restore/replay and packaging evidence | One reconciliation owner allocates migration compatibility; notice0011 must hand off before shared-model edits. Provider changes must preserve export/deletion cancellation, bounded runtime, dependencies and release attribution | Recheck actual PostgreSQL races, clean images and local rehearsal against reconciled HEAD. Lifecycle-wide policy, hosted scheduler, encrypted backup objectives and responders remain gates |
+| Verification and handoff: **12A, 12B, 12C, 12D** | Independent migration/provider/semantic diff review and regression preparation run beside six implementation lanes; render desktop/mobile synthetic UI, not merely class changes | Integrate reviewed commits serially; UI owners rebase/merge against reconciled remote baseline. Preserve selectors or intentionally update tests and record why | Protect the final10–15 minutes for combined checks/build, browser/axe, migration verification and repairs. Manual accessibility, intended-user studies, staging, content/privacy sign-off and public-demo authorization remain unclaimed |
+
+New input is `origin/codex/fix-security-dependencies` at `646201a`, fetched and
+reviewed in an isolated reconciliation lane, never blindly pulled over integration.
+Its Auth0 and Resend implementations are the adopted provider direction; real
+credentials and hosted verification are separate. Its November3 repository-owner
+structure decision is product evidence, not independent scientific approval.
+`docs/ui-inspiration.md` is committed. Five disjoint visual owners cover shared
+tokens/layout/navigation, roles/profile, reports/evidence, candidate flow, and
+accounts/privacy/invitations. All share neutral canvas, one restrained accent,
+compact records, considerate forms and preserved consent/evidence/accessibility.
 
 Coordinator alone integrates and allocates migrations/shared contracts; one
 worker owns dependency manifests/lockfile. Use isolated child worktrees, unique
@@ -198,7 +209,7 @@ to measured memory/provider capacity, not an arbitrary cap; avoid duplicate full
 suites and idle workers. Start downstream workers from the latest integrated
 commit, verify Fast mode per session, acknowledge reports and refill promptly.
 
-The realistic two-hour result is a substantially expanded, reviewed and locally
+The realistic accelerated result is a substantially expanded, reviewed and locally
 tested technical implementation, with precise partial/full evidence and remaining
 gates—not a guaranteed hosted release or real-participant authorization. Missing
 decisions, credentials, external/manual reviews and any unfinished implementation
