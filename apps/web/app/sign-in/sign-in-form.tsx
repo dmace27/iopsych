@@ -3,8 +3,16 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
+import { safeReturnTo } from "../../lib/safe-return-to";
+
 /** Exchange a short-lived provider token for the server-managed session cookie. */
-export function SignInForm({ localLogin = false }: { localLogin?: boolean }) {
+export function SignInForm({
+  localLogin = false,
+  returnTo,
+}: {
+  localLogin?: boolean;
+  returnTo?: string;
+}) {
   const router = useRouter();
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -38,7 +46,7 @@ export function SignInForm({ localLogin = false }: { localLogin?: boolean }) {
             : "The session could not be established.";
         throw new Error(detail);
       }
-      router.replace("/roles");
+      router.replace(safeReturnTo(returnTo));
       router.refresh();
     } catch (reason) {
       setError(

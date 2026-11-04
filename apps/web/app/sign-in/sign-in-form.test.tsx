@@ -96,4 +96,33 @@ describe("SignInForm", () => {
     ).toBeEnabled();
     expect(navigationMocks.replace).not.toHaveBeenCalled();
   });
+  it.each([
+    ["/privacy", "/privacy"],
+    [
+      "/reports/12345678-1234-4234-8234-123456789abc",
+      "/reports/12345678-1234-4234-8234-123456789abc",
+    ],
+    ["//evil.test", "/roles"],
+    ["/candidate/invites/secret", "/roles"],
+    ["/privacy?token=secret", "/roles"],
+  ])(
+    "validates returnTo %s before post-login navigation",
+    async (returnTo, expected) => {
+      vi.mocked(fetch).mockResolvedValue(Response.json({ status: "ok" }));
+      const user = userEvent.setup();
+      render(<SignInForm localLogin returnTo={returnTo} />);
+      await user.click(
+        screen.getByRole("button", { name: "Continue to roles" }),
+      );
+      await waitFor(() =>
+        expect(navigationMocks.replace).toHaveBeenCalledWith(expected),
+      );
+      expect(fetch).toHaveBeenCalledWith(
+        "/api/session/local",
+        expect.objectContaining({
+          body: JSON.stringify({ identity: "alpha" }),
+        }),
+      );
+    },
+  );
 });

@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 
+import { safeReturnTo } from "../../lib/safe-return-to";
+
 import { SignInForm } from "./sign-in-form";
 
 export const metadata: Metadata = {
@@ -7,7 +9,12 @@ export const metadata: Metadata = {
 };
 
 /** Render the provider-token exchange used to establish the secure session. */
-export default function SignInPage() {
+export default async function SignInPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ returnTo?: string | string[] }>;
+}) {
+  const returnTo = safeReturnTo((await searchParams).returnTo);
   const localLogin =
     process.env.LOCAL_LOGIN_ENABLED === "true" &&
     process.env.NODE_ENV === "development";
@@ -25,7 +32,7 @@ export default function SignInPage() {
           : "Use an internal-user access token issued by the configured identity provider. The token is exchanged for a secure, HTTP-only browser session."}
       </p>
       <div className="mt-8">
-        <SignInForm localLogin={localLogin} />
+        <SignInForm localLogin={localLogin} returnTo={returnTo} />
       </div>
     </main>
   );
