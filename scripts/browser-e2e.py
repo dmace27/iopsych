@@ -164,7 +164,7 @@ def main():
         with create_session_factory(engine)() as session:
             seed_database(session)
             seed_browser_admin(session)
-            for name in ("INVITE", "COMPLETE", "DENIED", "QUOTA"):
+            for name in ("INVITE", "COMPLETE", "DENIED", "QUOTA", "CLEAR"):
                 token = InviteTokenCodec(environment["INVITE_TOKEN_SIGNING_SECRET"]).generate()
                 tokens[f"BROWSER_E2E_{name}"] = token.raw_token
                 session.add(

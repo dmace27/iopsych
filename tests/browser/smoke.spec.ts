@@ -252,7 +252,7 @@ test("separate manager tenant cannot read or mutate recruiter resources", async 
   ).toBe(401);
 });
 
-for (const mode of ["COMPLETE", "DENIED", "QUOTA"]) {
+for (const mode of ["COMPLETE", "DENIED", "QUOTA", "CLEAR"]) {
   test(`candidate completes with ${mode.toLowerCase()} device storage`, async ({
     page,
   }) => {
@@ -289,7 +289,7 @@ for (const mode of ["COMPLETE", "DENIED", "QUOTA"]) {
         .getByRole("radio", { name: /^Least like me:/ })
         .nth(1)
         .check();
-      if (mode !== "COMPLETE")
+      if (mode === "DENIED" || mode === "QUOTA")
         await expect(
           page.getByText(
             "Not saved on this device. Keep this page open to finish.",
@@ -320,7 +320,7 @@ for (const mode of ["COMPLETE", "DENIED", "QUOTA"]) {
       page.getByRole("heading", { name: "Review your responses" }),
     ).toBeVisible();
     await accessible(page);
-    if (mode === "COMPLETE") {
+    if (mode === "CLEAR") {
       await page.getByRole("button", { name: "Clear device data" }).click();
       await expect(
         page.getByRole("heading", { name: "Assessment paused" }),

@@ -7,6 +7,7 @@ if (
     "COMPLETE",
     "DENIED",
     "QUOTA",
+    "CLEAR",
     "RECRUITER",
     "MANAGER",
     "ADMIN",
