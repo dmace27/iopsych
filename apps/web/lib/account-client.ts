@@ -84,7 +84,11 @@ export async function updateAccount(id: string, input: AccountUpdate) {
   if (
     !parsed.success ||
     parsed.data.id !== accountId ||
-    parsed.data.version <= update.expected_version
+    (parsed.data.version !== update.expected_version &&
+      parsed.data.version !== update.expected_version + 1) ||
+    (update.role !== undefined && parsed.data.role !== update.role) ||
+    (update.is_active !== undefined &&
+      parsed.data.is_active !== update.is_active)
   )
     return invalidResponse();
   return parsed.data;

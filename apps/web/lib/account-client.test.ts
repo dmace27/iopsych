@@ -1,19 +1,15 @@
 import { afterEach, expect, it, vi } from "vitest";
 import { AccountPageSchema, AccountUpdateSchema } from "./account-contracts";
 import { getAccounts, updateAccount } from "./account-client";
+import pageFixture from "../../api/tests/fixtures/accounts/page.json";
+import updateFixture from "../../api/tests/fixtures/accounts/update.json";
 
-const account = {
-  id: "10000000-0000-4000-8000-000000000099",
-  email: "admin@alpha.example.invalid",
-  name: "Alpha Admin",
-  role: "admin",
-  is_active: true,
-  version: 1,
-};
+const account = AccountPageSchema.parse(pageFixture).items[0];
+const canonicalUpdate = AccountUpdateSchema.parse(updateFixture);
 afterEach(() => vi.unstubAllGlobals());
 it("accepts the backend fixture and rejects extra sensitive fields, duplicates and invalid updates", () => {
   expect(
-    AccountPageSchema.parse({ items: [account], next_cursor: null }).items,
+    AccountPageSchema.parse(pageFixture).items,
   ).toEqual([account]);
   expect(
     AccountPageSchema.safeParse({
@@ -28,11 +24,7 @@ it("accepts the backend fixture and rejects extra sensitive fields, duplicates a
     }).success,
   ).toBe(false);
   expect(
-    AccountUpdateSchema.parse({
-      expected_version: 1,
-      role: "hiring_manager",
-      is_active: false,
-    }).is_active,
+    canonicalUpdate.is_active,
   ).toBe(false);
   for (const input of [
     { expected_version: 1 },
@@ -103,6 +95,67 @@ it("rejects stale successful responses and malformed pages", async () => {
     code: "invalid_api_response",
   });
 });
+it.each([
+  { role: account.role },
+  { is_active: true },
+  { is_active: false },
+  { role: canonicalUpdate.role, is_active: canonicalUpdate.is_active },
+])("accepts unchanged-version no-ops matching %j", async (mutation) => {
+  const response = { ...account, ...mutation };
+  vi.stubGlobal("fetch", vi.fn().mockResolvedValue(Response.json(response)));
+  await expect(
+    updateAccount(account.id, { expected_version: account.version, ...mutation }),
+  ).resolves.toEqual(response);
+});
+it.each([
+  { role: canonicalUpdate.role },
+  { is_active: false },
+  { role: canonicalUpdate.role, is_active: false },
+])("accepts one version increment matching %j", async (mutation) => {
+  const response = { ...account, ...mutation, version: account.version + 1 };
+  vi.stubGlobal("fetch", vi.fn().mockResolvedValue(Response.json(response)));
+  await expect(
+    updateAccount(account.id, { expected_version: account.version, ...mutation }),
+  ).resolves.toEqual(response);
+});
+it.each([1, 2, 3, 4])(
+  "rejects wrong identities and any mismatched mutation at version %s",
+  async (version) => {
+    const response = {
+      ...account,
+      role: canonicalUpdate.role,
+      is_active: canonicalUpdate.is_active,
+      version,
+    };
+    for (const invalid of [
+      { ...response, id: "10000000-0000-4000-8000-000000000098" },
+      { ...response, role: account.role },
+      { ...response, is_active: account.is_active },
+      { ...response, role: account.role, is_active: account.is_active },
+    ]) {
+      vi.stubGlobal("fetch", vi.fn().mockResolvedValue(Response.json(invalid)));
+      await expect(
+        updateAccount(account.id, { ...canonicalUpdate, expected_version: 2 }),
+      ).rejects.toMatchObject({ code: "invalid_api_response" });
+    }
+  },
+);
+it.each([1, 4])(
+  "rejects matching mutations at stale or skipped version %s",
+  async (version) => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(Response.json({ ...account, version })),
+    );
+    await expect(
+      updateAccount(account.id, {
+        expected_version: 2,
+        role: account.role,
+        is_active: account.is_active,
+      }),
+    ).rejects.toMatchObject({ code: "invalid_api_response" });
+  },
+);
 it("handles last-admin conflicts and uncertain network outcomes safely", async () => {
   vi.stubGlobal(
     "fetch",
