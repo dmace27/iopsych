@@ -9,8 +9,6 @@ RUN npm ci
 COPY tsconfig.base.json ./
 COPY packages/shared packages/shared
 COPY apps/web apps/web
-# Web test helpers participate in the normal production TypeScript check.
-# Keep their canonical JSON inputs in the build stage only.
 COPY apps/api/tests/fixtures/report_trace apps/api/tests/fixtures/report_trace
 RUN npm run build && npm prune --omit=dev
 
