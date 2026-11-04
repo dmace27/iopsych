@@ -9,6 +9,7 @@ import {
   getCurrentUser,
   getPrivacyAuditEvents,
   getPrivacyStatus,
+  getPrivacyAssessments,
   runPrivacyRetention,
 } from "../../lib/api-client";
 import type {
@@ -16,6 +17,8 @@ import type {
   CandidateDeletion,
   PrivacyAuditEvent,
   PrivacyStatus,
+  PrivacyAssessmentList,
+  PrivacyAssessmentLookup,
 } from "../../lib/privacy-contracts";
 import { ErrorState, LoadingState } from "../ui/workspace-states";
 
@@ -52,6 +55,56 @@ export function PrivacyWorkspace() {
   const [working, setWorking] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [announcement, setAnnouncement] = useState("");
+  const [lookupKind, setLookupKind] = useState<"invitation_id" | "role_id">(
+    "invitation_id",
+  );
+  const [lookupReference, setLookupReference] = useState("");
+  const [lookupResult, setLookupResult] =
+    useState<PrivacyAssessmentList | null>(null);
+  const [lookupQuery, setLookupQuery] =
+    useState<PrivacyAssessmentLookup | null>(null);
+  const [lookupLoading, setLookupLoading] = useState(false);
+  const [lookupError, setLookupError] = useState<string | null>(null);
+
+  function selectAssessment(id: string) {
+    setAssessmentId(id);
+    setConfirmingDeletion(false);
+    setExported(null);
+    setDeletion(null);
+    setActionError(null);
+    setAnnouncement(id ? `Selected assessment ${id}.` : "");
+  }
+
+  function resetLookup() {
+    setLookupResult(null);
+    setLookupQuery(null);
+    setLookupError(null);
+    selectAssessment("");
+  }
+
+  async function handleLookup(nextPage = false) {
+    if (lookupLoading || working) return;
+    const query: PrivacyAssessmentLookup =
+      nextPage && lookupQuery && lookupResult?.next_cursor
+        ? { ...lookupQuery, cursor: lookupResult.next_cursor }
+        : lookupKind === "invitation_id"
+          ? { invitation_id: lookupReference.trim(), limit: 20 }
+          : { role_id: lookupReference.trim(), limit: 20 };
+    setLookupLoading(true);
+    setLookupError(null);
+    selectAssessment("");
+    try {
+      const result = await getPrivacyAssessments(query);
+      setLookupQuery(query);
+      setLookupResult(result);
+      setAnnouncement(`Found ${result.items.length} assessments on this page.`);
+    } catch (error) {
+      setLookupError(errorMessage(error));
+    } finally {
+      setLookupLoading(false);
+    }
+  }
+
   const [auditLoadingMore, setAuditLoadingMore] = useState(false);
 
   async function load(entityId?: string) {
@@ -269,7 +322,7 @@ export function PrivacyWorkspace() {
             </div>
             <button
               className="min-h-11 rounded-xl border border-teal-700 px-5 py-2.5 text-sm font-bold text-teal-800 hover:bg-teal-50 focus-visible:ring-2 focus-visible:ring-teal-700"
-              disabled={working}
+              disabled={working || lookupLoading}
               onClick={() => void handleRetention()}
               type="button"
             >
@@ -297,6 +350,131 @@ export function PrivacyWorkspace() {
       </section>
 
       <section
+        aria-labelledby="lookup-title"
+        className="mt-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"
+      >
+        <h2 id="lookup-title" className="text-xl font-bold text-slate-950">
+          Find an assessment
+        </h2>
+        <p className="mt-2 text-sm text-slate-600">
+          Use an invitation or role reference from your organization. Results
+          contain assessment references and lifecycle dates only, with up to 20
+          results per page.
+        </p>
+        <form
+          onSubmit={(event) => {
+            event.preventDefault();
+            void handleLookup();
+          }}
+        >
+          <label className="mt-4 block text-sm font-bold">
+            Reference type
+            <select
+              className="field-control mt-2"
+              value={lookupKind}
+              disabled={lookupLoading || working}
+              onChange={(event) => {
+                setLookupKind(event.target.value as typeof lookupKind);
+                resetLookup();
+              }}
+            >
+              <option value="invitation_id">Invitation ID</option>
+              <option value="role_id">Role ID</option>
+            </select>
+          </label>
+          <label className="mt-4 block text-sm font-bold">
+            Reference ID
+            <input
+              className="field-control mt-2 font-mono"
+              value={lookupReference}
+              disabled={lookupLoading || working}
+              onChange={(event) => {
+                setLookupReference(event.target.value);
+                resetLookup();
+              }}
+              placeholder="00000000-0000-4000-8000-000000000000"
+            />
+          </label>
+          <button
+            className="mt-4 min-h-11 rounded-xl bg-teal-800 px-5 py-2.5 text-sm font-bold text-white disabled:opacity-50"
+            disabled={
+              lookupLoading ||
+              working ||
+              !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+                lookupReference.trim(),
+              )
+            }
+            type="submit"
+          >
+            Find assessments
+          </button>
+        </form>
+        {lookupLoading ? (
+          <p role="status" className="mt-4">
+            Finding assessments…
+          </p>
+        ) : null}
+        {lookupError ? (
+          <p role="alert" className="mt-4 text-rose-800">
+            {lookupError} Retry the lookup or start again with the reference.
+          </p>
+        ) : null}
+        {lookupResult && !lookupLoading ? (
+          <div className="mt-4">
+            {lookupResult.items.length === 0 ? (
+              <p>
+                No matching assessments. Check the reference; an invitation
+                without an assessment has no result.
+              </p>
+            ) : (
+              <ul className="space-y-3">
+                {lookupResult.items.map((item) => (
+                  <li
+                    key={item.assessment_id}
+                    className="rounded-xl border border-slate-200 p-4"
+                  >
+                    <p className="break-all font-mono text-sm">
+                      {item.assessment_id}
+                    </p>
+                    <p className="mt-2 text-sm">Created: {item.created_at}</p>
+                    <p className="text-sm">
+                      Submitted: {item.submitted_at ?? "Not submitted"}
+                    </p>
+                    <p className="text-sm">
+                      Retention deadline:{" "}
+                      {item.retention_expires_at ?? "Not set"}
+                    </p>
+                    <p className="text-sm">
+                      Anonymized: {item.anonymized_at ?? "No"}
+                    </p>
+                    <button
+                      type="button"
+                      className="mt-3 min-h-11 rounded-xl border border-teal-700 px-4 text-sm font-bold text-teal-800"
+                      disabled={working}
+                      aria-pressed={assessmentId === item.assessment_id}
+                      onClick={() => selectAssessment(item.assessment_id)}
+                    >
+                      Select assessment {item.assessment_id}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {lookupResult.next_cursor ? (
+              <button
+                type="button"
+                className="mt-4 min-h-11 rounded-xl border border-slate-400 px-4 text-sm font-bold"
+                disabled={working}
+                onClick={() => void handleLookup(true)}
+              >
+                Next assessment page
+              </button>
+            ) : null}
+          </div>
+        ) : null}
+      </section>
+
+      <section
         aria-labelledby="rights-title"
         className="mt-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"
       >
@@ -308,10 +486,9 @@ export function PrivacyWorkspace() {
           <input
             className="field-control mt-2 font-mono"
             onChange={(event) => {
-              setAssessmentId(event.target.value);
-              setConfirmingDeletion(false);
-              setActionError(null);
+              selectAssessment(event.target.value);
             }}
+            disabled={working || lookupLoading}
             placeholder="00000000-0000-4000-8000-000000000000"
             value={assessmentId}
           />
@@ -319,7 +496,7 @@ export function PrivacyWorkspace() {
         <div className="mt-4 flex flex-wrap gap-3">
           <button
             className="min-h-11 rounded-xl bg-teal-800 px-5 py-2.5 text-sm font-bold text-white disabled:opacity-50"
-            disabled={!validAssessmentId || working}
+            disabled={!validAssessmentId || working || lookupLoading}
             onClick={() => void handleExport()}
             type="button"
           >
@@ -327,7 +504,7 @@ export function PrivacyWorkspace() {
           </button>
           <button
             className="min-h-11 rounded-xl border border-rose-700 px-5 py-2.5 text-sm font-bold text-rose-800 disabled:opacity-50"
-            disabled={!validAssessmentId || working}
+            disabled={!validAssessmentId || working || lookupLoading}
             onClick={() => setConfirmingDeletion(true)}
             type="button"
           >
@@ -335,7 +512,7 @@ export function PrivacyWorkspace() {
           </button>
           <button
             className="min-h-11 rounded-xl border border-slate-400 px-5 py-2.5 text-sm font-bold text-slate-700 disabled:opacity-50"
-            disabled={!validAssessmentId || working}
+            disabled={!validAssessmentId || working || lookupLoading}
             onClick={() => void load(assessmentId.trim())}
             type="button"
           >
@@ -345,8 +522,9 @@ export function PrivacyWorkspace() {
         {confirmingDeletion ? (
           <div className="mt-5 rounded-xl border border-rose-200 bg-rose-50 p-4">
             <p className="text-sm leading-6 text-rose-950">
-              This revokes candidate access, erases assessment payloads, and
-              deletes derived reports. Immutable audit tombstones remain.
+              Assessment {assessmentId.trim()}: this revokes candidate access,
+              erases assessment payloads, and deletes derived reports. Immutable
+              audit tombstones remain.
             </p>
             <button
               className="mt-3 min-h-11 rounded-xl bg-rose-800 px-5 py-2.5 text-sm font-bold text-white"
@@ -355,6 +533,14 @@ export function PrivacyWorkspace() {
               type="button"
             >
               Confirm anonymization
+            </button>
+            <button
+              type="button"
+              disabled={working}
+              className="ml-3 min-h-11 px-4 text-sm font-bold"
+              onClick={() => setConfirmingDeletion(false)}
+            >
+              Cancel anonymization
             </button>
           </div>
         ) : null}

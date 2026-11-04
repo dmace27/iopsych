@@ -12,6 +12,7 @@ import {
   getCurrentUser,
   getPrivacyAuditEvents,
   getPrivacyStatus,
+  getPrivacyAssessments,
   getRole,
   getRoleProfiles,
   getRoles,
@@ -328,3 +329,82 @@ describe("role API client", () => {
     ]);
   });
 });
+
+describe("privacy discovery adapter", () => {
+  afterEach(() => vi.unstubAllGlobals());
+  it("encodes an opaque cursor and uses exactly one reference on the no-store internal route", async () => {
+    const page = { schema_version: "1.0", items: [], next_cursor: null };
+    const fetchMock = vi
+      .fn()
+      .mockImplementation(() => Promise.resolve(Response.json(page)));
+    vi.stubGlobal("fetch", fetchMock);
+    await expect(
+      getPrivacyAssessments({ invitation_id: IDS.invitation }),
+    ).resolves.toEqual(page);
+    await getPrivacyAssessments({
+      role_id: IDS.role,
+      limit: 20,
+      cursor: "opaque+/=",
+    });
+    expect(fetchMock.mock.calls.map(([path]) => path)).toEqual([
+      `/api/internal/privacy/assessments?invitation_id=${IDS.invitation}`,
+      `/api/internal/privacy/assessments?role_id=${IDS.role}&limit=20&cursor=opaque%2B%2F%3D`,
+    ]);
+    expect(fetchMock.mock.calls[0]?.[1]).toMatchObject({ cache: "no-store" });
+  });
+  it("rejects malformed requests without fetching and rejects identifying response fields", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      Response.json({
+        schema_version: "1.0",
+        items: [],
+        next_cursor: null,
+        email: "synthetic@example.test",
+      }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    await expect(
+      getPrivacyAssessments({ role_id: "bad" }),
+    ).rejects.toMatchObject({ code: "invalid_privacy_lookup" });
+    expect(fetchMock).not.toHaveBeenCalled();
+    await expect(
+      getPrivacyAssessments({ role_id: IDS.role }),
+    ).rejects.toMatchObject({ code: "invalid_api_response" });
+  });
+});
+
+it.each([
+  [422, "invalid_privacy_cursor"],
+  [422, "invalid_privacy_lookup"],
+  [403, "forbidden"],
+])(
+  "preserves discovery problem status %s and code %s",
+  async (status, code) => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        Response.json(
+          {
+            type: "about:blank",
+            title: "Discovery unavailable",
+            status,
+            code,
+            detail: "Retry with a permitted reference.",
+            errors: [],
+          },
+          { status },
+        ),
+      ),
+    );
+    try {
+      await expect(
+        getPrivacyAssessments({ role_id: IDS.role }),
+      ).rejects.toMatchObject({
+        status,
+        code,
+        message: "Retry with a permitted reference.",
+      });
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  },
+);

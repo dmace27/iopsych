@@ -96,3 +96,37 @@ export const CandidateDataExportSchema = z.strictObject({
   ),
 });
 export type CandidateDataExport = z.infer<typeof CandidateDataExportSchema>;
+
+/** Discovery deliberately excludes candidate identity and payload fields. */
+export const PrivacyAssessmentListSchema = z.strictObject({
+  schema_version: z.literal("1.0"),
+  items: z
+    .array(
+      z.strictObject({
+        assessment_id: z.uuid(),
+        created_at: z.iso.datetime({ offset: true }),
+        submitted_at: z.iso.datetime({ offset: true }).nullable(),
+        retention_expires_at: z.iso.datetime({ offset: true }).nullable(),
+        anonymized_at: z.iso.datetime({ offset: true }).nullable(),
+      }),
+    )
+    .max(50),
+  next_cursor: z.string().min(1).max(104).nullable(),
+});
+export type PrivacyAssessmentList = z.infer<typeof PrivacyAssessmentListSchema>;
+
+export const PrivacyAssessmentLookupSchema = z.union([
+  z.strictObject({
+    invitation_id: z.uuid(),
+    limit: z.int().min(1).max(50).optional(),
+    cursor: z.string().min(1).max(104).optional(),
+  }),
+  z.strictObject({
+    role_id: z.uuid(),
+    limit: z.int().min(1).max(50).optional(),
+    cursor: z.string().min(1).max(104).optional(),
+  }),
+]);
+export type PrivacyAssessmentLookup = z.infer<
+  typeof PrivacyAssessmentLookupSchema
+>;

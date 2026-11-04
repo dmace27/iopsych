@@ -17,6 +17,7 @@ const api = vi.hoisted(() => ({
   getCurrentUser: vi.fn(),
   getPrivacyAuditEvents: vi.fn(),
   getPrivacyStatus: vi.fn(),
+  getPrivacyAssessments: vi.fn(),
   runPrivacyRetention: vi.fn(),
 }));
 vi.mock("../../lib/api-client", async (importOriginal) => ({
@@ -92,6 +93,11 @@ describe("PrivacyWorkspace", () => {
     vi.resetAllMocks();
     api.getCurrentUser.mockResolvedValue({ role: "admin" });
     api.getPrivacyStatus.mockResolvedValue(privacyStatus);
+    api.getPrivacyAssessments.mockResolvedValue({
+      schema_version: "1.0",
+      items: [],
+      next_cursor: null,
+    });
     api.getPrivacyAuditEvents.mockResolvedValue([auditEvent]);
     api.exportCandidateData.mockResolvedValue(candidateExport);
     api.deleteCandidateData.mockResolvedValue({
@@ -119,6 +125,7 @@ describe("PrivacyWorkspace", () => {
       }),
     ).toBeVisible();
     expect(api.getPrivacyStatus).not.toHaveBeenCalled();
+    expect(api.getPrivacyAssessments).not.toHaveBeenCalled();
     expect(api.getPrivacyAuditEvents).not.toHaveBeenCalled();
   });
 
@@ -245,5 +252,155 @@ describe("PrivacyWorkspace", () => {
     expect(
       screen.queryByRole("button", { name: "Load more audit history" }),
     ).not.toBeInTheDocument();
+  });
+});
+
+const discoveryItem = {
+  assessment_id: ASSESSMENT_ID,
+  created_at: "2026-11-04T12:00:00Z",
+  submitted_at: null,
+  retention_expires_at: null,
+  anonymized_at: null,
+};
+
+describe("privacy assessment discovery", () => {
+  beforeEach(() => {
+    vi.resetAllMocks();
+    api.getCurrentUser.mockResolvedValue({ role: "admin" });
+    api.getPrivacyStatus.mockResolvedValue(privacyStatus);
+    api.getPrivacyAuditEvents.mockResolvedValue([]);
+    api.getPrivacyAssessments.mockResolvedValue({
+      schema_version: "1.0",
+      items: [discoveryItem],
+      next_cursor: null,
+    });
+    api.exportCandidateData.mockResolvedValue(candidateExport);
+  });
+  afterEach(cleanup);
+
+  it("selects an invitation result for export and clears stale data and confirmation on reference changes", async () => {
+    const user = userEvent.setup();
+    const storage = vi.spyOn(Storage.prototype, "setItem");
+    render(<PrivacyWorkspace />);
+    await screen.findByRole("heading", { name: "Find an assessment" });
+    expect(
+      screen.getByRole("button", { name: "Find assessments" }),
+    ).toBeDisabled();
+    await user.type(screen.getByLabelText("Reference ID"), INVITATION_ID);
+    await user.click(screen.getByRole("button", { name: "Find assessments" }));
+    await user.click(
+      await screen.findByRole("button", {
+        name: `Select assessment ${ASSESSMENT_ID}`,
+      }),
+    );
+    expect(api.getPrivacyAssessments).toHaveBeenCalledWith({
+      invitation_id: INVITATION_ID,
+      limit: 20,
+    });
+    expect(screen.getByLabelText("Assessment ID")).toHaveValue(ASSESSMENT_ID);
+    await user.click(
+      screen.getByRole("button", { name: "Create JSON export" }),
+    );
+    await screen.findByRole("link", { name: "Download JSON export" });
+    expect(api.exportCandidateData).toHaveBeenCalledWith(ASSESSMENT_ID);
+    await user.click(
+      screen.getByRole("button", { name: "Prepare anonymization" }),
+    );
+    expect(screen.getByText(/this revokes candidate access/)).toHaveTextContent(
+      ASSESSMENT_ID,
+    );
+    await user.click(
+      screen.getByRole("button", { name: "Cancel anonymization" }),
+    );
+    expect(api.deleteCandidateData).not.toHaveBeenCalled();
+    await user.click(
+      screen.getByRole("button", { name: "Prepare anonymization" }),
+    );
+    await user.clear(screen.getByLabelText("Reference ID"));
+    expect(
+      screen.queryByRole("button", { name: "Confirm anonymization" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("link", { name: "Download JSON export" }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Assessment ID")).toHaveValue("");
+    expect(storage).not.toHaveBeenCalled();
+    storage.mockRestore();
+  });
+
+  it("replaces bounded pages, preserves the role filter and opaque cursor, and retries errors", async () => {
+    const user = userEvent.setup();
+    api.getPrivacyAssessments
+      .mockResolvedValueOnce({
+        schema_version: "1.0",
+        items: [discoveryItem],
+        next_cursor: "opaque+/=",
+      })
+      .mockRejectedValueOnce(
+        new ApiClientError("Invalid privacy cursor.", {
+          code: "invalid_privacy_cursor",
+          status: 422,
+        }),
+      )
+      .mockResolvedValueOnce({
+        schema_version: "1.0",
+        items: [],
+        next_cursor: null,
+      });
+    render(<PrivacyWorkspace />);
+    await screen.findByRole("heading", { name: "Find an assessment" });
+    await user.selectOptions(
+      screen.getByLabelText("Reference type"),
+      "role_id",
+    );
+    await user.type(screen.getByLabelText("Reference ID"), USER_ID);
+    await user.click(screen.getByRole("button", { name: "Find assessments" }));
+    await user.click(
+      await screen.findByRole("button", { name: "Next assessment page" }),
+    );
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Invalid privacy cursor",
+    );
+    expect(api.getPrivacyAssessments).toHaveBeenLastCalledWith({
+      role_id: USER_ID,
+      limit: 20,
+      cursor: "opaque+/=",
+    });
+    await user.click(
+      screen.getByRole("button", { name: "Next assessment page" }),
+    );
+    expect(await screen.findByText(/No matching assessments/)).toBeVisible();
+    expect(
+      screen.queryByRole("button", { name: "Next assessment page" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", {
+        name: `Select assessment ${ASSESSMENT_ID}`,
+      }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("shows loading, locks reference changes, and handles expired lookup sessions", async () => {
+    const user = userEvent.setup();
+    let rejectLookup!: (error: unknown) => void;
+    api.getPrivacyAssessments.mockReturnValueOnce(
+      new Promise((_, reject) => {
+        rejectLookup = reject;
+      }),
+    );
+    render(<PrivacyWorkspace />);
+    await screen.findByRole("heading", { name: "Find an assessment" });
+    await user.type(screen.getByLabelText("Reference ID"), INVITATION_ID);
+    await user.click(screen.getByRole("button", { name: "Find assessments" }));
+    expect(screen.getByRole("status")).toHaveTextContent("Finding assessments");
+    expect(screen.getByLabelText("Reference ID")).toBeDisabled();
+    expect(screen.getByLabelText("Reference type")).toBeDisabled();
+    rejectLookup(
+      new ApiClientError("expired", { code: "unauthorized", status: 401 }),
+    );
+    expect(await screen.findByRole("alert")).toHaveTextContent("Sign in again");
+    expect(
+      screen.getByRole("button", { name: "Find assessments" }),
+    ).toBeEnabled();
   });
 });

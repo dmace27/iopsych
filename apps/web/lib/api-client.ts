@@ -24,6 +24,10 @@ import {
   CandidateDeletionSchema,
   PrivacyAuditEventListSchema,
   PrivacyStatusSchema,
+  PrivacyAssessmentListSchema,
+  PrivacyAssessmentLookupSchema,
+  type PrivacyAssessmentList,
+  type PrivacyAssessmentLookup,
   RetentionRunSchema,
   type CandidateDataExport,
   type CandidateDeletion,
@@ -254,4 +258,25 @@ export function runPrivacyRetention(): Promise<RetentionRun> {
   return requestJson("/privacy/retention/run", RetentionRunSchema, {
     method: "POST",
   });
+}
+
+/** Discover a bounded page by exactly one tenant-scoped reference. */
+export async function getPrivacyAssessments(
+  lookup: PrivacyAssessmentLookup,
+): Promise<PrivacyAssessmentList> {
+  const parsed = PrivacyAssessmentLookupSchema.safeParse(lookup);
+  if (!parsed.success) {
+    throw new ApiClientError(
+      "Enter one valid invitation or role reference and bounded pagination values.",
+      { status: 422, code: "invalid_privacy_lookup" },
+    );
+  }
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(parsed.data)) {
+    if (value !== undefined) params.set(key, String(value));
+  }
+  return requestJson(
+    `/privacy/assessments?${params}`,
+    PrivacyAssessmentListSchema,
+  );
 }
