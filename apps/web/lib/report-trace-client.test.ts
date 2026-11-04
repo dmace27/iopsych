@@ -1,11 +1,29 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { traceFixture } from "./report-trace-fixtures";
-import { parseReportTrace } from "./report-trace-contracts";
+import {
+  parseReportTrace,
+  ReportTraceV1Schema,
+} from "./report-trace-contracts";
 import { getReportTrace } from "./report-trace-client";
 
 afterEach(() => vi.unstubAllGlobals());
 
 describe("strict historical report trace", () => {
+  it.each(["1.0.0", "2.0.0"])(
+    "requires consistent %s algorithm provenance",
+    (algorithm) => {
+      const { trace, report } = traceFixture();
+      trace.algorithm_version = algorithm;
+      for (const construct of trace.constructs) {
+        construct.question_selection.algorithm_version = algorithm;
+      }
+      expect(ReportTraceV1Schema.safeParse(trace).success).toBe(true);
+      trace.constructs[0].question_selection.algorithm_version =
+        algorithm === "1.0.0" ? "2.0.0" : "1.0.0";
+      expect(ReportTraceV1Schema.safeParse(trace).success).toBe(false);
+      expect(() => parseReportTrace(trace, report)).toThrow();
+    },
+  );
   it.each(["complete", "skipped", "two-skipped", "all-skipped"])(
     "accepts exact backend %s fixture",
     (name) => {

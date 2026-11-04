@@ -47,7 +47,7 @@ mode; Auth0 mode never falls back to it.
 5. In `apps/api/.env`, set `AUTH_PROVIDER=auth0`, `AUTH_JWT_ISSUER` to the same
    exact issuer, and `AUTH_JWT_AUDIENCE` to the same API identifier. No HMAC
    secret is needed. Leave `ENABLE_TOKEN_SIGN_IN=false` in the web environment.
-6. Apply `npm run db:migrate`, including revision `20261103_0008`, then restart
+6. Apply `npm run db:migrate`, through the canonical integration head (`20261104_0012`), then restart
    both apps. Health checks work without a provider account. Missing web
    settings show actionable sign-in configuration feedback instead of accepting
    tokens.
@@ -166,3 +166,11 @@ Provider contracts:
 [Auth0 access-token validation](https://auth0.com/docs/secure/tokens/access-tokens/validate-access-tokens),
 [openid-client](https://github.com/panva/openid-client),
 [PyJWT JWKS usage](https://pyjwt.readthedocs.io/en/stable/usage.html#retrieve-rsa-signing-keys-from-a-jwks-endpoint).
+
+## Reconciled account API
+
+Existing `/v1/accounts/users` access management retains optimistic `expected_version`.
+Provider `/v1/users` provisioning coexists; its PATCH also requires `expected_version`
+and delegates the same tenant/user locking and version service. GET/POST responses
+include `version`. See [collision ledger](implementation/remote-reconciliation.md)
+for the migration mapping and unsupported remote-head database upgrade path.

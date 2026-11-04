@@ -14,7 +14,12 @@ from sqlalchemy import Engine, func, select
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.auth.config import AuthenticationSettings
-from app.database.models import AssessmentInvite, AssessmentInviteStatus, ProviderInvitationDelivery
+from app.database.models import (
+    AssessmentInvite,
+    AssessmentInviteStatus,
+    InvitationDeliveryStatus,
+    ProviderInvitationDelivery,
+)
 from app.database.seed import ALPHA_ORGANIZATION_ID, ALPHA_PROFILE_ID, ALPHA_ROLE_ID
 from app.invitations.delivery import InvitationEmail
 from app.invitations.outbox import process_delivery_batch
@@ -32,6 +37,39 @@ from tests.test_provider_invitations import (
     token_from_message,
 )
 from tests.test_reports_postgres import postgres_report_factory as postgres_report_factory
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("status", [InvitationDeliveryStatus.QUEUED, InvitationDeliveryStatus.SENT])
+async def test_provider_downgrade_preserves_pending_and_terminal_evidence(
+    postgres_report_factory: sessionmaker[Session],
+    status: InvitationDeliveryStatus,
+) -> None:
+    factory = postgres_report_factory
+    async with AsyncClient(
+        transport=ASGITransport(app=application(factory)), base_url="http://test"
+    ) as client:
+        response = await client.post(
+            f"/v1/roles/{ALPHA_ROLE_ID}/invites", headers=recruiter_headers(), json=invite_payload()
+        )
+    assert response.status_code == 201
+    with factory.begin() as session:
+        delivery = session.scalar(select(ProviderInvitationDelivery))
+        assert delivery is not None
+        delivery.status = status
+        if status is InvitationDeliveryStatus.SENT:
+            delivery.encrypted_message = None
+        identifier = delivery.id
+        engine = session.get_bind()
+        assert isinstance(engine, Engine)
+        url = engine.url.render_as_string(hide_password=False)
+    with pytest.raises(RuntimeError, match="provider delivery evidence"):
+        command.downgrade(alembic_config(url), "20261104_0011")
+    with factory() as session:
+        preserved = session.get(ProviderInvitationDelivery, identifier)
+        assert preserved is not None and preserved.status is status
+
+
 
 
 @pytest.fixture

@@ -20,8 +20,42 @@ real provider request, or scientific approval is implied.
 | Overlapping test names | Preserve local account/invitation suites and provider equivalents in separately named modules; provider tests target provider models and explicit provider mode. |
 | UI design | No redesign in reconciliation. Coordinator merges separate visual branches. |
 
-Validation in progress: npm audit zero vulnerabilities; application/shared Python
-mypy passes 82 source files; targeted provider compatibility tests pass (8).
-Full merged auth/invitation/report checks, PostgreSQL populated upgrade, and build
-are pending the notice and web compatibility checkpoints. Test PostgreSQL is
-isolated on loopback port 5606, database `iopsych_reconcile`.
+## Verification and handoff
+
+- Aggregate `ad06206` merges coordinator `d7fd9c9` visual/functional work and
+  `3768cfe` export/browser compatibility; production build passes.
+- API run: **1,163 passed, six explicit optional skips** on isolated PostgreSQL
+  5606. It covers Auth0 mocked signatures/protocol, local and provider issuance,
+  worker locking, populated upgrades, notices, historical reports and trace.
+- The **100% coverage gate remains unmet: 99.72%** (12 statements). It was not
+  relaxed. Machine-readable missing-line evidence is in
+  [remote-reconciliation-evidence.json](remote-reconciliation-evidence.json).
+  The run started before export source changed; final aggregate coverage must
+  be rerun by the coordinator's regression owner.
+- Before visual integration: **608 web tests and 101 shared tests passed**, with
+  all configured web coverage gates passing. Final visual aggregate build passes;
+  browser owner has the aggregate checkpoint for visual and live-session checks.
+- Provider downgrade followup tests: **5 PostgreSQL tests passed**, including
+  pending and terminal evidence retention; `0012` locks both provider tables
+  before checking and refuses any populated downgrade.
+- All committed integration migrations `0008`–`0010` and notice `0011` match
+  their originating commits byte-for-byte. `0012` alone adds provider storage.
+- npm audit reports zero vulnerabilities; stronger security pins are preserved.
+  Application/shared Python mypy passed (82 source files). Whole-tree mypy found
+  local CLI test typing issues assigned separately by the coordinator.
+- Optional readiness (3), defensive PostgreSQL (2), and local SMTP (1) checks
+  remain for the coordinator's resource-owning regression workers. No real mail
+  or provider requests were made; no provider deployment acceptance is claimed.
+
+Remaining work: final aggregate coverage/typecheck/browser gates, provider
+status/reissue frontend and proxy wiring, and any required remote-head database
+bridge. These are separate coordinator-owned followups. The provider API wire
+supports UUID body keys and the preserved header adapter; local queue semantics
+are unchanged. Final trace validation also rejects mixed parent/child algorithm
+versions while retaining trace contract version 1.
+
+Use the complete final branch head, not individual intermediate merge commits:
+notice conflict cleanup is completed in the subsequent compatibility commit.
+Auth web provenance is `0588b71` / `edd94ba` / `dea70a5`; backend v2 provenance is
+`927910e` / `3782861`. Functional notice, privacy, CLI, defensive and browser/export
+checkpoints are recorded in the branch history. Service policy is STANDARD only.

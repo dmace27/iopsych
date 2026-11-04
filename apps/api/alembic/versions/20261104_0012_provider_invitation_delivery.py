@@ -78,14 +78,19 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    """Remove only delivery state; downgrade discards queued messages and event deduplication."""
-    pending = op.get_bind().scalar(
-        sa.text(
-            "SELECT count(*) FROM provider_invitation_deliveries WHERE status IN ('queued', 'retrying')"
+    """Refuse to erase credentials, request tombstones or webhook evidence."""
+    connection = op.get_bind()
+    if connection.dialect.name == "postgresql":
+        connection.execute(
+            sa.text(
+                "LOCK TABLE provider_invitation_deliveries, provider_invitation_delivery_events "
+                "IN ACCESS EXCLUSIVE MODE"
+            )
         )
-    )
-    if pending:
-        raise RuntimeError("Cancel pending provider deliveries before downgrade")
+    deliveries = connection.scalar(sa.text("SELECT count(*) FROM provider_invitation_deliveries"))
+    events = connection.scalar(sa.text("SELECT count(*) FROM provider_invitation_delivery_events"))
+    if deliveries or events:
+        raise RuntimeError("Cannot downgrade while provider delivery evidence exists")
     op.drop_table("provider_invitation_delivery_events")
     op.drop_index(
         "ix_provider_invitation_deliveries_due", table_name="provider_invitation_deliveries"

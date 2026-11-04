@@ -1,0 +1,47 @@
+{
+  "tested_base": "5cbb93a",
+  "aggregate_build": "ad06206",
+  "api": {
+    "passed": 1163,
+    "skipped": 6,
+    "coverage_gate": 100,
+    "coverage_percent": 99.71711456859971,
+    "missing": {
+      "apps/api/app/invitations/local_worker_cli.py": [
+        89,
+        139
+      ],
+      "apps/api/app/invitations/service.py": [
+        135,
+        170,
+        282,
+        292,
+        810
+      ],
+      "apps/api/app/privacy/router.py": [
+        66,
+        67,
+        114,
+        169,
+        170
+      ]
+    },
+    "limitation": "API run began before coordinator export merge; privacy/router line attribution reflects changed source, and final aggregate coverage requires coordinator rerun."
+  },
+  "web_before_visual_merge": {
+    "passed": 608,
+    "shared_passed": 101,
+    "coverage_gates_passed": true
+  },
+  "remaining_opt_ins": [
+    "READINESS_TEST_DATABASE_URL: 3 tests",
+    "DEFENSIVE_TEST_POSTGRES_URL: 2 tests",
+    "local SMTP sink opt-in: 1 test"
+  ],
+  "postgres": {
+    "host": "127.0.0.1",
+    "port": 5606,
+    "database": "iopsych_reconcile"
+  },
+  "remote_head_database_upgrade": "unsupported; separate bridge required"
+}

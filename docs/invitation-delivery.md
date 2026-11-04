@@ -43,7 +43,7 @@ audit metadata and worker output never include the token or encrypted payload.
    HTTPS candidate route, and privacy/accommodation contact addresses must be
    working pilot addresses.
 
-3. Install dependencies, apply migration `20261103_0009`, and restart the API:
+3. Install dependencies, apply canonical integration migration `20261104_0012`, and restart the API:
 
    ```bash
    npm run api:install
@@ -252,3 +252,17 @@ Provider contracts:
 [Resend webhook verification](https://resend.com/docs/webhooks/verify-webhooks-requests),
 [Svix verification](https://docs.svix.com/receiving/verifying-payloads/how),
 [Fernet](https://cryptography.io/en/latest/fernet/).
+
+## Reconciliation compatibility
+
+Provider jobs use `provider_invitation_deliveries` and `provider_invitation_delivery_events`;
+the existing local SMTP queue remains separate. The provider CLI is
+`app.invitations.provider_worker`. Existing header-only `Idempotency-Key` clients
+map to a stable tenant-scoped UUID; if a body `request_id` is also present it must
+equal the header UUID string. Contradictory keys return 409. Both modes cannot be
+enabled together. Downgrade locks both provider tables on PostgreSQL and refuses
+to discard any delivery row or webhook event, including terminal tombstones.
+
+Provider delivery/reissue browser controls are a separate coordinator-owned
+followup. See [collision ledger](implementation/remote-reconciliation.md) before
+considering any database previously migrated on the remote lineage.

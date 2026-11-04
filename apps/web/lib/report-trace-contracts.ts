@@ -62,7 +62,10 @@ export const ReportTraceV1Schema = z
     trace.constructs.forEach((construct, index) => {
       if (
         construct.construct_key !== CONSTRUCT_KEYS[index] ||
-        construct.question_selection.construct_key !== construct.construct_key
+        construct.question_selection.construct_key !==
+          construct.construct_key ||
+        construct.question_selection.algorithm_version !==
+          trace.algorithm_version
       )
         fail();
       if (
