@@ -28,6 +28,35 @@ const labels: Record<Invitation["status"], string> = {
   revoked: "Revoked",
   expired: "Expired",
 };
+const deliveryLabels: Record<
+  NonNullable<Invitation["delivery_state"]>,
+  string
+> = {
+  queued: "Queued",
+  sending: "Sending",
+  sent: "Sent",
+  uncertain: "Delivery uncertain",
+  cancelled: "Delivery cancelled",
+  expired: "Delivery expired",
+};
+function deliveryGuidance(item: Invitation): string {
+  switch (item.delivery_state) {
+    case "queued":
+      return "Waiting for a delivery attempt. Receipt is not confirmed.";
+    case "sending":
+      return "A delivery attempt is in progress. Receipt is not confirmed.";
+    case "sent":
+      return "The delivery service recorded a successful send. Recipient receipt is not confirmed.";
+    case "uncertain":
+      return "The delivery attempt ended without a confirmed outcome. The message may have been sent; no automatic retry is pending.";
+    case "cancelled":
+      return "Delivery was cancelled. No delivery work is pending.";
+    case "expired":
+      return "The delivery window expired. No delivery work is pending.";
+    default:
+      return "No delivery queue state is available. Legacy invitations may have used synchronous delivery; the stored invitation status and sent time do not confirm receipt.";
+  }
+}
 type Failure = { message: string; status: number; restart: boolean };
 function failure(error: unknown): Failure {
   const status = error instanceof ApiClientError ? error.status : 0;
@@ -195,9 +224,9 @@ function Invitations({ roleId }: { roleId: string }) {
       </h1>
       <p>
         Invitation history across all role profile versions, newest first.
-        Status is the stored invitation state; delivery receipt and assessment
-        submission are not reported here. Expiry dates do not change the
-        displayed status.
+        Invitation state and delivery state are shown separately. Recipient
+        receipt and assessment submission are not reported here. Expiry dates do
+        not change the displayed invitation state.
       </p>
       <div
         ref={status}
@@ -242,7 +271,7 @@ function Invitations({ roleId }: { roleId: string }) {
         ) : (
           <InvitationIssueForm
             roleId={roleId}
-            disabled={busy}
+            disabled={busy || !ready}
             onBusyChange={setIssuing}
             onIssued={() => {
               const refresh = () => {
@@ -259,7 +288,7 @@ function Invitations({ roleId }: { roleId: string }) {
         <>
           <button
             className={button}
-            disabled={busy || issuing}
+            disabled={busy || issuing || !ready}
             onClick={restart}
           >
             Refresh invitation history
@@ -284,8 +313,30 @@ function Invitations({ roleId }: { roleId: string }) {
                 >
                   <h2 className="break-all text-lg font-bold">{item.email}</h2>
                   <p>
-                    Stored status: <strong>{labels[item.status]}</strong>
+                    Stored invitation state:{" "}
+                    <strong>{labels[item.status]}</strong>
                   </p>
+                  <p>
+                    Delivery state:{" "}
+                    <strong>
+                      {item.delivery_state
+                        ? deliveryLabels[item.delivery_state]
+                        : "Unknown"}
+                    </strong>
+                  </p>
+                  <p className="text-sm">{deliveryGuidance(item)}</p>
+                  {item.delivery_state === "uncertain" ||
+                  item.delivery_state === "expired" ||
+                  item.delivery_state === "cancelled" ? (
+                    <p className="text-sm">
+                      {item.status !== "revoked"
+                        ? "To replace this invitation, explicitly revoke it first. "
+                        : "This invitation is revoked. "}
+                      {archived
+                        ? "Archived roles cannot issue a replacement."
+                        : "Then review and confirm a new invitation using the issuance form."}
+                    </p>
+                  ) : null}
                   <p className="break-all text-sm">
                     Profile ID: {item.role_profile_id}
                   </p>

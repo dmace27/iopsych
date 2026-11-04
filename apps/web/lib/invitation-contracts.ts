@@ -14,6 +14,10 @@ export const InvitationSchema = z.strictObject({
     "revoked",
     "expired",
   ]),
+  delivery_state: z
+    .enum(["queued", "sending", "sent", "uncertain", "cancelled", "expired"])
+    .nullable()
+    .optional(),
   sent_at: z.iso.datetime({ offset: true }).nullable(),
   revoked_at: z.iso.datetime({ offset: true }).nullable(),
   created_at: z.iso.datetime({ offset: true }),
