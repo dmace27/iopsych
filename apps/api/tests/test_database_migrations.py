@@ -21,6 +21,7 @@ EXPECTED_TABLES = {
     "assessment_invites",
     "audit_events",
     "candidate_consents",
+    "invitation_deliveries",
     "organizations",
     "role_construct_ratings",
     "role_profiles",

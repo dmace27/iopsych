@@ -15,6 +15,7 @@ from sqlalchemy import (
     ForeignKey,
     Index,
     Integer,
+    LargeBinary,
     String,
     Text,
     UniqueConstraint,
@@ -25,6 +26,7 @@ from sqlalchemy.engine import Connection
 from sqlalchemy.orm import Mapped, Mapper, mapped_column
 
 from app.database.base import Base, CreatedAtMixin, UtcDateTime, UuidPrimaryKeyMixin
+from app.invitations.recovery import DeliveryState
 from iopsych_contracts import ConfidenceLevel, ConstructKey
 
 
@@ -217,6 +219,43 @@ class AssessmentInvite(UuidPrimaryKeyMixin, CreatedAtMixin, Base):
     revoked_by: Mapped[UUID | None] = mapped_column(
         Uuid(as_uuid=True), ForeignKey("users.id", ondelete="RESTRICT"), nullable=True
     )
+
+
+class InvitationDelivery(UuidPrimaryKeyMixin, CreatedAtMixin, Base):
+    """Local opt-in delivery state; only authenticated ciphertext may be queued."""
+
+    __tablename__ = "invitation_deliveries"
+    __table_args__ = (
+        UniqueConstraint("invite_id", name="uq_invitation_deliveries_invite"),
+        UniqueConstraint("organization_id", "idempotency_digest", name="uq_delivery_idempotency"),
+        CheckConstraint("attempt_count >= 0", name="ck_delivery_attempt_count"),
+        CheckConstraint(
+            "(state IN ('queued', 'sending') AND credential_ciphertext IS NOT NULL "
+            "AND credential_key_id IS NOT NULL) OR "
+            "(state NOT IN ('queued', 'sending') AND credential_ciphertext IS NULL "
+            "AND credential_key_id IS NULL)",
+            name="ck_delivery_credentials",
+        ),
+        Index("ix_delivery_state_expiry", "state", "credential_expires_at"),
+    )
+
+    organization_id: Mapped[UUID] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("organizations.id", ondelete="RESTRICT"), nullable=False
+    )
+    invite_id: Mapped[UUID] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("assessment_invites.id", ondelete="RESTRICT"), nullable=False
+    )
+    idempotency_digest: Mapped[str] = mapped_column(String(64), nullable=False)
+    request_digest: Mapped[str] = mapped_column(String(64), nullable=False)
+    state: Mapped[DeliveryState] = mapped_column(
+        enum_type(DeliveryState, "invitation_delivery_state", 16), nullable=False
+    )
+    attempt_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    credential_ciphertext: Mapped[bytes | None] = mapped_column(LargeBinary, nullable=True)
+    credential_key_id: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    credential_expires_at: Mapped[datetime] = mapped_column(UtcDateTime(), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(UtcDateTime(), nullable=False)
+    attempt_started_at: Mapped[datetime | None] = mapped_column(UtcDateTime(), nullable=True)
 
 
 class CandidateConsent(UuidPrimaryKeyMixin, CreatedAtMixin, Base):
