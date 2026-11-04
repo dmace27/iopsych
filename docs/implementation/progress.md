@@ -18,7 +18,30 @@ Future launches must inherit the verified Fast default and have their own live s
 
 ## Current scheduling and critical path
 
-### Latest checkpoint: 22:46 UTC
+### Latest checkpoint: 22:53 UTC
+
+This checkpoint supersedes all older live ownership and package-status rows below. Accelerated schedule is committed as `3cf79c2`; all original acceptance criteria remain. Integration is `cd113de`. Main is unchanged. The two-hour target still ends 00:31 UTC; reserve 23:46–00:31 for final combined checks, repairs and truthful handoff rather than adding speculative scope.
+
+- Reviewed/integrated since the prior checkpoint: DB deadlines/readiness `0717428`; historical trace backend `9e4bfe7`/`0f0e9e1`/`84e3285` and UI `8b7625c`; session navigation `30ff4dd`; extraction redirect protection `4e97d2f`; safe telemetry `bc90237`; bounded invitation discovery `e6a39f4`; bounded retention drain `cd113de`.
+- Independent coordinator evidence: readiness 43 passed/3 PostgreSQL skips; trace backend 60 passed/1 PostgreSQL skip; trace UI 55 passed; navigation 61 passed; redirect safety 80 passed; telemetry 53 passed; invitation discovery 29 passed; retention drain 23 passed. Worker PostgreSQL evidence is separately documented, not substituted for coordinator runs.
+- Actual isolated PostgreSQL upgrade/concurrency verification: 44 passed/zero skips, report `531c380`. Production browser checkpoint: 11 passed/zero skips, 27 axe scans without violations, reports `df2ab0c` and associated fixture commits. New accessibility matrix has real failures: 320px overflow and Create role Cancel focus loss; dedicated correction owns app changes while audit retains tests/runtime. Earlier green smoke is not full accessibility acceptance.
+- 6A boundary fixes and 6C backend/UI are integrated/reviewed, not still active as historical rows suggest. 7A session improvements, 8A local adapter/discovery, 8B list/revoke UI, 9A pinned recovery, 9C historical trace, 10A export locking, 10C bounded drain and 11A–C local runtime slices are partial engineering completion only. Provider identity/delivery, provisioning, manager workflow, server drafts/context, comprehensive privacy lifecycle/admin and scientific interpretation gates remain open. No full gated package is declared accepted.
+
+| Current task | Dispatch / child branch suffix | Ownership / allocation |
+| --- | --- | --- |
+| Accessibility matrix | `ctx_2200ba5fbc72` / `iopsych-a11y-matrix` | Browser accessibility spec/report; exclusive 3116/8116/5556/1136/8136 |
+| Invitation list/revoke UI | `ctx_7e14cc9f9cf1` / `iopsych-invite-ui` | New client/contracts/UI, proxy allowlist, role link; 3140/8160/5580 |
+| Combined regression | `ctx_3848fc7fba6d` / `iopsych-current-regression` | Read-only app, frozen `e6a39f4`; isolated upgrade PG5571; no browser runtime |
+| Independent review | `ctx_43d065e44ab0` / `iopsych-latest-review` | Read-only trace/telemetry/discovery/privacy/session review; 3142/8162/5582 |
+| Accessibility corrections | `ctx_b081756b1bae` / `iopsych-a11y-fixes` | App CSS/layout and Create role focus, not browser specs; 3143/8163/5583 |
+| Privacy discovery | `iopsych-privacy-discovery` | Additive admin-only exact-reference lookup; contract approval before implementation; 3144/8164/5584 |
+| Local restore rehearsal | `iopsych-local-restore` | Isolated synthetic script/evidence only; 3145/8165/5585 |
+
+Five workers were executing and two starting at refill. Four new executing screens plus continuing audit show Fast; verify the final two live screens after launch before claiming seven verified. No unsupported session observed. Future workers retain the same verify-not-toggle policy. Coordinator remains sole integrator/migration/dependency owner. Latest completed workers were released after reports; no work was lost for settings.
+
+Critical path now: resolve measured accessibility failures → rerun matrix; finish invitation UI against committed discovery wire → targeted tests/browser handoff; approve privacy lookup engineering contract → backend → separately owned UI. Regression/review and isolated restore proceed independently. No worker waits for an entire phase. Provider/product/privacy/scientific decisions are still unanswered; prepare safe interfaces only, never fabricate approvals. Reserve full release/manual/hosted gates as remaining work even if local slices finish within the target.
+
+### Historical checkpoint: 22:46 UTC
 
 This checkpoint supersedes earlier live-worker counts and ownership tables. Integration `c78a70c` includes 6C integrity repair `beec1c4`, expanded browser suite `7d89b17`/`8caf297`, secure sign-out `fb7a404`, candidate recovery `a8feb7f`, safe upgrade target guard `6619167`, and export/anonymization locking `c78a70c`. Completed workers were released after processing reports. Main remains `f5224c9`; no pushes/deployments/real mail occurred.
 
