@@ -10,10 +10,12 @@ from app.audit import audited
 from app.auth.context import AuthorizationContext
 from app.auth.dependencies import get_database_session, require_roles
 from app.database.models import InternalUserRole
+from app.privacy.discovery import discover_assessments
 from app.privacy.schemas import (
     CandidateDataExportResponse,
     CandidateDeletionResponse,
     PrivacyAuditEventResponse,
+    PrivacyDiscoveryResponse,
     PrivacyStatusResponse,
     RetentionRunResponse,
 )
@@ -128,3 +130,27 @@ def run_retention(
     """Run one bounded retention batch for the administrator's organization."""
 
     return _service(request, session, context).run_retention()
+
+
+@privacy_router.get("/assessments", response_model=PrivacyDiscoveryResponse)
+@audited("privacy.assessments_discovered", "user")
+def privacy_assessments(
+    response: Response,
+    context: AdminContext,
+    session: DatabaseSession,
+    invitation_id: UUID | None = None,
+    role_id: UUID | None = None,
+    limit: Annotated[int, Query(ge=1, le=50)] = 20,
+    cursor: Annotated[str | None, Query(max_length=104)] = None,
+) -> PrivacyDiscoveryResponse:
+    """Find assessment IDs using exactly one tenant-owned invitation or role UUID."""
+
+    response.headers["Cache-Control"] = "no-store"
+    return discover_assessments(
+        session,
+        context,
+        invitation_id=invitation_id,
+        role_id=role_id,
+        limit=limit,
+        cursor=cursor,
+    )

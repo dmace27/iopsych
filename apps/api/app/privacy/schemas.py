@@ -121,3 +121,25 @@ class RetentionRunResponse(BaseModel):
 
     completed_at: datetime
     anonymized_assessment_ids: list[UUID]
+
+
+class PrivacyAssessmentResponse(BaseModel):
+    """Existing lifecycle metadata sufficient to select a data-rights target."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    assessment_id: UUID
+    created_at: datetime
+    submitted_at: datetime | None
+    retention_expires_at: datetime | None
+    anonymized_at: datetime | None
+
+
+class PrivacyDiscoveryResponse(BaseModel):
+    """Versioned bounded discovery page without candidate content or identity."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    schema_version: Literal["1.0"] = "1.0"
+    items: list[PrivacyAssessmentResponse] = Field(max_length=50)
+    next_cursor: str | None = Field(max_length=104)
