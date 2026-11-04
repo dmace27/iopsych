@@ -64,7 +64,6 @@ def export_candidate_data(
         f'attachment; filename="candidate-data-{assessment_id}.json"'
     )
     exported = _service(request, session, context).export(assessment_id)
-    # Revalidate the projection so legacy clients retain their exact strict keyset.
     if request.headers.get("X-IOPsych-Notice-Snapshot") == "1":
         return CandidateDataExportResponse.model_validate(exported.model_dump())
     return CandidateDataExportResponse.model_validate(
