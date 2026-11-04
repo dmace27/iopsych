@@ -1,7 +1,14 @@
 /** @vitest-environment jsdom */
 
 import "@testing-library/jest-dom/vitest";
-import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { PILOT_ASSESSMENT_DEFINITION_V1 } from "@iopsych/shared";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -74,6 +81,69 @@ describe("CandidateAssessment", () => {
   afterEach(() => {
     cleanup();
     vi.restoreAllMocks();
+  });
+
+  it("counts only complete or skipped blocks and retains progress when revisiting", async () => {
+    apiMocks.getCandidateInvite.mockResolvedValue(
+      candidateInvite({ can_start_assessment: true, decision: "consent" }),
+    );
+    const user = userEvent.setup();
+    render(<CandidateAssessment token="signed-token" />);
+    const progress = await screen.findByRole("progressbar", {
+      name: "Blocks ready to submit",
+    });
+    expect(progress).toHaveAttribute("aria-valuenow", "0");
+    const radios = screen.getAllByRole("radio");
+    await user.click(radios[0]!);
+    expect(progress).toHaveAttribute("aria-valuenow", "0");
+    await user.click(radios[3]!);
+    expect(progress).toHaveAttribute("aria-valuenow", "1");
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+    expect(screen.getByText("Block 2 of 6")).toBeInTheDocument();
+    expect(progress).toHaveAttribute("aria-valuenow", "1");
+    await user.click(screen.getByRole("button", { name: "Previous block" }));
+    expect(screen.getAllByRole("radio")[0]).toBeChecked();
+    await user.click(screen.getAllByRole("radio")[2]!);
+    expect(progress).toHaveAttribute("aria-valuenow", "0");
+    await user.click(screen.getByRole("checkbox"));
+    expect(progress).toHaveAttribute("aria-valuenow", "1");
+  });
+
+  it("shows the actual selected statements on review and returns to them for changes", async () => {
+    apiMocks.getCandidateInvite.mockResolvedValue(
+      candidateInvite({ can_start_assessment: true, decision: "consent" }),
+    );
+    const user = userEvent.setup();
+    render(<CandidateAssessment token="signed-token" />);
+    await screen.findByRole("checkbox");
+    const radios = screen.getAllByRole("radio");
+    const most = radios[0]!
+      .getAttribute("aria-label")!
+      .replace("Most like me: ", "");
+    const least = radios[3]!
+      .getAttribute("aria-label")!
+      .replace("Least like me: ", "");
+    await user.click(radios[0]!);
+    await user.click(radios[3]!);
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+    for (let index = 1; index < 6; index++) {
+      await user.click(screen.getByRole("checkbox"));
+      await user.click(
+        screen.getByRole("button", {
+          name: index === 5 ? "Review answers" : "Continue",
+        }),
+      );
+    }
+    const firstRow = within(screen.getAllByRole("listitem")[0]!);
+    expect(firstRow.getByText(most)).toBeInTheDocument();
+    expect(firstRow.getByText(least)).toBeInTheDocument();
+    expect(apiMocks.submitCandidateAssessment).not.toHaveBeenCalled();
+    await user.click(firstRow.getByRole("button", { name: "Change block 1" }));
+    expect(screen.getAllByRole("radio")[0]).toBeChecked();
+    expect(screen.getAllByRole("radio")[3]).toBeChecked();
+    expect(
+      screen.getByRole("heading", { name: /which statements/i }),
+    ).toHaveFocus();
   });
 
   it("does not expose any assessment question before affirmative consent", async () => {

@@ -36,6 +36,9 @@ interface CandidateAssessmentProps {
   token: string;
 }
 
+const secondaryAction =
+  "action-secondary min-h-11 rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700 disabled:opacity-60";
+
 interface BlockChoice {
   leastLikeItemId?: string;
   mostLikeItemId?: string;
@@ -487,23 +490,23 @@ function InvitationAssessment({ token }: CandidateAssessmentProps) {
     return (
       <main
         aria-busy="true"
-        className="mx-auto max-w-4xl px-5 py-12 sm:px-8"
+        className="mx-auto max-w-2xl px-5 py-12 sm:px-8"
         id="main-content"
       >
         <p className="text-sm font-bold text-teal-800">Opening invitation…</p>
-        <div className="skeleton-shimmer mt-5 h-56 rounded-3xl" />
+        <div className="mt-5 h-56 rounded-lg bg-slate-100" />
       </main>
     );
   }
 
   if (state.status === "error") {
     return (
-      <main className="mx-auto max-w-3xl px-5 py-16 sm:px-8" id="main-content">
-        <section className="rounded-3xl border border-rose-200 bg-white p-7 shadow-sm sm:p-10">
-          <p className="text-sm font-bold uppercase tracking-[0.16em] text-rose-800">
+      <main className="mx-auto max-w-2xl px-5 py-16 sm:px-8" id="main-content">
+        <section className="surface rounded-lg border border-slate-200 bg-white p-5 sm:p-7">
+          <p className="text-sm font-medium text-rose-800">
             Invitation unavailable
           </p>
-          <h1 className="mt-3 text-3xl font-bold text-slate-950">
+          <h1 className="mt-3 workspace-title text-2xl font-semibold tracking-tight text-slate-900">
             We could not open this assessment
           </h1>
           <p className="mt-4 leading-7 text-slate-700" role="alert">
@@ -515,6 +518,7 @@ function InvitationAssessment({ token }: CandidateAssessmentProps) {
             invitation.
           </p>
           <button
+            className={secondaryAction + " mt-5"}
             type="button"
             onClick={() => {
               setNoticeReviewRequired(false);
@@ -548,7 +552,11 @@ function InvitationAssessment({ token }: CandidateAssessmentProps) {
     encodeURIComponent("Assessment accommodation request");
 
   const deviceControls = (
-    <aside className="mt-6 space-y-3 text-sm text-slate-700">
+    <aside
+      aria-label="Save and device privacy"
+      className="mt-6 space-y-3 border-t border-slate-200 pt-5 text-sm leading-6 text-slate-600"
+    >
+      <h2 className="font-semibold text-slate-900">Your data on this device</h2>
       <p>
         Resume uses this browser only, for up to 24 hours after saving and
         before the invitation expires. Only completed blocks are saved. On a
@@ -558,6 +566,7 @@ function InvitationAssessment({ token }: CandidateAssessmentProps) {
       </p>
       <p role="status">{deviceMessage}</p>
       <button
+        className={secondaryAction + " mr-3"}
         type="button"
         disabled={submittingAssessment}
         onClick={() => {
@@ -585,6 +594,7 @@ function InvitationAssessment({ token }: CandidateAssessmentProps) {
       </button>
       {(view === "assessment" || view === "review") && (
         <button
+          className={secondaryAction}
           type="button"
           disabled={submittingAssessment}
           onClick={() => {
@@ -616,11 +626,16 @@ function InvitationAssessment({ token }: CandidateAssessmentProps) {
   if (view === "paused")
     return (
       <CandidateFrame invite={invite} privacyHref={privacyHref}>
-        <h1 ref={headingRef} tabIndex={-1}>
+        <h1
+          className="workspace-title text-2xl font-semibold text-slate-900"
+          ref={headingRef}
+          tabIndex={-1}
+        >
           Assessment paused
         </h1>
         {deviceControls}
         <button
+          className={secondaryAction + " mt-5"}
           type="button"
           onClick={() => {
             setDeviceMessage(null);
@@ -635,12 +650,10 @@ function InvitationAssessment({ token }: CandidateAssessmentProps) {
   if (view === "declined") {
     return (
       <CandidateFrame invite={invite} privacyHref={privacyHref}>
-        <section className="rounded-3xl border border-slate-200 bg-white p-7 shadow-sm sm:p-10">
-          <p className="text-sm font-bold uppercase tracking-[0.16em] text-teal-800">
-            Choice recorded
-          </p>
+        <section className="surface rounded-lg border border-slate-200 bg-white p-5 sm:p-7">
+          <p className="text-sm font-medium text-teal-800">Choice recorded</p>
           <h1
-            className="mt-3 text-3xl font-bold text-slate-950"
+            className="mt-3 workspace-title text-2xl font-semibold tracking-tight text-slate-900"
             ref={headingRef}
             tabIndex={-1}
           >
@@ -661,7 +674,7 @@ function InvitationAssessment({ token }: CandidateAssessmentProps) {
   if (view === "complete") {
     return (
       <CandidateFrame invite={invite} privacyHref={privacyHref}>
-        <section className="rounded-3xl border border-teal-200 bg-white p-7 shadow-sm sm:p-10">
+        <section className="surface rounded-lg border border-slate-200 bg-white p-5 sm:p-7">
           <div
             aria-hidden="true"
             className="grid size-12 place-items-center rounded-full bg-teal-100 text-2xl text-teal-900"
@@ -669,7 +682,7 @@ function InvitationAssessment({ token }: CandidateAssessmentProps) {
             ✓
           </div>
           <h1
-            className="mt-5 text-3xl font-bold text-slate-950"
+            className="mt-5 workspace-title text-2xl font-semibold tracking-tight text-slate-900"
             ref={headingRef}
             tabIndex={-1}
           >
@@ -680,7 +693,7 @@ function InvitationAssessment({ token }: CandidateAssessmentProps) {
             human-reviewed pilot. This assessment does not make a hiring
             decision.
           </p>
-          <div className="mt-7 rounded-2xl bg-slate-50 p-5">
+          <div className="mt-6 border-t border-slate-200 pt-5">
             <h2 className="font-bold text-slate-950">What happens next?</h2>
             <p className="mt-2 text-sm leading-6 text-slate-700">
               A recruiter may use your responses to prepare neutral interview
@@ -691,7 +704,7 @@ function InvitationAssessment({ token }: CandidateAssessmentProps) {
           <p className="mt-6 text-sm leading-6 text-slate-600">
             Want a copy, correction, or deletion? Use the{" "}
             <a
-              className="font-bold text-teal-800 underline underline-offset-4 hover:text-teal-950"
+              className="inline-flex min-h-11 items-center font-semibold text-teal-700 underline underline-offset-4 hover:text-teal-950"
               href={privacyHref}
             >
               data-rights contact
@@ -709,13 +722,11 @@ function InvitationAssessment({ token }: CandidateAssessmentProps) {
       <CandidateFrame invite={invite} privacyHref={privacyHref}>
         <section
           aria-labelledby="consent-title"
-          className="rounded-3xl border border-slate-200 bg-white p-7 shadow-sm sm:p-10"
+          className="surface rounded-lg border border-slate-200 bg-white p-5 sm:p-7"
         >
-          <p className="text-sm font-bold uppercase tracking-[0.16em] text-teal-800">
-            Before you begin
-          </p>
+          <p className="text-sm font-medium text-teal-800">Before you begin</p>
           <h1
-            className="mt-3 text-3xl font-bold tracking-tight text-slate-950 sm:text-4xl"
+            className="mt-3 workspace-title text-2xl font-semibold tracking-tight text-slate-900"
             id="consent-title"
             ref={headingRef}
             tabIndex={-1}
@@ -726,7 +737,7 @@ function InvitationAssessment({ token }: CandidateAssessmentProps) {
             Review this information before deciding. Assessment questions remain
             hidden until you give affirmative consent.
           </p>
-          <dl className="mt-8 grid gap-5 sm:grid-cols-2">
+          <dl className="mt-6 divide-y divide-slate-200 border-y border-slate-200">
             <ConsentDetail
               description={invite.consent_notice.purpose}
               term="Purpose"
@@ -745,7 +756,7 @@ function InvitationAssessment({ token }: CandidateAssessmentProps) {
                   For an adjustment or another way to complete this assessment,
                   email{" "}
                   <a
-                    className="font-bold text-teal-800 underline underline-offset-4"
+                    className="inline-flex min-h-11 items-center font-semibold text-teal-700 underline underline-offset-4"
                     href={accommodationHref}
                   >
                     {invite.consent_notice.accommodation_contact_email}
@@ -756,7 +767,7 @@ function InvitationAssessment({ token }: CandidateAssessmentProps) {
               term="Accommodation"
             />
           </dl>
-          <div className="mt-7 rounded-2xl border border-amber-200 bg-amber-50 p-5 text-sm leading-6 text-amber-950">
+          <div className="mt-6 border-l-2 border-teal-700 pl-4 text-sm leading-6 text-slate-700">
             <strong>Your participation is voluntary.</strong>{" "}
             {invite.consent_notice.decline_without_penalty
               ? "You may decline without penalty."
@@ -769,7 +780,7 @@ function InvitationAssessment({ token }: CandidateAssessmentProps) {
           ) : null}
           <div className="mt-7 flex flex-col gap-3 sm:flex-row">
             <button
-              className="min-h-12 rounded-xl bg-teal-800 px-6 py-3 font-bold text-white hover:bg-teal-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-700 focus-visible:ring-offset-2"
+              className="action-primary min-h-11 rounded-md bg-teal-700 px-5 py-3 font-semibold text-white hover:bg-teal-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-700 focus-visible:ring-offset-2"
               disabled={submittingConsent}
               onClick={() => void decide("consent")}
               type="button"
@@ -779,7 +790,7 @@ function InvitationAssessment({ token }: CandidateAssessmentProps) {
                 : "I consent and want to begin"}
             </button>
             <button
-              className="min-h-12 rounded-xl border border-slate-300 bg-white px-6 py-3 font-bold text-slate-800 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-700 focus-visible:ring-offset-2"
+              className="action-secondary min-h-11 rounded-md border border-slate-300 bg-white px-5 py-3 font-semibold text-slate-800 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-700 focus-visible:ring-offset-2"
               disabled={submittingConsent}
               onClick={() => void decide("decline")}
               type="button"
@@ -800,37 +811,64 @@ function InvitationAssessment({ token }: CandidateAssessmentProps) {
   if (view === "review") {
     return (
       <CandidateFrame invite={invite} privacyHref={privacyHref}>
-        <section className="rounded-3xl border border-slate-200 bg-white p-7 shadow-sm sm:p-10">
-          <p className="text-sm font-bold uppercase tracking-[0.16em] text-teal-800">
-            Review
-          </p>
+        <section className="surface rounded-lg border border-slate-200 bg-white p-5 sm:p-7">
+          <p className="text-sm font-medium text-teal-800">Review</p>
           <h1
-            className="mt-3 text-3xl font-bold text-slate-950"
+            className="mt-3 workspace-title text-2xl font-semibold tracking-tight text-slate-900"
             ref={headingRef}
             tabIndex={-1}
           >
             Review your responses
           </h1>
           <p className="mt-3 leading-7 text-slate-700">
-            All six blocks are ready. You can return to any block before
-            submitting.
+            {assessment.blocks.length} blocks to review. You can return to any
+            block before submitting. Responses are only submitted when you
+            select “Submit my responses.”
           </p>
-          <ol className="mt-7 divide-y divide-slate-200 rounded-2xl border border-slate-200">
+          <ol className="record-list mt-6 divide-y divide-slate-200 border-y border-slate-200">
             {assessment.blocks.map((block, index) => {
               const choice = choices[block.id];
               return (
                 <li
-                  className="flex items-center justify-between gap-4 p-4"
+                  className="record-row flex flex-col items-start justify-between gap-x-4 gap-y-2 py-4 sm:flex-row"
                   key={block.id}
                 >
-                  <span className="font-semibold text-slate-800">
+                  <div className="min-w-0 flex-1 font-semibold text-slate-800">
                     Block {index + 1}:{" "}
                     <span className="font-normal text-slate-600">
-                      {choice?.skipped ? "Prefer not to answer" : "Answered"}
+                      {choice?.skipped
+                        ? "Prefer not to answer"
+                        : choice?.mostLikeItemId && choice.leastLikeItemId
+                          ? "Answered"
+                          : "Needs an answer"}
                     </span>
-                  </span>
+                    {!choice?.skipped && (
+                      <dl className="mt-2 space-y-2 text-sm font-normal leading-6">
+                        <div>
+                          <dt className="font-medium text-slate-900">
+                            Most like me
+                          </dt>
+                          <dd className="text-slate-600">
+                            {block.items.find(
+                              (item) => item.id === choice?.mostLikeItemId,
+                            )?.statement ?? "Not selected"}
+                          </dd>
+                        </div>
+                        <div>
+                          <dt className="font-medium text-slate-900">
+                            Least like me
+                          </dt>
+                          <dd className="text-slate-600">
+                            {block.items.find(
+                              (item) => item.id === choice?.leastLikeItemId,
+                            )?.statement ?? "Not selected"}
+                          </dd>
+                        </div>
+                      </dl>
+                    )}
+                  </div>
                   <button
-                    className="rounded-lg px-3 py-2 text-sm font-bold text-teal-800 underline underline-offset-4 hover:text-teal-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-700"
+                    className="min-h-11 shrink-0 rounded-md px-3 py-2 text-sm font-semibold text-teal-700 underline underline-offset-4 hover:text-teal-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-700"
                     onClick={() => {
                       setCurrentBlockIndex(index);
                       setState({ ...state, view: "assessment" });
@@ -851,7 +889,7 @@ function InvitationAssessment({ token }: CandidateAssessmentProps) {
           ) : null}
           <div className="mt-7 flex flex-col gap-3 sm:flex-row">
             <button
-              className="min-h-12 rounded-xl bg-teal-800 px-6 py-3 font-bold text-white hover:bg-teal-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-700 focus-visible:ring-offset-2"
+              className="action-primary min-h-11 rounded-md bg-teal-700 px-5 py-3 font-semibold text-white hover:bg-teal-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-700 focus-visible:ring-offset-2"
               onClick={submitAssessment}
               disabled={submittingAssessment}
               type="button"
@@ -859,7 +897,7 @@ function InvitationAssessment({ token }: CandidateAssessmentProps) {
               {submittingAssessment ? "Submitting…" : "Submit my responses"}
             </button>
             <button
-              className="min-h-12 rounded-xl border border-slate-300 bg-white px-6 py-3 font-bold text-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-700"
+              className="action-secondary min-h-11 rounded-md border border-slate-300 bg-white px-5 py-3 font-semibold text-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-700"
               onClick={() => {
                 setCurrentBlockIndex(assessment.blocks.length - 1);
                 setState({ ...state, view: "assessment" });
@@ -879,44 +917,60 @@ function InvitationAssessment({ token }: CandidateAssessmentProps) {
   const block = assessment.blocks[currentBlockIndex]!;
   const choice = choices[block.id] ?? { skipped: false };
   const items = orderedItems(block, invite.invitation_id);
-  const progress = ((currentBlockIndex + 1) / assessment.blocks.length) * 100;
+  const completedBlocks = responseSet?.responses.length ?? 0;
+  const progress = (completedBlocks / assessment.blocks.length) * 100;
 
   return (
     <CandidateFrame invite={invite} privacyHref={privacyHref}>
       <div className="mb-6" role="status">
-        <div className="flex items-center justify-between gap-4 text-sm font-semibold text-slate-700">
+        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 text-sm text-slate-600">
           <span>
             Block {currentBlockIndex + 1} of {assessment.blocks.length}
           </span>
           <span>{saveStatus}</span>
         </div>
         <div
-          aria-hidden="true"
-          className="mt-2 h-2 overflow-hidden rounded-full bg-slate-200"
+          role="progressbar"
+          aria-label="Blocks ready to submit"
+          aria-valuemin={0}
+          aria-valuemax={assessment.blocks.length}
+          aria-valuenow={completedBlocks}
+          className="mt-3 h-1 overflow-hidden rounded-full bg-slate-200"
         >
           <div
             className="h-full rounded-full bg-teal-700"
             style={{ width: String(progress) + "%" }}
           />
         </div>
+        <p className="mt-2 text-sm text-slate-600">
+          {completedBlocks} of {assessment.blocks.length} blocks ready to submit
+        </p>
       </div>
-      <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-9">
+      <section className="surface rounded-lg border border-slate-200 bg-white p-5 sm:p-7">
         <h1
-          className="text-3xl font-bold tracking-tight text-slate-950"
+          className="workspace-title text-2xl font-semibold tracking-tight text-slate-900"
           ref={headingRef}
           tabIndex={-1}
         >
           Which statements are most and least like you?
         </h1>
-        <p className="mt-3 max-w-3xl leading-7 text-slate-700">
+        <p
+          id="block-guidance"
+          className="mt-3 max-w-2xl leading-7 text-slate-700"
+        >
           Choose one statement in each column. There are no right or wrong
-          answers.
+          answers. Choose different statements for most and least like you.
         </p>
-        <fieldset className="mt-7">
+        <fieldset
+          aria-describedby={
+            validationError ? "block-guidance block-error" : "block-guidance"
+          }
+          className="mt-6"
+        >
           <legend className="sr-only">
             Work-preference statements for block {currentBlockIndex + 1}
           </legend>
-          <div className="hidden grid-cols-[1fr_7rem_7rem] gap-3 border-b border-slate-300 px-4 pb-3 text-center text-xs font-bold uppercase tracking-wide text-slate-600 sm:grid">
+          <div className="hidden grid-cols-[1fr_6rem_6rem] gap-3 border-b border-slate-200 pb-3 text-center text-sm font-semibold text-slate-600 sm:grid">
             <span className="text-left">Statement</span>
             <span>Most like me</span>
             <span>Least like me</span>
@@ -924,17 +978,17 @@ function InvitationAssessment({ token }: CandidateAssessmentProps) {
           <div className="divide-y divide-slate-200">
             {items.map((item, index) => (
               <div
-                className="grid gap-4 px-2 py-5 sm:grid-cols-[1fr_7rem_7rem] sm:items-center sm:px-4"
+                className="grid grid-cols-2 gap-2 py-4 sm:grid-cols-[1fr_6rem_6rem] sm:items-center sm:gap-3"
                 key={item.id}
               >
-                <p className="font-medium leading-6 text-slate-900">
+                <p className="col-span-2 font-medium leading-6 text-slate-900 sm:col-span-1">
                   {item.statement}
                 </p>
-                <label className="flex min-h-11 items-center gap-3 rounded-lg px-2 text-sm font-semibold text-slate-700 sm:justify-center sm:px-0">
+                <label className="flex min-h-11 cursor-pointer items-center gap-2 rounded-md border border-slate-200 px-2 text-sm font-medium text-slate-700 has-checked:border-teal-700 has-checked:bg-teal-50 has-checked:text-teal-900 has-disabled:cursor-not-allowed has-disabled:opacity-60 has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-teal-700 sm:justify-center">
                   <input
                     aria-label={"Most like me: " + item.statement}
                     checked={choice.mostLikeItemId === item.id}
-                    className="size-5 accent-teal-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700"
+                    className="size-5 shrink-0 accent-teal-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700"
                     disabled={choice.skipped}
                     name={"most-" + block.id}
                     onChange={() => updateChoice(block.id, "most", item.id)}
@@ -946,11 +1000,11 @@ function InvitationAssessment({ token }: CandidateAssessmentProps) {
                     Most like me
                   </span>
                 </label>
-                <label className="flex min-h-11 items-center gap-3 rounded-lg px-2 text-sm font-semibold text-slate-700 sm:justify-center sm:px-0">
+                <label className="flex min-h-11 cursor-pointer items-center gap-2 rounded-md border border-slate-200 px-2 text-sm font-medium text-slate-700 has-checked:border-teal-700 has-checked:bg-teal-50 has-checked:text-teal-900 has-disabled:cursor-not-allowed has-disabled:opacity-60 has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-teal-700 sm:justify-center">
                   <input
                     aria-label={"Least like me: " + item.statement}
                     checked={choice.leastLikeItemId === item.id}
-                    className="size-5 accent-teal-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700"
+                    className="size-5 shrink-0 accent-teal-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700"
                     disabled={choice.skipped}
                     name={"least-" + block.id}
                     onChange={() => updateChoice(block.id, "least", item.id)}
@@ -964,10 +1018,10 @@ function InvitationAssessment({ token }: CandidateAssessmentProps) {
               </div>
             ))}
           </div>
-          <label className="mt-4 flex min-h-12 items-center gap-3 rounded-xl border border-slate-300 bg-slate-50 px-4 py-3 font-semibold text-slate-800">
+          <label className="mt-4 flex min-h-11 cursor-pointer items-center gap-3 rounded-md border border-slate-200 px-3 py-3 text-sm font-medium text-slate-700 has-checked:border-teal-700 has-checked:bg-teal-50 has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-teal-700">
             <input
               checked={choice.skipped}
-              className="size-5 accent-teal-700"
+              className="size-5 shrink-0 accent-teal-700"
               onChange={() => updateChoice(block.id, "skip")}
               type="checkbox"
             />
@@ -976,7 +1030,8 @@ function InvitationAssessment({ token }: CandidateAssessmentProps) {
         </fieldset>
         {validationError ? (
           <p
-            className="mt-5 rounded-xl border border-rose-200 bg-rose-50 p-4 font-semibold text-rose-900"
+            id="block-error"
+            className="mt-5 border-l-2 border-rose-700 bg-rose-50 p-4 text-sm font-semibold text-rose-900"
             role="alert"
           >
             {validationError}
@@ -984,7 +1039,7 @@ function InvitationAssessment({ token }: CandidateAssessmentProps) {
         ) : null}
         <div className="mt-7 flex flex-col-reverse gap-3 sm:flex-row sm:justify-between">
           <button
-            className="min-h-12 rounded-xl border border-slate-300 bg-white px-6 py-3 font-bold text-slate-800 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-700 disabled:opacity-50"
+            className="action-secondary min-h-11 rounded-md border border-slate-300 bg-white px-5 py-3 font-semibold text-slate-800 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-700 disabled:opacity-50"
             disabled={currentBlockIndex === 0}
             onClick={() => {
               setValidationError(null);
@@ -995,7 +1050,7 @@ function InvitationAssessment({ token }: CandidateAssessmentProps) {
             Previous block
           </button>
           <button
-            className="min-h-12 rounded-xl bg-teal-800 px-6 py-3 font-bold text-white hover:bg-teal-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-700 focus-visible:ring-offset-2"
+            className="action-primary min-h-11 rounded-md bg-teal-700 px-5 py-3 font-semibold text-white hover:bg-teal-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-700 focus-visible:ring-offset-2"
             onClick={() => goForward(block)}
             type="button"
           >
@@ -1021,14 +1076,14 @@ function CandidateFrame({
 }) {
   return (
     <main
-      className="mx-auto max-w-4xl px-5 py-10 sm:px-8 sm:py-14"
+      className="mx-auto max-w-2xl px-4 py-6 text-slate-900 sm:px-6 sm:py-10 [&_a]:wrap-anywhere [&_a:focus-visible]:outline-2 [&_a:focus-visible]:outline-offset-4 [&_a:focus-visible]:outline-teal-700 [&_h1:focus-visible]:outline-2 [&_h1:focus-visible]:outline-offset-4 [&_h1:focus-visible]:outline-teal-700"
       id="main-content"
     >
-      <div className="mb-7 border-b border-slate-300 pb-6">
-        <p className="text-xs font-bold uppercase tracking-[0.18em] text-teal-800">
+      <div className="mb-6 border-b border-slate-200 pb-5">
+        <p className="text-sm font-medium text-slate-600">
           {invite.organization_name}
         </p>
-        <p className="mt-2 text-xl font-bold text-slate-950">
+        <p className="mt-1 text-base font-semibold text-slate-900">
           {invite.role_title}
         </p>
         <p className="mt-1 text-sm text-slate-600">
@@ -1047,10 +1102,10 @@ function CandidateFrame({
           record does not verify which notice was presented.
         </p>
       )}
-      <footer className="mt-8 flex flex-col justify-between gap-3 border-t border-slate-300 pt-6 text-sm text-slate-600 sm:flex-row">
+      <footer className="mt-8 flex flex-col gap-2 border-t border-slate-200 pt-4 text-sm text-slate-600">
         <span>Work-preference pilot · Human reviewed</span>
         <a
-          className="font-bold text-teal-800 underline underline-offset-4 hover:text-teal-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-700"
+          className="inline-flex min-h-11 items-center font-semibold text-teal-700 underline underline-offset-4 hover:text-teal-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-700"
           href={privacyHref}
         >
           Request a copy, correction, or deletion
@@ -1068,8 +1123,8 @@ function ConsentDetail({
   term: string;
 }) {
   return (
-    <div className="min-w-0 rounded-2xl bg-slate-50 p-5 wrap-anywhere">
-      <dt className="font-bold text-slate-950">{term}</dt>
+    <div className="min-w-0 py-4 wrap-anywhere">
+      <dt className="field-label font-semibold text-slate-900">{term}</dt>
       <dd className="mt-2 text-sm leading-6 text-slate-700">{description}</dd>
     </div>
   );
