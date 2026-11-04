@@ -213,14 +213,16 @@ export function getPrivacyStatus(): Promise<PrivacyStatus> {
   return requestJson("/privacy/status", PrivacyStatusSchema);
 }
 
-/** Read newest-first immutable audit history, optionally for one entity. */
+/** Read newest-first immutable audit history for an entity or related assessment. */
 export function getPrivacyAuditEvents(
-  entityId?: string,
+  scope?: string | { assessment_id: string },
   before?: string,
   limit = 50,
 ): Promise<PrivacyAuditEvent[]> {
   const parameters = new URLSearchParams();
-  if (entityId) parameters.set("entity_id", entityId);
+  if (typeof scope === "string" && scope) parameters.set("entity_id", scope);
+  else if (typeof scope === "object")
+    parameters.set("assessment_id", scope.assessment_id);
   if (before) parameters.set("before", before);
   if (limit !== 50) parameters.set("limit", String(limit));
   const serialized = parameters.toString();

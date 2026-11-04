@@ -30,7 +30,7 @@ type WorkspaceState =
       status: "ready";
       privacy: PrivacyStatus;
       auditEvents: PrivacyAuditEvent[];
-      auditEntityId: string | null;
+      auditAssessmentId: string | null;
       auditHasMore: boolean;
     };
 
@@ -110,7 +110,7 @@ export function PrivacyWorkspace() {
 
   const [auditLoadingMore, setAuditLoadingMore] = useState(false);
 
-  async function load(entityId?: string, afterMutation = false) {
+  async function load(relatedAssessmentId?: string, afterMutation = false) {
     if (!afterMutation) setState({ status: "loading" });
     try {
       const user = await getCurrentUser();
@@ -120,13 +120,17 @@ export function PrivacyWorkspace() {
       }
       const [privacy, auditEvents] = await Promise.all([
         getPrivacyStatus(),
-        getPrivacyAuditEvents(entityId),
+        getPrivacyAuditEvents(
+          relatedAssessmentId
+            ? { assessment_id: relatedAssessmentId }
+            : undefined,
+        ),
       ]);
       setState({
         status: "ready",
         privacy,
         auditEvents,
-        auditEntityId: entityId ?? null,
+        auditAssessmentId: relatedAssessmentId ?? null,
         auditHasMore: auditEvents.length === AUDIT_PAGE_SIZE,
       });
     } catch (error) {
@@ -158,7 +162,7 @@ export function PrivacyWorkspace() {
             status: "ready",
             privacy,
             auditEvents,
-            auditEntityId: null,
+            auditAssessmentId: null,
             auditHasMore: auditEvents.length === AUDIT_PAGE_SIZE,
           });
         }
@@ -246,12 +250,14 @@ export function PrivacyWorkspace() {
     setActionError(null);
     try {
       const nextEvents = await getPrivacyAuditEvents(
-        state.auditEntityId ?? undefined,
+        state.auditAssessmentId
+          ? { assessment_id: state.auditAssessmentId }
+          : undefined,
         state.auditEvents.at(-1)?.id,
         AUDIT_PAGE_SIZE,
       );
       setState((current) =>
-        current.status === "ready"
+        current.status === "ready" && current.auditEvents === state.auditEvents
           ? {
               ...current,
               auditEvents: [...current.auditEvents, ...nextEvents],
@@ -601,6 +607,11 @@ export function PrivacyWorkspace() {
         <h2 className="text-xl font-bold text-slate-950" id="audit-title">
           Immutable audit history
         </h2>
+        <p className="mt-2 break-all text-sm text-slate-600">
+          {state.auditAssessmentId
+            ? `Related history for assessment ${state.auditAssessmentId}, including linked invitation, consent, and report events.`
+            : "Organization-wide audit history, newest events first."}
+        </p>
         {state.auditEvents.length === 0 ? (
           <p className="mt-4 rounded-xl border border-slate-200 bg-white p-5 text-sm text-slate-600">
             No matching audit events.

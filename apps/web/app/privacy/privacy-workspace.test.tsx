@@ -163,7 +163,9 @@ describe("PrivacyWorkspace", () => {
 
     expect(await screen.findByText(/Derived reports removed: 2/)).toBeVisible();
     expect(api.deleteCandidateData).toHaveBeenCalledWith(ASSESSMENT_ID);
-    expect(api.getPrivacyAuditEvents).toHaveBeenLastCalledWith(ASSESSMENT_ID);
+    expect(api.getPrivacyAuditEvents).toHaveBeenLastCalledWith({
+      assessment_id: ASSESSMENT_ID,
+    });
     expect(
       screen.queryByRole("link", { name: "Download JSON export" }),
     ).not.toBeInTheDocument();
@@ -189,7 +191,9 @@ describe("PrivacyWorkspace", () => {
       screen.getByRole("button", { name: "Look up audit history" }),
     );
     await waitFor(() =>
-      expect(api.getPrivacyAuditEvents).toHaveBeenLastCalledWith(ASSESSMENT_ID),
+      expect(api.getPrivacyAuditEvents).toHaveBeenLastCalledWith({
+        assessment_id: ASSESSMENT_ID,
+      }),
     );
     await user.click(
       screen.getByRole("button", { name: "Create JSON export" }),
@@ -215,7 +219,7 @@ describe("PrivacyWorkspace", () => {
     ).toBeVisible();
   });
 
-  it("paginates audit history without dropping the active entity filter", async () => {
+  it("paginates audit history without dropping the active assessment filter", async () => {
     const user = userEvent.setup();
     const firstPage = Array.from({ length: 50 }, (_, index) => ({
       ...auditEvent,
@@ -245,7 +249,7 @@ describe("PrivacyWorkspace", () => {
 
     expect(await screen.findByText("candidate_data.anonymized")).toBeVisible();
     expect(api.getPrivacyAuditEvents).toHaveBeenLastCalledWith(
-      ASSESSMENT_ID,
+      { assessment_id: ASSESSMENT_ID },
       firstPage.at(-1)?.id,
       50,
     );
