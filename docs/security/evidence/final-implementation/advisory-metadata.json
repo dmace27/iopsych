@@ -1,0 +1,661 @@
+[
+  {
+    "ghsa_id": "GHSA-2464-fhr4-w9xw",
+    "html_url": "https://github.com/advisories/GHSA-2464-fhr4-w9xw",
+    "summary": "Next.js: Unauthenticated Remote Code Execution in Image Optimization API when SVG files are used",
+    "vulnerabilities": [
+      {
+        "package": {
+          "ecosystem": "npm",
+          "name": "next"
+        },
+        "vulnerable_version_range": ">= 10.0.0, <= 15.5.27",
+        "first_patched_version": "15.5.28",
+        "vulnerable_functions": []
+      },
+      {
+        "package": {
+          "ecosystem": "npm",
+          "name": "next"
+        },
+        "vulnerable_version_range": ">= 16.0.0, <= 16.4.0",
+        "first_patched_version": "16.4.1",
+        "vulnerable_functions": []
+      }
+    ],
+    "references": [
+      "https://github.com/vercel/next.js/security/advisories/GHSA-2464-fhr4-w9xw",
+      "https://nvd.nist.gov/vuln/detail/CVE-2026-96889",
+      "https://github.com/vercel/next.js/commit/5e3b687b5edb868b064bdc058d768a7021e7f6ad",
+      "https://github.com/vercel/next.js/commit/9571ec899f063df6533351bec390ccb2cc0af6a3",
+      "https://github.com/vercel/next.js/releases/tag/v15.5.28",
+      "https://github.com/vercel/next.js/releases/tag/v16.4.1",
+      "https://github.com/advisories/GHSA-2464-fhr4-w9xw"
+    ],
+    "published_at": "2026-10-22T15:52:53Z",
+    "updated_at": "2026-10-22T15:52:56Z"
+  },
+  {
+    "ghsa_id": "GHSA-2m5v-pch6-74hx",
+    "html_url": "https://github.com/advisories/GHSA-2m5v-pch6-74hx",
+    "summary": "undici vulnerable to TLS certificate validation bypass via dropped tls options in Agent",
+    "vulnerabilities": [
+      {
+        "package": {
+          "ecosystem": "npm",
+          "name": "undici"
+        },
+        "vulnerable_version_range": ">= 4.0.0, < 6.29.1",
+        "first_patched_version": "6.29.1",
+        "vulnerable_functions": []
+      },
+      {
+        "package": {
+          "ecosystem": "npm",
+          "name": "undici"
+        },
+        "vulnerable_version_range": ">= 7.0.0, < 7.30.1",
+        "first_patched_version": "7.30.1",
+        "vulnerable_functions": []
+      },
+      {
+        "package": {
+          "ecosystem": "npm",
+          "name": "undici"
+        },
+        "vulnerable_version_range": ">= 8.0.0, < 8.12.2",
+        "first_patched_version": "8.12.2",
+        "vulnerable_functions": []
+      }
+    ],
+    "references": [
+      "https://github.com/nodejs/undici/security/advisories/GHSA-2m5v-pch6-74hx",
+      "https://nvd.nist.gov/vuln/detail/CVE-2026-109383",
+      "https://github.com/nodejs/undici/commit/04cb74b1db131ff8f5b4557dce811cbf5f4664b4",
+      "https://github.com/nodejs/undici/commit/8c59f6b302898cb2e9b0f7962cd7212b6e597c9f",
+      "https://github.com/nodejs/undici/commit/f75eac00ac177f7b2e6c8bfbd52d4113164286e6",
+      "https://cna.openjsf.org/security-advisories.html",
+      "https://github.com/nodejs/undici/releases/tag/v6.29.1",
+      "https://github.com/nodejs/undici/releases/tag/v7.30.1",
+      "https://github.com/nodejs/undici/releases/tag/v8.12.2",
+      "https://github.com/advisories/GHSA-2m5v-pch6-74hx"
+    ],
+    "published_at": "2026-10-27T19:02:26Z",
+    "updated_at": "2026-10-27T19:02:27Z"
+  },
+  {
+    "ghsa_id": "GHSA-4qv8-2p9j-2685",
+    "html_url": "https://github.com/advisories/GHSA-4qv8-2p9j-2685",
+    "summary": "undici vulnerable to Denial of Service via unbounded memory in the EventSource parser",
+    "vulnerabilities": [
+      {
+        "package": {
+          "ecosystem": "npm",
+          "name": "undici"
+        },
+        "vulnerable_version_range": ">= 6.5.0, < 6.29.1",
+        "first_patched_version": "6.29.1",
+        "vulnerable_functions": []
+      },
+      {
+        "package": {
+          "ecosystem": "npm",
+          "name": "undici"
+        },
+        "vulnerable_version_range": ">= 7.0.0, < 7.30.1",
+        "first_patched_version": "7.30.1",
+        "vulnerable_functions": []
+      },
+      {
+        "package": {
+          "ecosystem": "npm",
+          "name": "undici"
+        },
+        "vulnerable_version_range": ">= 8.0.0, < 8.12.2",
+        "first_patched_version": "8.12.2",
+        "vulnerable_functions": []
+      }
+    ],
+    "references": [
+      "https://github.com/nodejs/undici/security/advisories/GHSA-4qv8-2p9j-2685",
+      "https://nvd.nist.gov/vuln/detail/CVE-2026-109924",
+      "https://github.com/nodejs/undici/commit/299162740d5f39120092277e70efacb4d151c1c6",
+      "https://github.com/nodejs/undici/commit/789ef26461c648480433846607154f52d74ec9ab",
+      "https://github.com/nodejs/undici/commit/c43b23fdc6b37e1283d4347408bb16800f867d9e",
+      "https://cna.openjsf.org/security-advisories.html",
+      "https://github.com/nodejs/undici/releases/tag/v6.29.1",
+      "https://github.com/nodejs/undici/releases/tag/v7.30.1",
+      "https://github.com/nodejs/undici/releases/tag/v8.12.2",
+      "https://github.com/advisories/GHSA-4qv8-2p9j-2685"
+    ],
+    "published_at": "2026-10-23T22:13:29Z",
+    "updated_at": "2026-10-23T22:13:31Z"
+  },
+  {
+    "ghsa_id": "GHSA-4w7w-5xrc-9h26",
+    "html_url": "https://github.com/advisories/GHSA-4w7w-5xrc-9h26",
+    "summary": "undici vulnerable to cache poisoning and cross-user disclosure via cross-origin redirects",
+    "vulnerabilities": [
+      {
+        "package": {
+          "ecosystem": "npm",
+          "name": "undici"
+        },
+        "vulnerable_version_range": ">= 7.0.0, < 7.30.1",
+        "first_patched_version": "7.30.1",
+        "vulnerable_functions": []
+      },
+      {
+        "package": {
+          "ecosystem": "npm",
+          "name": "undici"
+        },
+        "vulnerable_version_range": ">= 8.0.0, < 8.12.2",
+        "first_patched_version": "8.12.2",
+        "vulnerable_functions": []
+      }
+    ],
+    "references": [
+      "https://github.com/nodejs/undici/security/advisories/GHSA-4w7w-5xrc-9h26",
+      "https://nvd.nist.gov/vuln/detail/CVE-2026-109829",
+      "https://github.com/nodejs/undici/commit/26c2bfb3def0b67241ce878e80657ed5d6c3efa8",
+      "https://github.com/nodejs/undici/commit/b20b82ad80a405a12b6ce1f341bcd418de390aa0",
+      "https://cna.openjsf.org/security-advisories.html",
+      "https://github.com/nodejs/undici/releases/tag/v7.30.1",
+      "https://github.com/nodejs/undici/releases/tag/v8.12.2",
+      "https://github.com/advisories/GHSA-4w7w-5xrc-9h26"
+    ],
+    "published_at": "2026-10-27T19:02:31Z",
+    "updated_at": "2026-10-27T19:02:32Z"
+  },
+  {
+    "ghsa_id": "GHSA-55wc-3pg8-jfw6",
+    "html_url": "https://github.com/advisories/GHSA-55wc-3pg8-jfw6",
+    "summary": "undici vulnerable to Denial of Service via unhandled exception in the decompress interceptor",
+    "vulnerabilities": [
+      {
+        "package": {
+          "ecosystem": "npm",
+          "name": "undici"
+        },
+        "vulnerable_version_range": ">= 7.15.0, < 7.30.1",
+        "first_patched_version": "7.30.1",
+        "vulnerable_functions": []
+      },
+      {
+        "package": {
+          "ecosystem": "npm",
+          "name": "undici"
+        },
+        "vulnerable_version_range": ">= 8.0.0, < 8.12.2",
+        "first_patched_version": "8.12.2",
+        "vulnerable_functions": []
+      }
+    ],
+    "references": [
+      "https://github.com/nodejs/undici/security/advisories/GHSA-55wc-3pg8-jfw6",
+      "https://nvd.nist.gov/vuln/detail/CVE-2026-87029",
+      "https://github.com/nodejs/undici/commit/63cba7712ca012b2603c6aeeb4c72d8692332cd0",
+      "https://github.com/nodejs/undici/commit/f851f315db1f2acce0ea668f88d9d0fa61c8420c",
+      "https://cna.openjsf.org/security-advisories.html",
+      "https://github.com/nodejs/undici/releases/tag/v7.30.1",
+      "https://github.com/nodejs/undici/releases/tag/v8.12.2",
+      "https://github.com/advisories/GHSA-55wc-3pg8-jfw6"
+    ],
+    "published_at": "2026-10-27T19:02:10Z",
+    "updated_at": "2026-10-27T19:02:12Z"
+  },
+  {
+    "ghsa_id": "GHSA-587h-7wmj-h5pm",
+    "html_url": "https://github.com/advisories/GHSA-587h-7wmj-h5pm",
+    "summary": "launch-editor: `fs.existsSync()` existence check can be bypassed on Windows",
+    "vulnerabilities": [
+      {
+        "package": {
+          "ecosystem": "npm",
+          "name": "launch-editor"
+        },
+        "vulnerable_version_range": "<= 2.14.1",
+        "first_patched_version": "2.14.2",
+        "vulnerable_functions": []
+      },
+      {
+        "package": {
+          "ecosystem": "npm",
+          "name": "vite"
+        },
+        "vulnerable_version_range": ">= 8.3.0, <= 8.3.2",
+        "first_patched_version": "8.3.3",
+        "vulnerable_functions": []
+      },
+      {
+        "package": {
+          "ecosystem": "npm",
+          "name": "vite"
+        },
+        "vulnerable_version_range": ">= 8.2.0, <= 8.2.3",
+        "first_patched_version": "8.2.4",
+        "vulnerable_functions": []
+      },
+      {
+        "package": {
+          "ecosystem": "npm",
+          "name": "vite"
+        },
+        "vulnerable_version_range": ">= 8.0.0, <= 8.1.5",
+        "first_patched_version": "8.1.6",
+        "vulnerable_functions": []
+      },
+      {
+        "package": {
+          "ecosystem": "npm",
+          "name": "vite"
+        },
+        "vulnerable_version_range": ">= 7.0.0, <= 7.3.6",
+        "first_patched_version": "7.3.7",
+        "vulnerable_functions": []
+      },
+      {
+        "package": {
+          "ecosystem": "npm",
+          "name": "vite"
+        },
+        "vulnerable_version_range": "<= 6.4.3",
+        "first_patched_version": "6.4.4",
+        "vulnerable_functions": []
+      },
+      {
+        "package": {
+          "ecosystem": "npm",
+          "name": "vite-plus"
+        },
+        "vulnerable_version_range": "<= 1.0.0",
+        "first_patched_version": "1.1.0",
+        "vulnerable_functions": []
+      }
+    ],
+    "references": [
+      "https://github.com/vitejs/launch-editor/security/advisories/GHSA-587h-7wmj-h5pm",
+      "https://nvd.nist.gov/vuln/detail/CVE-2026-112942",
+      "https://github.com/vitejs/launch-editor/commit/f13cd835d4b8e860b1d4d080ad8a490cc2463679",
+      "https://github.com/vitejs/launch-editor/releases/tag/v2.14.2",
+      "https://github.com/advisories/GHSA-587h-7wmj-h5pm"
+    ],
+    "published_at": "2026-10-20T19:48:25Z",
+    "updated_at": "2026-10-20T19:48:26Z"
+  },
+  {
+    "ghsa_id": "GHSA-673q-mjm6-r5xr",
+    "html_url": "https://github.com/advisories/GHSA-673q-mjm6-r5xr",
+    "summary": "Next.js: Unauthenticated Remote Code Execution in `use cache` functions returning typed arrays",
+    "vulnerabilities": [
+      {
+        "package": {
+          "ecosystem": "npm",
+          "name": "next"
+        },
+        "vulnerable_version_range": ">= 16.0.0, <= 16.4.0",
+        "first_patched_version": "16.4.1",
+        "vulnerable_functions": []
+      }
+    ],
+    "references": [
+      "https://github.com/vercel/next.js/security/advisories/GHSA-673q-mjm6-r5xr",
+      "https://github.com/vercel/next.js/commit/a4cea6aec5da89d116b8960e113189cf51745d2f",
+      "https://github.com/vercel/next.js/releases/tag/v16.4.1",
+      "https://github.com/advisories/GHSA-673q-mjm6-r5xr"
+    ],
+    "published_at": "2026-10-22T16:42:31Z",
+    "updated_at": "2026-10-22T16:42:32Z"
+  },
+  {
+    "ghsa_id": "GHSA-698v-4r3x-3vcv",
+    "html_url": "https://github.com/advisories/GHSA-698v-4r3x-3vcv",
+    "summary": "launch-editor: escapeCmdArgs() omits % escaping on Windows",
+    "vulnerabilities": [
+      {
+        "package": {
+          "ecosystem": "npm",
+          "name": "launch-editor"
+        },
+        "vulnerable_version_range": "<= 2.14.1",
+        "first_patched_version": "2.14.2",
+        "vulnerable_functions": []
+      },
+      {
+        "package": {
+          "ecosystem": "npm",
+          "name": "vite"
+        },
+        "vulnerable_version_range": ">= 8.3.0, <= 8.3.2",
+        "first_patched_version": "8.3.3",
+        "vulnerable_functions": []
+      },
+      {
+        "package": {
+          "ecosystem": "npm",
+          "name": "vite"
+        },
+        "vulnerable_version_range": ">= 8.2.0, <= 8.2.3",
+        "first_patched_version": "8.2.4",
+        "vulnerable_functions": []
+      },
+      {
+        "package": {
+          "ecosystem": "npm",
+          "name": "vite"
+        },
+        "vulnerable_version_range": ">= 8.0.0, <= 8.1.5",
+        "first_patched_version": "8.1.6",
+        "vulnerable_functions": []
+      },
+      {
+        "package": {
+          "ecosystem": "npm",
+          "name": "vite"
+        },
+        "vulnerable_version_range": ">= 7.0.0, <= 7.3.6",
+        "first_patched_version": "7.3.7",
+        "vulnerable_functions": []
+      },
+      {
+        "package": {
+          "ecosystem": "npm",
+          "name": "vite"
+        },
+        "vulnerable_version_range": "<= 6.4.3",
+        "first_patched_version": "6.4.4",
+        "vulnerable_functions": []
+      },
+      {
+        "package": {
+          "ecosystem": "npm",
+          "name": "vite-plus"
+        },
+        "vulnerable_version_range": "<= 1.0.0",
+        "first_patched_version": "1.1.0",
+        "vulnerable_functions": []
+      }
+    ],
+    "references": [
+      "https://github.com/vitejs/launch-editor/security/advisories/GHSA-698v-4r3x-3vcv",
+      "https://nvd.nist.gov/vuln/detail/CVE-2026-112943",
+      "https://github.com/vitejs/launch-editor/pull/155",
+      "https://github.com/vitejs/launch-editor/commit/3c2f9bf2ff8fe63d056a8f9cc52d825b66ca79fc",
+      "https://github.com/vitejs/launch-editor/releases/tag/v2.14.2",
+      "https://github.com/advisories/GHSA-698v-4r3x-3vcv"
+    ],
+    "published_at": "2026-10-20T18:30:24Z",
+    "updated_at": "2026-10-20T18:30:25Z"
+  },
+  {
+    "ghsa_id": "GHSA-9fm3-97px-rjf6",
+    "html_url": "https://github.com/advisories/GHSA-9fm3-97px-rjf6",
+    "summary": "undici WebSocket client vulnerable to Denial of Service via unbounded automatic PONG buffering",
+    "vulnerabilities": [
+      {
+        "package": {
+          "ecosystem": "npm",
+          "name": "undici"
+        },
+        "vulnerable_version_range": ">= 5.15.0, < 6.29.1",
+        "first_patched_version": "6.29.1",
+        "vulnerable_functions": []
+      },
+      {
+        "package": {
+          "ecosystem": "npm",
+          "name": "undici"
+        },
+        "vulnerable_version_range": ">= 7.0.0, < 7.30.1",
+        "first_patched_version": "7.30.1",
+        "vulnerable_functions": []
+      },
+      {
+        "package": {
+          "ecosystem": "npm",
+          "name": "undici"
+        },
+        "vulnerable_version_range": ">= 8.0.0, < 8.12.2",
+        "first_patched_version": "8.12.2",
+        "vulnerable_functions": []
+      }
+    ],
+    "references": [
+      "https://github.com/nodejs/undici/security/advisories/GHSA-9fm3-97px-rjf6",
+      "https://nvd.nist.gov/vuln/detail/CVE-2026-109932",
+      "https://github.com/nodejs/undici/commit/39f93e142df03e559fe7c3d1fc7fba9beee2c185",
+      "https://github.com/nodejs/undici/commit/53944624462b6797560288c55dbd8c66857bb495",
+      "https://github.com/nodejs/undici/commit/b217373bb024cd93f85eb5b3ffd25684855f60f8",
+      "https://cna.openjsf.org/security-advisories.html",
+      "https://github.com/nodejs/undici/releases/tag/v6.29.1",
+      "https://github.com/nodejs/undici/releases/tag/v7.30.1",
+      "https://github.com/nodejs/undici/releases/tag/v8.12.2",
+      "https://github.com/advisories/GHSA-9fm3-97px-rjf6"
+    ],
+    "published_at": "2026-10-27T19:02:15Z",
+    "updated_at": "2026-10-27T19:02:17Z"
+  },
+  {
+    "ghsa_id": "GHSA-9jrq-w75r-8gcw",
+    "html_url": "https://github.com/advisories/GHSA-9jrq-w75r-8gcw",
+    "summary": "Vite: Cross origin script execution through Vite custom middleware",
+    "vulnerabilities": [
+      {
+        "package": {
+          "ecosystem": "npm",
+          "name": "vite"
+        },
+        "vulnerable_version_range": ">= 8.3.0, <= 8.3.2",
+        "first_patched_version": "8.3.3",
+        "vulnerable_functions": []
+      },
+      {
+        "package": {
+          "ecosystem": "npm",
+          "name": "vite"
+        },
+        "vulnerable_version_range": ">= 8.2.0, <= 8.2.3",
+        "first_patched_version": "8.2.4",
+        "vulnerable_functions": []
+      },
+      {
+        "package": {
+          "ecosystem": "npm",
+          "name": "vite"
+        },
+        "vulnerable_version_range": ">= 8.0.0, <= 8.1.5",
+        "first_patched_version": "8.1.6",
+        "vulnerable_functions": []
+      },
+      {
+        "package": {
+          "ecosystem": "npm",
+          "name": "vite"
+        },
+        "vulnerable_version_range": ">= 7.0.0, <= 7.3.6",
+        "first_patched_version": "7.3.7",
+        "vulnerable_functions": []
+      },
+      {
+        "package": {
+          "ecosystem": "npm",
+          "name": "vite"
+        },
+        "vulnerable_version_range": "<= 6.4.3",
+        "first_patched_version": "6.4.4",
+        "vulnerable_functions": []
+      },
+      {
+        "package": {
+          "ecosystem": "npm",
+          "name": "vite-plus"
+        },
+        "vulnerable_version_range": "<= 1.0.0",
+        "first_patched_version": "1.1.0",
+        "vulnerable_functions": []
+      }
+    ],
+    "references": [
+      "https://github.com/vitejs/vite/security/advisories/GHSA-9jrq-w75r-8gcw",
+      "https://nvd.nist.gov/vuln/detail/CVE-2026-112945",
+      "https://github.com/vitejs/vite/pull/23653",
+      "https://github.com/vitejs/vite/commit/7dafd8e56f152403a3230608fa4005273c2e9e17",
+      "https://github.com/advisories/GHSA-9jrq-w75r-8gcw"
+    ],
+    "published_at": "2026-10-21T16:48:14Z",
+    "updated_at": "2026-10-21T16:48:15Z"
+  },
+  {
+    "ghsa_id": "GHSA-f72v-6w45-q472",
+    "html_url": "https://github.com/advisories/GHSA-f72v-6w45-q472",
+    "summary": "undici vulnerable to Subresource Integrity bypass via non-lowercase algorithm tokens",
+    "vulnerabilities": [
+      {
+        "package": {
+          "ecosystem": "npm",
+          "name": "undici"
+        },
+        "vulnerable_version_range": ">= 7.15.0, < 7.30.1",
+        "first_patched_version": "7.30.1",
+        "vulnerable_functions": []
+      },
+      {
+        "package": {
+          "ecosystem": "npm",
+          "name": "undici"
+        },
+        "vulnerable_version_range": ">= 8.0.0, < 8.12.2",
+        "first_patched_version": "8.12.2",
+        "vulnerable_functions": []
+      }
+    ],
+    "references": [
+      "https://github.com/nodejs/undici/security/advisories/GHSA-f72v-6w45-q472",
+      "https://nvd.nist.gov/vuln/detail/CVE-2026-109841",
+      "https://github.com/nodejs/undici/commit/18bc8a1e09d15bc45815154a289dcf6fd5254d00",
+      "https://github.com/nodejs/undici/commit/4f7ef6806e532ab9e29ccd6229b1b9d241e1b1f0",
+      "https://cna.openjsf.org/security-advisories.html",
+      "https://github.com/nodejs/undici/releases/tag/v7.30.1",
+      "https://github.com/nodejs/undici/releases/tag/v8.12.2",
+      "https://github.com/advisories/GHSA-f72v-6w45-q472"
+    ],
+    "published_at": "2026-10-23T22:12:57Z",
+    "updated_at": "2026-10-23T22:13:18Z"
+  },
+  {
+    "ghsa_id": "GHSA-g3hv-75wg-m249",
+    "html_url": "https://github.com/advisories/GHSA-g3hv-75wg-m249",
+    "summary": "minimatch has potential denial of service via globparts amplification",
+    "vulnerabilities": [
+      {
+        "package": {
+          "ecosystem": "npm",
+          "name": "minimatch"
+        },
+        "vulnerable_version_range": ">= 7.0.0, < 11.0.1",
+        "first_patched_version": "11.0.1",
+        "vulnerable_functions": []
+      }
+    ],
+    "references": [
+      "https://github.com/isaacs/minimatch/security/advisories/GHSA-g3hv-75wg-m249",
+      "https://nvd.nist.gov/vuln/detail/CVE-2026-118764",
+      "https://github.com/isaacs/minimatch/commit/77a0f5c4b80bdc641c3c930a1d9edf5ad2db57f8",
+      "https://github.com/isaacs/minimatch/releases/tag/v11.0.1",
+      "https://github.com/isaacs/minimatch/commit/297b6c1a01f2410b3ba1ebed14ba222d0c3c1033",
+      "https://github.com/isaacs/minimatch/commit/fd0b3ab9cbc5bf1aff1c99f1f46e413c2b3340da",
+      "https://github.com/advisories/GHSA-g3hv-75wg-m249"
+    ],
+    "published_at": "2026-10-30T23:09:55Z",
+    "updated_at": "2026-11-04T16:50:04Z"
+  },
+  {
+    "ghsa_id": "GHSA-mrhx-c7xc-m3w5",
+    "html_url": "https://github.com/advisories/GHSA-mrhx-c7xc-m3w5",
+    "summary": "Zod can exhaust memory while validating oversized constrained collections",
+    "vulnerabilities": [
+      {
+        "package": {
+          "ecosystem": "npm",
+          "name": "zod"
+        },
+        "vulnerable_version_range": "< 4.6.6",
+        "first_patched_version": "4.6.6",
+        "vulnerable_functions": []
+      }
+    ],
+    "references": [
+      "https://nvd.nist.gov/vuln/detail/CVE-2023-54404",
+      "https://github.com/colinhacks/zod/issues/1872",
+      "https://github.com/colinhacks/zod/pull/6475",
+      "https://www.vulncheck.com/advisories/zod-uncontrolled-resource-consumption-via-array-validation",
+      "https://github.com/colinhacks/zod/pull/6652",
+      "https://github.com/colinhacks/zod/commit/a0ebf970f2d752e5f58527cd2942ff48be4f46bd",
+      "https://github.com/advisories/GHSA-mrhx-c7xc-m3w5"
+    ],
+    "published_at": "2026-10-01T18:32:46Z",
+    "updated_at": "2026-10-23T18:26:52Z"
+  },
+  {
+    "ghsa_id": "GHSA-p3m5-59mp-jv5r",
+    "html_url": "https://github.com/advisories/GHSA-p3m5-59mp-jv5r",
+    "summary": "Next.js: Denial of Service in App Router using Server Actions",
+    "vulnerabilities": [
+      {
+        "package": {
+          "ecosystem": "npm",
+          "name": "next"
+        },
+        "vulnerable_version_range": ">= 13.0.0, <= 15.5.27",
+        "first_patched_version": "15.5.28",
+        "vulnerable_functions": []
+      },
+      {
+        "package": {
+          "ecosystem": "npm",
+          "name": "next"
+        },
+        "vulnerable_version_range": ">= 16.0.0, <= 16.4.0",
+        "first_patched_version": "16.4.1",
+        "vulnerable_functions": []
+      }
+    ],
+    "references": [
+      "https://github.com/vercel/next.js/security/advisories/GHSA-p3m5-59mp-jv5r",
+      "https://github.com/vercel/next.js/releases/tag/v15.5.28",
+      "https://github.com/vercel/next.js/releases/tag/v16.4.1",
+      "https://github.com/advisories/GHSA-p3m5-59mp-jv5r"
+    ],
+    "published_at": "2026-10-22T15:50:34Z",
+    "updated_at": "2026-10-22T15:50:35Z"
+  },
+  {
+    "ghsa_id": "GHSA-qrxm-fqhp-jwvm",
+    "error": "HTTPError"
+  },
+  {
+    "ghsa_id": "GHSA-qxg6-89mg-rqv8",
+    "error": "HTTPError"
+  },
+  {
+    "ghsa_id": "GHSA-r825-w8mm-5pxw",
+    "error": "HTTPError"
+  },
+  {
+    "ghsa_id": "GHSA-rq7h-c2jc-7f22",
+    "error": "HTTPError"
+  },
+  {
+    "ghsa_id": "GHSA-vfpm-58rq-9qcg",
+    "error": "HTTPError"
+  },
+  {
+    "ghsa_id": "GHSA-xjj6-f33q-929c",
+    "error": "HTTPError"
+  },
+  {
+    "ghsa_id": "GHSA-xp26-3454-mjgp",
+    "error": "HTTPError"
+  }
+]

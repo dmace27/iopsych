@@ -1,0 +1,33 @@
+{
+  "assessed_revision": "16c461a45b3dcd8b27e560fa15a2a616fdfe5c61",
+  "collected_at_utc": "2026-11-04T22:27:07.489634+00:00",
+  "node": "24.21.0",
+  "npm": "11.19.0",
+  "platform": "macOS",
+  "lockfile_sha256": "72f2b0b4aac0e3a7bd0e8ff303175e0666fb8a05aae763e5da310285fb55acfe",
+  "audit_basis": "committed root lockfile; existing node_modules present; no active npm ci/bootstrap observed before audit; no install performed by worker",
+  "commands": [
+    {
+      "command": "npm audit --json",
+      "result": "15 package entries: 11 moderate, 3 high, 1 critical; audit vulnerability failure"
+    },
+    {
+      "command": "npm audit --omit=dev --json",
+      "result": "2 package entries: 1 high, 1 critical; audit vulnerability failure"
+    }
+  ],
+  "secret_scan": {
+    "status": "not_run_tool_unavailable",
+    "checks": "command -v gitleaks and trufflehog; gitleaks absent from ~/go/bin, ~/.local/bin, /opt/homebrew/bin, /usr/local/bin",
+    "current_source": "unverified",
+    "full_history": "unverified",
+    "installed_tools": false
+  },
+  "limitations": [
+    "No exploit or production reachability test",
+    "No proposed dependency change installed or tested",
+    "No Python dependency audit in this bounded task",
+    "No hosted CI or approval claims",
+    "GitHub advisory API returned HTTP errors for seven records; their pages were read through web tool"
+  ]
+}
