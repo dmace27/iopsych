@@ -63,6 +63,9 @@ export function PrivacyWorkspace() {
     useState<PrivacyAssessmentList | null>(null);
   const [lookupQuery, setLookupQuery] =
     useState<PrivacyAssessmentLookup | null>(null);
+  const [anonymizationConfirmations, setAnonymizationConfirmations] = useState<
+    ReadonlyMap<string, string>
+  >(new Map());
   const [lookupLoading, setLookupLoading] = useState(false);
   const [lookupError, setLookupError] = useState<string | null>(null);
 
@@ -107,8 +110,8 @@ export function PrivacyWorkspace() {
 
   const [auditLoadingMore, setAuditLoadingMore] = useState(false);
 
-  async function load(entityId?: string) {
-    setState({ status: "loading" });
+  async function load(entityId?: string, afterMutation = false) {
+    if (!afterMutation) setState({ status: "loading" });
     try {
       const user = await getCurrentUser();
       if (user.role !== "admin") {
@@ -127,7 +130,13 @@ export function PrivacyWorkspace() {
         auditHasMore: auditEvents.length === AUDIT_PAGE_SIZE,
       });
     } catch (error) {
-      setState({ status: "error", message: errorMessage(error) });
+      if (afterMutation) {
+        setActionError(
+          `The operation completed, but privacy status and audit history could not be refreshed. ${errorMessage(error)}`,
+        );
+      } else {
+        setState({ status: "error", message: errorMessage(error) });
+      }
     }
   }
 
@@ -189,11 +198,14 @@ export function PrivacyWorkspace() {
     setActionError(null);
     try {
       const result = await deleteCandidateData(assessmentId.trim());
+      setAnonymizationConfirmations((current) =>
+        new Map(current).set(result.assessment_id, result.anonymized_at),
+      );
       setDeletion(result);
       setExported(null);
       setConfirmingDeletion(false);
       setAnnouncement("Candidate data was anonymized.");
-      await load(assessmentId.trim());
+      await load(assessmentId.trim(), true);
       setWorking(false);
     } catch (error) {
       setActionError(errorMessage(error));
@@ -206,10 +218,21 @@ export function PrivacyWorkspace() {
     setActionError(null);
     try {
       const result = await runPrivacyRetention();
+      setAnonymizationConfirmations((current) => {
+        const next = new Map(current);
+        for (const id of result.anonymized_assessment_ids) {
+          if (!next.has(id)) next.set(id, "Yes (confirmed by retention)");
+        }
+        return next;
+      });
+      if (result.anonymized_assessment_ids.includes(assessmentId.trim())) {
+        setExported(null);
+        setConfirmingDeletion(false);
+      }
       setAnnouncement(
         `Retention run anonymized ${result.anonymized_assessment_ids.length} assessments.`,
       );
-      await load();
+      await load(undefined, true);
       setWorking(false);
     } catch (error) {
       setActionError(errorMessage(error));
@@ -445,7 +468,10 @@ export function PrivacyWorkspace() {
                       {item.retention_expires_at ?? "Not set"}
                     </p>
                     <p className="text-sm">
-                      Anonymized: {item.anonymized_at ?? "No"}
+                      Anonymized:{" "}
+                      {anonymizationConfirmations.get(item.assessment_id) ??
+                        item.anonymized_at ??
+                        "No"}
                     </p>
                     <button
                       type="button"

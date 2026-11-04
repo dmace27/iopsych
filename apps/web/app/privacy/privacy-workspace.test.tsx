@@ -404,3 +404,302 @@ describe("privacy assessment discovery", () => {
     ).toBeEnabled();
   });
 });
+
+describe("privacy discovery after mutations", () => {
+  const OTHER_ID = "66666666-6666-4666-8666-666666666666";
+  const UNAFFECTED_ID = "77777777-7777-4777-8777-777777777777";
+  const anonymizedAt = "2026-11-04T13:00:00Z";
+  const page = {
+    schema_version: "1.0",
+    items: [ASSESSMENT_ID, OTHER_ID, UNAFFECTED_ID].map((id) => ({
+      ...discoveryItem,
+      assessment_id: id,
+    })),
+    next_cursor: null,
+  };
+
+  beforeEach(() => {
+    vi.resetAllMocks();
+    api.getCurrentUser.mockResolvedValue({ role: "admin" });
+    api.getPrivacyStatus.mockResolvedValue(privacyStatus);
+    api.getPrivacyAuditEvents.mockResolvedValue([]);
+    api.getPrivacyAssessments.mockResolvedValue(page);
+    api.exportCandidateData.mockResolvedValue(candidateExport);
+    api.deleteCandidateData.mockResolvedValue({
+      already_anonymized: false,
+      anonymized_at: anonymizedAt,
+      assessment_id: ASSESSMENT_ID,
+      reports_deleted: 2,
+    });
+    api.runPrivacyRetention.mockResolvedValue({
+      anonymized_assessment_ids: [ASSESSMENT_ID, OTHER_ID],
+      completed_at: anonymizedAt,
+    });
+  });
+  afterEach(cleanup);
+
+  async function selectResult() {
+    const user = userEvent.setup();
+    render(<PrivacyWorkspace />);
+    await screen.findByRole("heading", { name: "Find an assessment" });
+    await user.type(screen.getByLabelText("Reference ID"), INVITATION_ID);
+    await user.click(screen.getByRole("button", { name: "Find assessments" }));
+    await user.click(
+      await screen.findByRole("button", {
+        name: `Select assessment ${ASSESSMENT_ID}`,
+      }),
+    );
+    return user;
+  }
+
+  function card(id: string) {
+    return screen
+      .getByRole("button", {
+        name: `Select assessment ${id}`,
+      })
+      .closest("li");
+  }
+
+  it("reconciles anonymization while preserving selection and clearing export and confirmation", async () => {
+    const user = await selectResult();
+    await user.click(
+      screen.getByRole("button", { name: "Create JSON export" }),
+    );
+    await screen.findByRole("link", { name: "Download JSON export" });
+    await user.click(
+      screen.getByRole("button", { name: "Prepare anonymization" }),
+    );
+    await user.click(
+      screen.getByRole("button", { name: "Confirm anonymization" }),
+    );
+
+    expect(await screen.findByText(/Derived reports removed: 2/)).toBeVisible();
+    expect(card(ASSESSMENT_ID)).toHaveTextContent(
+      `Anonymized: ${anonymizedAt}`,
+    );
+    expect(card(OTHER_ID)).toHaveTextContent("Anonymized: No");
+    expect(screen.getByLabelText("Assessment ID")).toHaveValue(ASSESSMENT_ID);
+    expect(
+      screen.queryByRole("link", { name: "Download JSON export" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Confirm anonymization" }),
+    ).not.toBeInTheDocument();
+    expect(api.getPrivacyAssessments).toHaveBeenCalledOnce();
+  });
+
+  it("reconciles every retention result and clears affected selection artifacts", async () => {
+    const user = await selectResult();
+    await user.click(
+      screen.getByRole("button", { name: "Create JSON export" }),
+    );
+    await screen.findByRole("link", { name: "Download JSON export" });
+    await user.click(
+      screen.getByRole("button", { name: "Prepare anonymization" }),
+    );
+    await user.click(screen.getByRole("button", { name: "Run retention now" }));
+
+    expect(
+      await screen.findByText("Retention run anonymized 2 assessments."),
+    ).toBeInTheDocument();
+    expect(card(ASSESSMENT_ID)).toHaveTextContent("Anonymized: Yes");
+    expect(card(OTHER_ID)).toHaveTextContent("Anonymized: Yes");
+    expect(card(UNAFFECTED_ID)).toHaveTextContent("Anonymized: No");
+    expect(screen.getByLabelText("Assessment ID")).toHaveValue(ASSESSMENT_ID);
+    expect(
+      screen.queryByRole("link", { name: "Download JSON export" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Confirm anonymization" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("preserves unaffected selection artifacts when retention changes another row", async () => {
+    api.runPrivacyRetention.mockResolvedValue({
+      anonymized_assessment_ids: [OTHER_ID],
+      completed_at: anonymizedAt,
+    });
+    const user = await selectResult();
+    await user.click(
+      screen.getByRole("button", { name: "Create JSON export" }),
+    );
+    await screen.findByRole("link", { name: "Download JSON export" });
+    await user.click(
+      screen.getByRole("button", { name: "Prepare anonymization" }),
+    );
+    await user.click(screen.getByRole("button", { name: "Run retention now" }));
+
+    await screen.findByText("Retention run anonymized 1 assessments.");
+    expect(card(OTHER_ID)).toHaveTextContent("Anonymized: Yes");
+    expect(card(ASSESSMENT_ID)).toHaveTextContent("Anonymized: No");
+    expect(
+      screen.getByRole("link", { name: "Download JSON export" }),
+    ).toBeVisible();
+    expect(
+      screen.getByRole("button", { name: "Confirm anonymization" }),
+    ).toBeVisible();
+  });
+
+  it.each(["anonymization", "retention"])(
+    "does not report success or change lifecycle data after failed %s",
+    async (operation) => {
+      const user = await selectResult();
+      api.deleteCandidateData.mockRejectedValue(new Error("Mutation failed"));
+      api.runPrivacyRetention.mockRejectedValue(new Error("Mutation failed"));
+      if (operation === "anonymization") {
+        await user.click(
+          screen.getByRole("button", { name: "Prepare anonymization" }),
+        );
+        await user.click(
+          screen.getByRole("button", { name: "Confirm anonymization" }),
+        );
+      } else {
+        await user.click(
+          screen.getByRole("button", { name: "Run retention now" }),
+        );
+      }
+
+      expect(await screen.findByRole("alert")).toHaveTextContent(
+        "Mutation failed",
+      );
+      expect(card(ASSESSMENT_ID)).toHaveTextContent("Anonymized: No");
+      expect(card(OTHER_ID)).toHaveTextContent("Anonymized: No");
+      expect(
+        screen.queryByText(/was anonymized|Retention run anonymized/),
+      ).not.toBeInTheDocument();
+      expect(api.getPrivacyStatus).toHaveBeenCalledOnce();
+    },
+  );
+
+  it.each(["anonymization", "retention"])(
+    "keeps truthful %s success when status refresh fails",
+    async (operation) => {
+      const user = await selectResult();
+      api.getPrivacyStatus.mockRejectedValueOnce(
+        new Error("Status unavailable"),
+      );
+      if (operation === "anonymization") {
+        await user.click(
+          screen.getByRole("button", { name: "Prepare anonymization" }),
+        );
+        await user.click(
+          screen.getByRole("button", { name: "Confirm anonymization" }),
+        );
+      } else {
+        await user.click(
+          screen.getByRole("button", { name: "Run retention now" }),
+        );
+      }
+
+      expect(await screen.findByRole("alert")).toHaveTextContent(
+        "The operation completed, but privacy status and audit history could not be refreshed.",
+      );
+      expect(card(ASSESSMENT_ID)).not.toHaveTextContent("Anonymized: No");
+      expect(
+        screen.getByText(
+          operation === "anonymization"
+            ? /Derived reports removed: 2/
+            : "Retention run anonymized 2 assessments.",
+        ),
+      ).toBeInTheDocument();
+    },
+  );
+
+  it("locks discovery through a pending mutation and delayed status refresh", async () => {
+    const user = await selectResult();
+    let resolveRetention!: (value: {
+      anonymized_assessment_ids: string[];
+      completed_at: string;
+    }) => void;
+    let resolveStatus!: (value: PrivacyStatus) => void;
+    api.runPrivacyRetention.mockReturnValueOnce(
+      new Promise((resolve) => {
+        resolveRetention = resolve;
+      }),
+    );
+    api.getPrivacyStatus.mockReturnValueOnce(
+      new Promise((resolve) => {
+        resolveStatus = resolve;
+      }),
+    );
+    await user.click(
+      screen.getByRole("button", { name: "Prepare anonymization" }),
+    );
+    await user.click(screen.getByRole("button", { name: "Run retention now" }));
+    expect(
+      screen.getByRole("button", { name: "Find assessments" }),
+    ).toBeDisabled();
+    expect(
+      screen.getByRole("button", { name: "Confirm anonymization" }),
+    ).toBeDisabled();
+    expect(card(ASSESSMENT_ID)).toHaveTextContent("Anonymized: No");
+    resolveRetention({
+      anonymized_assessment_ids: [ASSESSMENT_ID, OTHER_ID],
+      completed_at: anonymizedAt,
+    });
+    await screen.findByText("Retention run anonymized 2 assessments.");
+    expect(card(ASSESSMENT_ID)).toHaveTextContent("Anonymized: Yes");
+    expect(card(OTHER_ID)).toHaveTextContent("Anonymized: Yes");
+    expect(
+      screen.getByRole("button", { name: "Find assessments" }),
+    ).toBeDisabled();
+    await user.click(screen.getByRole("button", { name: "Find assessments" }));
+    expect(api.getPrivacyAssessments).toHaveBeenCalledOnce();
+    await waitFor(() => expect(api.getPrivacyStatus).toHaveBeenCalledTimes(2));
+    resolveStatus(privacyStatus);
+    await waitFor(() =>
+      expect(
+        screen.getByRole("button", { name: "Find assessments" }),
+      ).toBeEnabled(),
+    );
+    expect(
+      screen.getByText("Retention run anonymized 2 assessments."),
+    ).toBeInTheDocument();
+    expect(card(ASSESSMENT_ID)).toHaveTextContent("Anonymized: Yes");
+  });
+
+  it.each(["anonymization", "retention"])(
+    "prevents delayed stale lookup data from reverting confirmed %s",
+    async (operation) => {
+      const user = await selectResult();
+      if (operation === "anonymization") {
+        await user.click(
+          screen.getByRole("button", { name: "Prepare anonymization" }),
+        );
+        await user.click(
+          screen.getByRole("button", { name: "Confirm anonymization" }),
+        );
+      } else {
+        await user.click(
+          screen.getByRole("button", { name: "Run retention now" }),
+        );
+      }
+      await waitFor(() =>
+        expect(
+          screen.getByRole("button", { name: "Find assessments" }),
+        ).toBeEnabled(),
+      );
+      let resolveLookup!: (value: typeof page) => void;
+      api.getPrivacyAssessments.mockReturnValueOnce(
+        new Promise((resolve) => {
+          resolveLookup = resolve;
+        }),
+      );
+      await user.click(
+        screen.getByRole("button", { name: "Find assessments" }),
+      );
+      expect(
+        screen.getByRole("button", { name: "Run retention now" }),
+      ).toBeDisabled();
+      expect(screen.getByLabelText("Reference ID")).toBeDisabled();
+      resolveLookup(page);
+      await screen.findByRole("button", {
+        name: `Select assessment ${ASSESSMENT_ID}`,
+      });
+      expect(card(ASSESSMENT_ID)).not.toHaveTextContent("Anonymized: No");
+      expect(card(OTHER_ID)).toHaveTextContent(
+        operation === "retention" ? "Anonymized: Yes" : "Anonymized: No",
+      );
+    },
+  );
+});
