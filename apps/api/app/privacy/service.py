@@ -11,7 +11,11 @@ from sqlalchemy import and_, delete, or_, select
 from sqlalchemy.orm import Session
 
 from app.auth.context import AuthorizationContext
-from app.auth.errors import organization_resource_not_found, resource_unavailable
+from app.auth.errors import (
+    organization_resource_not_found,
+    resource_unavailable,
+    resource_validation_failed,
+)
 from app.database.models import (
     AlignmentReport,
     AlignmentReportItem,
@@ -197,11 +201,50 @@ class PrivacyService:
         entity_id: UUID | None,
         event_type: str | None,
         before: UUID | None,
+        assessment_id: UUID | None = None,
     ) -> list[PrivacyAuditEventResponse]:
         """Return newest-first tenant audit history with optional exact filters."""
 
         organization_id = self._organization_id()
+        if assessment_id is not None and entity_id is not None:
+            raise resource_validation_failed(
+                code="invalid_privacy_audit_selector",
+                detail="Supply at most one assessment_id or entity_id.",
+            )
         statement = select(AuditEvent).where(AuditEvent.organization_id == organization_id)
+        if assessment_id is not None:
+            ownership = self._session.execute(
+                select(Assessment.invite_id, Assessment.consent_id)
+                .join(AssessmentInvite, AssessmentInvite.id == Assessment.invite_id)
+                .join(RoleProfile, RoleProfile.id == AssessmentInvite.role_profile_id)
+                .join(Role, Role.id == RoleProfile.role_id)
+                .where(Assessment.id == assessment_id, Role.organization_id == organization_id)
+            ).one_or_none()
+            if ownership is None:
+                raise organization_resource_not_found()
+            report_ids = select(AlignmentReport.id).where(
+                AlignmentReport.assessment_id == assessment_id
+            )
+            statement = statement.where(
+                or_(
+                    and_(
+                        AuditEvent.entity_type == "assessment",
+                        AuditEvent.entity_id == assessment_id,
+                    ),
+                    and_(
+                        AuditEvent.entity_type == "assessment_invite",
+                        AuditEvent.entity_id == ownership.invite_id,
+                    ),
+                    and_(
+                        AuditEvent.entity_type == "candidate_consent",
+                        AuditEvent.entity_id == ownership.consent_id,
+                    ),
+                    and_(
+                        AuditEvent.entity_type == "alignment_report",
+                        AuditEvent.entity_id.in_(report_ids),
+                    ),
+                )
+            )
         if entity_id is not None:
             statement = statement.where(AuditEvent.entity_id == entity_id)
         if event_type is not None:
@@ -211,6 +254,8 @@ class PrivacyService:
                 AuditEvent.organization_id == organization_id,
                 AuditEvent.id == before,
             )
+            if assessment_id is not None:
+                cursor_statement = statement.where(AuditEvent.id == before)
             cursor = self._session.scalar(cursor_statement)
             if cursor is None:
                 raise organization_resource_not_found()

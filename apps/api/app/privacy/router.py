@@ -101,6 +101,7 @@ def privacy_status(
 @audited("privacy.audit_history_read", "user")
 def privacy_audit_events(
     request: Request,
+    response: Response,
     context: AdminContext,
     session: DatabaseSession,
     limit: Annotated[int, Query(ge=1, le=200)] = 50,
@@ -108,15 +109,18 @@ def privacy_audit_events(
     entity_id: UUID | None = None,
     event_type: Annotated[str | None, Query(min_length=1, max_length=120)] = None,
     before: UUID | None = None,
+    assessment_id: UUID | None = None,
 ) -> list[PrivacyAuditEventResponse]:
     """Read immutable organization audit history with bounded filtering."""
 
+    response.headers["Cache-Control"] = "no-store"
     return _service(request, session, context).list_audit_events(
         limit=limit,
         offset=offset,
         entity_id=entity_id,
         event_type=event_type,
         before=before,
+        assessment_id=assessment_id,
     )
 
 
