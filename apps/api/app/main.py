@@ -44,6 +44,7 @@ from app.roles.router import router as roles_router
 from app.runtime.config import RuntimeSettings
 from app.runtime.health import router as readiness_router
 from app.runtime.middleware import RequestBodyLimitMiddleware
+from app.runtime.telemetry import CompletionTelemetryMiddleware
 from app.security import SecurityMiddleware, unexpected_problem_handler
 
 
@@ -123,6 +124,7 @@ def create_app(
     application.add_middleware(AuditMiddleware, session_factory=resolved_session_factory)
     application.add_middleware(RequestBodyLimitMiddleware, settings=resolved_runtime_settings)
     application.add_middleware(SecurityMiddleware)
+    application.add_middleware(CompletionTelemetryMiddleware, routes=application.routes)
     application.include_router(readiness_router)
     application.include_router(local_login_router)
     application.include_router(roles_router)

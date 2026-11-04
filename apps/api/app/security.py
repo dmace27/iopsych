@@ -9,6 +9,7 @@ from starlette.types import ASGIApp
 
 from app.auth.errors import access_problem_handler, rate_limit_exceeded
 from app.invitations.rate_limit import InMemoryRateLimiter
+from app.runtime.telemetry import correlation_headers
 
 
 class SecurityMiddleware(BaseHTTPMiddleware):
@@ -77,6 +78,6 @@ async def unexpected_problem_handler(request: Request, exc: Exception) -> JSONRe
             "code": "internal_service_error",
             "detail": "The request could not be completed. Try again later.",
         },
-        headers=security_headers(request.url.path),
+        headers={**security_headers(request.url.path), **correlation_headers(request.scope)},
         media_type="application/problem+json",
     )
