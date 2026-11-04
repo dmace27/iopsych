@@ -73,7 +73,8 @@ def account_test_url(raw: str) -> URL:
     if (
         url.drivername != "postgresql+psycopg"
         or url.host != "127.0.0.1"
-        or (url.port, url.database) not in {(5594, "iopsych_access"), (5606, "iopsych_reconcile")}
+        or (url.port, url.database)
+        not in {(5594, "iopsych_access"), (5606, "iopsych_reconcile"), (5620, "iopsych_final")}
         or url.query
     ):
         raise ValueError(

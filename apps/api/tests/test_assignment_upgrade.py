@@ -36,6 +36,7 @@ from tests.test_database_migrations import alembic_config
 from tests.test_reports import responses
 
 APPROVED_UPGRADE_DATABASES = {
+    (5620, "iopsych_final"),
     (5550, "iopsych_6c"),
     (5571, "iopsych_regression"),
     (5606, "iopsych_reconcile"),
