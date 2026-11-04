@@ -8,6 +8,7 @@ from fastapi.exceptions import RequestValidationError
 from pydantic import BaseModel
 from sqlalchemy.orm import Session, sessionmaker
 
+from app.accounts.router import router as accounts_router
 from app.audit import AuditMiddleware, audited
 from app.auth.config import AuthenticationSettings
 from app.auth.context import AuthorizationContext
@@ -127,6 +128,7 @@ def create_app(
     application.add_middleware(CompletionTelemetryMiddleware, routes=application.routes)
     application.include_router(readiness_router)
     application.include_router(local_login_router)
+    application.include_router(accounts_router)
     application.include_router(roles_router)
     application.include_router(invitations_router)
     application.include_router(reports_router)

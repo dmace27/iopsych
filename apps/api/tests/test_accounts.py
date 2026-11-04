@@ -10,7 +10,6 @@ from httpx import ASGITransport, AsyncClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session, sessionmaker
 
-from app.accounts.router import router
 from app.database.models import AuditEvent, InternalUserRole, User
 from app.database.seed import ALPHA_ORGANIZATION_ID, ALPHA_USER_ID, BEACON_ORGANIZATION_ID
 from tests.test_authorization import (
@@ -28,7 +27,6 @@ ADMIN = auth_header("provider-admin", ALPHA_ORGANIZATION_ID)
 
 @pytest.fixture
 async def account_client(auth_app: FastAPI) -> AsyncGenerator[AsyncClient]:
-    auth_app.include_router(router)
     async with AsyncClient(transport=ASGITransport(app=auth_app), base_url="http://test") as client:
         yield client
 
