@@ -90,7 +90,8 @@ it("requires confirmation and retries unknown outcomes with the identical reques
     await screen.findByText(/Replacement outcome is unknown/),
   ).toBeVisible();
   expect(api.reissueInvitation).toHaveBeenCalledTimes(1);
-  await userEvent.click(screen.getByText("Retry same reissue request"));
+  const retryButton = screen.getByText("Retry same reissue request");
+  await userEvent.click(retryButton);
   expect(api.reissueInvitation.mock.calls[0]).toEqual(
     api.reissueInvitation.mock.calls[1],
   );
@@ -99,6 +100,13 @@ it("requires confirmation and retries unknown outcomes with the identical reques
   );
   expect(confirm).toHaveBeenCalledTimes(2);
   expect(onReissued).toHaveBeenCalledTimes(1);
+  expect(onReissued).toHaveBeenCalledWith(
+    { ...invitation, id: "replacement" },
+    retryButton,
+  );
+  expect(screen.getByRole("region")).toHaveAccessibleName(
+    `Provider delivery for ${invitation.email}, invitation ${invitation.id}`,
+  );
 });
 it.each([401, 403, 404, 409, 422, 429])(
   "retains an unknown outcome after a same-key retry returns %s",

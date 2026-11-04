@@ -378,10 +378,10 @@ function Invitations({ roleId }: { roleId: string }) {
                     disabled={busy || issuing}
                     archived={archived}
                     onBusyChange={setBusy}
-                    onReissued={(replacement) => {
+                    onReissued={(replacement, origin) => {
                       focusAfterUpdate.current = {
                         id: replacement.id,
-                        origin: document.activeElement,
+                        origin,
                       };
                       setItems((rows) => [
                         replacement,

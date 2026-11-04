@@ -44,7 +44,7 @@ export function ProviderDelivery({
   invitation: Invitation;
   disabled: boolean;
   archived: boolean;
-  onReissued: (replacement: Invitation) => void;
+  onReissued: (replacement: Invitation, origin: Element | null) => void;
   onBusyChange: (busy: boolean) => void;
 }) {
   const [delivery, setDelivery] = useState<ProviderInvitationDelivery | null>(
@@ -87,6 +87,7 @@ export function ProviderDelivery({
     )
       return;
     requestId.current ??= crypto.randomUUID();
+    const origin = document.activeElement;
     lock.current = true;
     setBusy(true);
     onBusyChange(true);
@@ -99,7 +100,7 @@ export function ProviderDelivery({
       setUncertain(false);
       setDelivery(null);
       requestId.current = null;
-      onReissued(replacement);
+      onReissued(replacement, origin);
     } catch (error) {
       const unknown =
         uncertain ||
@@ -127,7 +128,7 @@ export function ProviderDelivery({
     (delivery?.status === "failed" || delivery?.status === "reissue_required");
   return (
     <section
-      aria-label={`Provider delivery for ${invitation.email}`}
+      aria-label={`Provider delivery for ${invitation.email}, invitation ${invitation.id}`}
       className="space-y-2 text-sm"
     >
       <button
