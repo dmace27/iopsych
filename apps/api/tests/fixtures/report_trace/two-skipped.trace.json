@@ -1,0 +1,438 @@
+{
+  "trace_version": "1.0.0",
+  "report_id": "00000000-0000-4000-8000-000000000001",
+  "assessment_id": "00000000-0000-4000-8000-000000000002",
+  "role_profile_id": "00000000-0000-4000-8000-000000000003",
+  "role_profile_version": 1,
+  "algorithm_version": "1.0.0",
+  "assessment_definition_id": "work-preferences-pilot",
+  "assessment_definition_version": "1.0.0",
+  "scoring_version": "1.0.0",
+  "definition_sha256": "021233ca4dab9c86b87aeabca88f503bf7c70fd0b0d324c64e788b620aeb6e3c",
+  "source": "stored_assessment",
+  "scoring": {
+    "version": "1.0.0",
+    "choice_weights": {
+      "most_like": 1,
+      "least_like": -1
+    },
+    "rating_thresholds": [
+      {
+        "rating": 1,
+        "minimum_raw_score": -4,
+        "maximum_raw_score": -3
+      },
+      {
+        "rating": 2,
+        "minimum_raw_score": -2,
+        "maximum_raw_score": -1
+      },
+      {
+        "rating": 3,
+        "minimum_raw_score": 0,
+        "maximum_raw_score": 0
+      },
+      {
+        "rating": 4,
+        "minimum_raw_score": 1,
+        "maximum_raw_score": 2
+      },
+      {
+        "rating": 5,
+        "minimum_raw_score": 3,
+        "maximum_raw_score": 4
+      }
+    ],
+    "candidate_confidence": {
+      "high": {
+        "level": "high",
+        "minimum_skipped_items": 0,
+        "maximum_skipped_items": 0
+      },
+      "medium": {
+        "level": "medium",
+        "minimum_skipped_items": 1,
+        "maximum_skipped_items": 1
+      },
+      "low": {
+        "level": "low",
+        "minimum_skipped_items": 2,
+        "maximum_skipped_items": null
+      }
+    }
+  },
+  "constructs": [
+    {
+      "construct_key": "autonomy",
+      "items": [
+        {
+          "block_id": "block-1",
+          "block_position": 1,
+          "item_id": "b1-autonomy",
+          "statement": "I prefer to decide how I organize my workday.",
+          "choice": "block_skipped",
+          "most_like_item_id": null,
+          "least_like_item_id": null,
+          "contribution": 0
+        },
+        {
+          "block_id": "block-2",
+          "block_position": 2,
+          "item_id": "b2-autonomy",
+          "statement": "I like choosing my own approach to a clear outcome.",
+          "choice": "block_skipped",
+          "most_like_item_id": null,
+          "least_like_item_id": null,
+          "contribution": 0
+        },
+        {
+          "block_id": "block-4",
+          "block_position": 4,
+          "item_id": "b4-autonomy",
+          "statement": "I work well when trusted to make day-to-day decisions.",
+          "choice": "most_like",
+          "most_like_item_id": "b4-autonomy",
+          "least_like_item_id": "b4-collaboration",
+          "contribution": 1
+        },
+        {
+          "block_id": "block-5",
+          "block_position": 5,
+          "item_id": "b5-autonomy",
+          "statement": "I prefer room to set the sequence of my tasks.",
+          "choice": "not_selected",
+          "most_like_item_id": "b5-structure",
+          "least_like_item_id": "b5-pace",
+          "contribution": 0
+        }
+      ],
+      "rating_threshold": {
+        "rating": 4,
+        "minimum_raw_score": 1,
+        "maximum_raw_score": 2
+      },
+      "confidence_rule": {
+        "level": "low",
+        "minimum_skipped_items": 2,
+        "maximum_skipped_items": null
+      },
+      "question_selection": {
+        "algorithm_version": "1.0.0",
+        "construct_key": "autonomy",
+        "classification": "insufficient_evidence",
+        "primary_question_id": "autonomy.insufficient_evidence.primary.v1",
+        "follow_up_question_id": "autonomy.insufficient_evidence.follow-up.v1"
+      }
+    },
+    {
+      "construct_key": "structure",
+      "items": [
+        {
+          "block_id": "block-1",
+          "block_position": 1,
+          "item_id": "b1-structure",
+          "statement": "I do my best work when goals and next steps are explicit.",
+          "choice": "block_skipped",
+          "most_like_item_id": null,
+          "least_like_item_id": null,
+          "contribution": 0
+        },
+        {
+          "block_id": "block-3",
+          "block_position": 3,
+          "item_id": "b3-structure",
+          "statement": "I prefer work with dependable routines and expectations.",
+          "choice": "most_like",
+          "most_like_item_id": "b3-structure",
+          "least_like_item_id": "b3-collaboration",
+          "contribution": 1
+        },
+        {
+          "block_id": "block-5",
+          "block_position": 5,
+          "item_id": "b5-structure",
+          "statement": "I value clear processes for recurring work.",
+          "choice": "most_like",
+          "most_like_item_id": "b5-structure",
+          "least_like_item_id": "b5-pace",
+          "contribution": 1
+        },
+        {
+          "block_id": "block-6",
+          "block_position": 6,
+          "item_id": "b6-structure",
+          "statement": "I prefer knowing the criteria for a successful result up front.",
+          "choice": "not_selected",
+          "most_like_item_id": "b6-mastery",
+          "least_like_item_id": "b6-ambiguity",
+          "contribution": 0
+        }
+      ],
+      "rating_threshold": {
+        "rating": 4,
+        "minimum_raw_score": 1,
+        "maximum_raw_score": 2
+      },
+      "confidence_rule": {
+        "level": "medium",
+        "minimum_skipped_items": 1,
+        "maximum_skipped_items": 1
+      },
+      "question_selection": {
+        "algorithm_version": "1.0.0",
+        "construct_key": "structure",
+        "classification": "aligned",
+        "primary_question_id": "structure.aligned.primary.v1",
+        "follow_up_question_id": "structure.aligned.follow-up.v1"
+      }
+    },
+    {
+      "construct_key": "ambiguity",
+      "items": [
+        {
+          "block_id": "block-2",
+          "block_position": 2,
+          "item_id": "b2-ambiguity",
+          "statement": "I can move work forward before every detail is known.",
+          "choice": "block_skipped",
+          "most_like_item_id": null,
+          "least_like_item_id": null,
+          "contribution": 0
+        },
+        {
+          "block_id": "block-3",
+          "block_position": 3,
+          "item_id": "b3-ambiguity",
+          "statement": "I am comfortable testing a direction when requirements may change.",
+          "choice": "not_selected",
+          "most_like_item_id": "b3-structure",
+          "least_like_item_id": "b3-collaboration",
+          "contribution": 0
+        },
+        {
+          "block_id": "block-4",
+          "block_position": 4,
+          "item_id": "b4-ambiguity",
+          "statement": "I can choose a useful next step when the path is unclear.",
+          "choice": "not_selected",
+          "most_like_item_id": "b4-autonomy",
+          "least_like_item_id": "b4-collaboration",
+          "contribution": 0
+        },
+        {
+          "block_id": "block-6",
+          "block_position": 6,
+          "item_id": "b6-ambiguity",
+          "statement": "I can act on partial information and adjust as I learn.",
+          "choice": "least_like",
+          "most_like_item_id": "b6-mastery",
+          "least_like_item_id": "b6-ambiguity",
+          "contribution": -1
+        }
+      ],
+      "rating_threshold": {
+        "rating": 2,
+        "minimum_raw_score": -2,
+        "maximum_raw_score": -1
+      },
+      "confidence_rule": {
+        "level": "medium",
+        "minimum_skipped_items": 1,
+        "maximum_skipped_items": 1
+      },
+      "question_selection": {
+        "algorithm_version": "1.0.0",
+        "construct_key": "ambiguity",
+        "classification": "aligned",
+        "primary_question_id": "ambiguity.aligned.primary.v1",
+        "follow_up_question_id": "ambiguity.aligned.follow-up.v1"
+      }
+    },
+    {
+      "construct_key": "collaboration",
+      "items": [
+        {
+          "block_id": "block-1",
+          "block_position": 1,
+          "item_id": "b1-collaboration",
+          "statement": "I gain energy from developing ideas with teammates.",
+          "choice": "block_skipped",
+          "most_like_item_id": null,
+          "least_like_item_id": null,
+          "contribution": 0
+        },
+        {
+          "block_id": "block-3",
+          "block_position": 3,
+          "item_id": "b3-collaboration",
+          "statement": "I like checking ideas with others as work develops.",
+          "choice": "least_like",
+          "most_like_item_id": "b3-structure",
+          "least_like_item_id": "b3-collaboration",
+          "contribution": -1
+        },
+        {
+          "block_id": "block-4",
+          "block_position": 4,
+          "item_id": "b4-collaboration",
+          "statement": "I prefer solving problems through active discussion with others.",
+          "choice": "least_like",
+          "most_like_item_id": "b4-autonomy",
+          "least_like_item_id": "b4-collaboration",
+          "contribution": -1
+        },
+        {
+          "block_id": "block-5",
+          "block_position": 5,
+          "item_id": "b5-collaboration",
+          "statement": "I enjoy coordinating my work closely with a team.",
+          "choice": "not_selected",
+          "most_like_item_id": "b5-structure",
+          "least_like_item_id": "b5-pace",
+          "contribution": 0
+        }
+      ],
+      "rating_threshold": {
+        "rating": 2,
+        "minimum_raw_score": -2,
+        "maximum_raw_score": -1
+      },
+      "confidence_rule": {
+        "level": "medium",
+        "minimum_skipped_items": 1,
+        "maximum_skipped_items": 1
+      },
+      "question_selection": {
+        "algorithm_version": "1.0.0",
+        "construct_key": "collaboration",
+        "classification": "aligned",
+        "primary_question_id": "collaboration.aligned.primary.v1",
+        "follow_up_question_id": "collaboration.aligned.follow-up.v1"
+      }
+    },
+    {
+      "construct_key": "mastery",
+      "items": [
+        {
+          "block_id": "block-1",
+          "block_position": 1,
+          "item_id": "b1-mastery",
+          "statement": "I enjoy breaking down a technically difficult problem.",
+          "choice": "block_skipped",
+          "most_like_item_id": null,
+          "least_like_item_id": null,
+          "contribution": 0
+        },
+        {
+          "block_id": "block-2",
+          "block_position": 2,
+          "item_id": "b2-mastery",
+          "statement": "I am energized by learning a skill in depth.",
+          "choice": "block_skipped",
+          "most_like_item_id": null,
+          "least_like_item_id": null,
+          "contribution": 0
+        },
+        {
+          "block_id": "block-4",
+          "block_position": 4,
+          "item_id": "b4-mastery",
+          "statement": "I like spending focused time improving a difficult solution.",
+          "choice": "not_selected",
+          "most_like_item_id": "b4-autonomy",
+          "least_like_item_id": "b4-collaboration",
+          "contribution": 0
+        },
+        {
+          "block_id": "block-6",
+          "block_position": 6,
+          "item_id": "b6-mastery",
+          "statement": "I seek work that stretches my technical understanding.",
+          "choice": "most_like",
+          "most_like_item_id": "b6-mastery",
+          "least_like_item_id": "b6-ambiguity",
+          "contribution": 1
+        }
+      ],
+      "rating_threshold": {
+        "rating": 4,
+        "minimum_raw_score": 1,
+        "maximum_raw_score": 2
+      },
+      "confidence_rule": {
+        "level": "low",
+        "minimum_skipped_items": 2,
+        "maximum_skipped_items": null
+      },
+      "question_selection": {
+        "algorithm_version": "1.0.0",
+        "construct_key": "mastery",
+        "classification": "insufficient_evidence",
+        "primary_question_id": "mastery.insufficient_evidence.primary.v1",
+        "follow_up_question_id": "mastery.insufficient_evidence.follow-up.v1"
+      }
+    },
+    {
+      "construct_key": "pace",
+      "items": [
+        {
+          "block_id": "block-2",
+          "block_position": 2,
+          "item_id": "b2-pace",
+          "statement": "I am comfortable shifting between priorities during the day.",
+          "choice": "block_skipped",
+          "most_like_item_id": null,
+          "least_like_item_id": null,
+          "contribution": 0
+        },
+        {
+          "block_id": "block-3",
+          "block_position": 3,
+          "item_id": "b3-pace",
+          "statement": "I enjoy days that include several different kinds of work.",
+          "choice": "not_selected",
+          "most_like_item_id": "b3-structure",
+          "least_like_item_id": "b3-collaboration",
+          "contribution": 0
+        },
+        {
+          "block_id": "block-5",
+          "block_position": 5,
+          "item_id": "b5-pace",
+          "statement": "I stay effective when urgent work changes the plan.",
+          "choice": "least_like",
+          "most_like_item_id": "b5-structure",
+          "least_like_item_id": "b5-pace",
+          "contribution": -1
+        },
+        {
+          "block_id": "block-6",
+          "block_position": 6,
+          "item_id": "b6-pace",
+          "statement": "I am comfortable maintaining momentum across changing tasks.",
+          "choice": "not_selected",
+          "most_like_item_id": "b6-mastery",
+          "least_like_item_id": "b6-ambiguity",
+          "contribution": 0
+        }
+      ],
+      "rating_threshold": {
+        "rating": 2,
+        "minimum_raw_score": -2,
+        "maximum_raw_score": -1
+      },
+      "confidence_rule": {
+        "level": "medium",
+        "minimum_skipped_items": 1,
+        "maximum_skipped_items": 1
+      },
+      "question_selection": {
+        "algorithm_version": "1.0.0",
+        "construct_key": "pace",
+        "classification": "aligned",
+        "primary_question_id": "pace.aligned.primary.v1",
+        "follow_up_question_id": "pace.aligned.follow-up.v1"
+      }
+    }
+  ]
+}
