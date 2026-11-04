@@ -588,7 +588,7 @@ function ProfileEditor({
             key={construct.key}
           >
             <legend className="px-1 text-lg font-bold text-slate-950">
-              <span className="mr-2 text-sm text-slate-400">{index + 1}/6</span>
+              <span className="mr-2 text-sm text-slate-600">{index + 1}/6</span>
               {definition.label}
             </legend>
             <p
@@ -735,7 +735,7 @@ function ReadonlyProfile({ profile }: { profile: RoleProfile }) {
           >
             <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
               <div>
-                <p className="text-xs font-bold uppercase tracking-[0.14em] text-slate-400">
+                <p className="text-xs font-bold uppercase tracking-[0.14em] text-slate-600">
                   Construct {index + 1} of 6
                 </p>
                 <h3
