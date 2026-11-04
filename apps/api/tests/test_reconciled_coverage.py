@@ -1,13 +1,23 @@
 """Reconciled invitation boundaries reject malformed input without side effects."""
 
+from datetime import UTC, datetime, timedelta
 from uuid import uuid4
 
 import pytest
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 from sqlalchemy.orm.attributes import set_committed_value
 
 from app.auth.errors import AccessProblemError
+from app.database.models import (
+    AssessmentInvite,
+    AssessmentInviteStatus,
+    AuditEvent,
+    InvitationDeliveryStatus,
+    ProviderInvitationDelivery,
+)
 from app.database.seed import ALPHA_PROFILE_ID, ALPHA_ROLE_ID
+from app.invitations.outbox import stop_delivery
 from app.invitations.schemas import InvitationCreateRequest
 from app.invitations.service import InternalInvitationService, read_notice_snapshot
 from app.invitations.tokens import InviteTokenCodec
@@ -40,6 +50,65 @@ def test_provider_rejects_invalid_idempotency_key_before_writes(
     assert snapshot(seeded_session) == before
     assert not seeded_session.new and not seeded_session.dirty
     assert delivery.messages == []
+
+
+@pytest.mark.parametrize("status", [AssessmentInviteStatus.REVOKED, AssessmentInviteStatus.EXPIRED])
+def test_stopping_delivery_preserves_terminal_invitation_history(
+    seeded_session: Session, status: AssessmentInviteStatus
+) -> None:
+    adapter = RecordingDelivery()
+    service = InternalInvitationService(
+        seeded_session, context(), invitation_settings(), InviteTokenCodec(INVITE_SECRET), adapter
+    )
+    invite = service.create(
+        ALPHA_ROLE_ID,
+        InvitationCreateRequest(
+            role_profile_id=ALPHA_PROFILE_ID,
+            email="synthetic@example.invalid",
+            request_id=uuid4(),
+        ),
+    )
+    delivery = seeded_session.scalar(
+        select(ProviderInvitationDelivery).where(ProviderInvitationDelivery.invite_id == invite.id)
+    )
+    assert delivery is not None and delivery.encrypted_message is not None
+    original_revoked_at = datetime.now(UTC) - timedelta(hours=1)
+    invite.status = status
+    invite.revoked_at = original_revoked_at if status is AssessmentInviteStatus.REVOKED else None
+    seeded_session.commit()
+    invitation_id, delivery_id = invite.id, delivery.id
+    stop_delivery(
+        seeded_session,
+        delivery,
+        invite,
+        InvitationDeliveryStatus.REISSUE_REQUIRED,
+        "retry_window_closed",
+        datetime.now(UTC),
+    )
+    seeded_session.commit()
+    seeded_session.expire_all()
+    preserved = seeded_session.get(AssessmentInvite, invitation_id)
+    stopped = seeded_session.get(ProviderInvitationDelivery, delivery_id)
+    assert preserved is not None and preserved.status is status
+    assert preserved.revoked_at == (
+        original_revoked_at if status is AssessmentInviteStatus.REVOKED else None
+    )
+    assert stopped is not None and stopped.status is InvitationDeliveryStatus.REISSUE_REQUIRED
+    assert stopped.encrypted_message is None
+    assert stopped.last_error_code == "retry_window_closed"
+    audit = seeded_session.scalar(
+        select(AuditEvent).where(
+            AuditEvent.entity_id == invitation_id,
+            AuditEvent.event_type == "invitation_delivery.stopped",
+        )
+    )
+    assert audit is not None
+    assert audit.metadata_json == {
+        "delivery_id": str(delivery_id),
+        "status": "reissue_required",
+        "attempt_count": 0,
+    }
+    assert adapter.messages == []
 
 
 def test_provider_requires_request_id_without_header(seeded_session: Session) -> None:
