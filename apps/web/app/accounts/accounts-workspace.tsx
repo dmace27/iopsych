@@ -13,8 +13,7 @@ import type {
 import type { CurrentUser } from "../../lib/contracts";
 import { signInHref } from "../../lib/safe-return-to";
 
-const button =
-  "action-secondary min-h-11 rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-semibold disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700";
+const button = "action-secondary disabled:opacity-50";
 const roles = ["admin", "recruiter", "hiring_manager"] as const;
 const roleName = (role: string) => role.replaceAll("_", " ");
 type Pending = { account: Account; update: AccountUpdate };
@@ -147,29 +146,34 @@ export function AccountsWorkspace() {
   return (
     <main
       id="main-content"
-      className="workspace-shell mx-auto max-w-6xl space-y-5 px-5 py-8 text-slate-900 sm:px-8"
+      className="workspace-shell admin-workspace mx-auto max-w-6xl space-y-5 px-5 py-8 text-slate-900 sm:px-8"
     >
-      <h1
-        ref={heading}
-        tabIndex={-1}
-        className="workspace-title text-2xl font-semibold text-slate-950 focus-visible:outline-2 focus-visible:outline-teal-700"
-      >
-        Accounts
-      </h1>
-      <p className="text-slate-600">
-        Manage existing accounts in your organization. Each account belongs to
-        one organization; organization switching is unavailable.
-      </p>
+      <header className="admin-header border-b border-[var(--border)] pb-6">
+        <p className="mb-2 text-xs font-medium text-[var(--muted)]">
+          Workspace / Access
+        </p>
+        <h1
+          ref={heading}
+          tabIndex={-1}
+          className="workspace-title text-2xl font-semibold text-slate-950 focus-visible:outline-2 focus-visible:outline-[var(--accent)]"
+        >
+          Accounts
+        </h1>
+        <p className="mt-3 max-w-3xl text-sm leading-6 text-[var(--muted)]">
+          Manage existing accounts in your organization. Each account belongs to
+          one organization; organization switching is unavailable.
+        </p>
+      </header>
       <div
         ref={feedback}
         tabIndex={-1}
-        className="rounded-md focus-visible:outline-2 focus-visible:outline-teal-700"
+        className="rounded-md focus-visible:outline-2 focus-visible:outline-[var(--accent)]"
       >
         {error ? <p role="alert">{error.message}</p> : null}
         {notice ? <p role="status">{notice}</p> : null}
         {expired ? (
           <Link
-            className="inline-flex min-h-11 items-center text-teal-700 underline focus-visible:outline-2 focus-visible:outline-teal-700"
+            className="inline-flex min-h-11 items-center text-[var(--accent)] underline focus-visible:outline-2 focus-visible:outline-[var(--accent)]"
             href={signInHref("/accounts")}
           >
             Sign in to continue
@@ -192,20 +196,21 @@ export function AccountsWorkspace() {
           Refresh accounts
         </button>
       ) : null}
-      {page && user?.role === "admin" && !expired && !denied ? (
-        <ProvisionAccount
-          disabled={saving || !!pending || loading}
-          onCreated={() => void load()}
-        />
-      ) : null}
       {page && !expired && !denied ? (
         <>
           <p className="text-sm text-slate-600">
             Up to 25 accounts per page. Your own account is read-only.
           </p>
           {page.items.length === 0 ? <p>No accounts on this page.</p> : null}
+          <div
+            className="admin-list-heading hidden grid-cols-[minmax(12rem,1fr)_minmax(0,2fr)] gap-6 border-b border-[var(--border)] px-4 py-3 text-xs font-medium text-[var(--muted)] lg:grid"
+            aria-hidden="true"
+          >
+            <span>Account</span>
+            <span>Permissions and access</span>
+          </div>
           <ul
-            className="record-list surface divide-y divide-slate-200 border-y border-slate-200 bg-white"
+            className="record-list admin-accounts-list divide-y divide-[var(--border)] bg-white"
             aria-label="Organization accounts"
           >
             {page.items.map((account) => (
@@ -218,7 +223,10 @@ export function AccountsWorkspace() {
               />
             ))}
           </ul>
-          <nav aria-label="Account pages" className="flex flex-wrap gap-3">
+          <nav
+            aria-label="Account pages"
+            className="admin-pagination flex flex-wrap justify-end gap-2"
+          >
             <button
               className={button}
               disabled={!history.length || saving || !!pending || needsRefresh}
@@ -240,12 +248,18 @@ export function AccountsWorkspace() {
           </nav>
         </>
       ) : null}
+      {page && user?.role === "admin" && !expired && !denied ? (
+        <ProvisionAccount
+          disabled={saving || !!pending || loading}
+          onCreated={() => void load()}
+        />
+      ) : null}
       {pending ? (
         <section
           role="alertdialog"
           aria-labelledby="account-confirm-title"
           aria-describedby="account-confirm-detail"
-          className="surface space-y-3 border-l-4 border-teal-700 bg-white p-4 [overflow-wrap:anywhere]"
+          className="admin-confirmation space-y-3 rounded-lg border border-[var(--border)] bg-[var(--canvas)] p-5 [overflow-wrap:anywhere]"
           onKeyDown={(event) => {
             if (event.key === "Escape" && !saving) dismiss();
           }}
@@ -272,7 +286,7 @@ export function AccountsWorkspace() {
               Cancel
             </button>
             <button
-              className="action-primary min-h-11 rounded-md bg-teal-700 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700"
+              className="action-primary disabled:opacity-50"
               disabled={saving}
               onClick={() => void confirm()}
             >
@@ -302,16 +316,31 @@ function AccountRow({
 }) {
   const [role, setRole] = useState(account.role);
   return (
-    <li className="record-row grid gap-3 px-4 py-4 lg:grid-cols-[minmax(12rem,1fr)_minmax(0,2fr)] lg:gap-x-6">
-      <div className="min-w-0 space-y-1">
-        <h2 className="font-semibold [overflow-wrap:anywhere]">
-          {account.name}
-          {self ? " (you)" : ""}
-        </h2>
-        <p className="break-all text-sm">{account.email}</p>
-        <p className="text-sm text-slate-600">
-          {roleName(account.role)} · {account.is_active ? "Active" : "Inactive"}
-        </p>
+    <li className="record-row admin-account-row grid gap-4 px-4 py-5 lg:grid-cols-[minmax(12rem,1fr)_minmax(0,2fr)] lg:items-center lg:gap-x-6">
+      <div className="admin-account-identity flex min-w-0 items-start gap-3">
+        <span
+          aria-hidden="true"
+          className="grid size-9 shrink-0 place-items-center rounded-lg bg-[var(--canvas)] text-xs font-medium text-[var(--muted)]"
+        >
+          {account.name
+            .split(" ")
+            .map((part) => part[0])
+            .slice(0, 2)
+            .join("")}
+        </span>
+        <div className="min-w-0 space-y-1">
+          <h2 className="font-semibold [overflow-wrap:anywhere]">
+            {account.name}
+            {self ? " (you)" : ""}
+          </h2>
+          <p className="break-all text-sm text-[var(--muted)]">
+            {account.email}
+          </p>
+          <p className="text-sm text-slate-600">
+            {roleName(account.role)} ·{" "}
+            {account.is_active ? "Active" : "Inactive"}
+          </p>
+        </div>
       </div>
       {self ? (
         <p className="text-sm">
@@ -319,17 +348,14 @@ function AccountRow({
           access.
         </p>
       ) : (
-        <div className="flex min-w-0 flex-wrap items-end gap-3">
+        <div className="admin-account-actions flex min-w-0 flex-wrap items-end gap-2">
           <div className="w-full sm:w-auto">
-            <label
-              className="field-label mb-1 block text-sm font-medium [overflow-wrap:anywhere]"
-              htmlFor={`role-${account.id}`}
-            >
+            <label className="sr-only" htmlFor={`role-${account.id}`}>
               Role for {account.name}
             </label>
             <select
               id={`role-${account.id}`}
-              className="min-h-11 w-full rounded-md border border-slate-300 bg-white p-2 text-sm focus-visible:outline-2 focus-visible:outline-teal-700"
+              className="field-control w-full text-sm"
               value={role}
               disabled={disabled}
               onChange={(event) =>

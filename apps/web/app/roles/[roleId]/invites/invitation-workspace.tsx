@@ -82,7 +82,7 @@ function failure(error: unknown): Failure {
   };
 }
 const button =
-  "action-secondary min-h-11 rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700";
+  "action-secondary min-h-11 rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)]";
 export function InvitationWorkspace({ roleId }: { roleId: string }) {
   return <Invitations key={roleId} roleId={roleId} />;
 }
@@ -213,23 +213,25 @@ function Invitations({ roleId }: { roleId: string }) {
   return (
     <main
       id="main-content"
-      className="workspace-shell mx-auto max-w-6xl space-y-5 px-5 py-8 text-slate-900 sm:px-8"
+      className="workspace-shell invite-workspace mx-auto max-w-6xl space-y-5 px-5 py-8 text-slate-900 sm:px-8"
     >
       <Link
-        className="inline-flex min-h-11 items-center text-sm font-medium text-teal-700 underline focus-visible:outline-2 focus-visible:outline-teal-700"
+        className="inline-flex min-h-11 items-center text-sm font-medium text-[var(--muted)] hover:text-[var(--text)]"
         href={`/roles/${roleId}`}
       >
         ← Back to role profile
       </Link>
-      <h1 className="workspace-title text-2xl font-semibold [overflow-wrap:anywhere]">
-        {title ? `${title}: invitations` : "Invitations"}
-      </h1>
-      <p className="max-w-3xl text-sm leading-6 text-slate-600">
-        Invitation history across all role profile versions, newest first.
-        Invitation state and delivery state are shown separately. Recipient
-        receipt and assessment submission are not reported here. Expiry dates do
-        not change the displayed invitation state.
-      </p>
+      <header className="invite-header border-b border-[var(--border)] pb-6">
+        <h1 className="workspace-title text-2xl font-semibold [overflow-wrap:anywhere]">
+          {title ? `${title}: invitations` : "Invitations"}
+        </h1>
+        <p className="mt-3 max-w-3xl text-sm leading-6 text-[var(--muted)]">
+          Invitation history across all role profile versions, newest first.
+          Invitation state and delivery state are shown separately. Recipient
+          receipt and assessment submission are not reported here. Expiry dates
+          do not change the displayed invitation state.
+        </p>
+      </header>
       <div
         ref={status}
         role="status"
@@ -248,7 +250,7 @@ function Invitations({ roleId }: { roleId: string }) {
           <p>{error.message}</p>
           {error.status === 401 ? (
             <Link
-              className="inline-flex min-h-11 items-center text-teal-700 underline focus-visible:outline-2 focus-visible:outline-teal-700"
+              className="inline-flex min-h-11 items-center text-[var(--accent)] underline focus-visible:outline-2 focus-visible:outline-[var(--accent)]"
               href={`/sign-in?returnTo=${encodeURIComponent(`/roles/${roleId}/invites`)}`}
             >
               Sign in to manage invitations
@@ -303,7 +305,7 @@ function Invitations({ roleId }: { roleId: string }) {
           ) : (
             <ul
               aria-label="Invitation history"
-              className="record-list surface divide-y divide-slate-200 border-y border-slate-200 bg-white"
+              className="record-list invite-list divide-y divide-[var(--border)] bg-white"
             >
               {items.map((item) => (
                 <li
@@ -314,12 +316,12 @@ function Invitations({ roleId }: { roleId: string }) {
                   }}
                   tabIndex={-1}
                   aria-label={`${item.email}: ${labels[item.status]}`}
-                  className="record-row space-y-2 px-4 py-4 focus:ring-2 focus:ring-teal-700"
+                  className="record-row invite-record space-y-3 px-5 py-5 focus:ring-2 focus:ring-[var(--accent)]"
                 >
                   <h2 className="break-all text-base font-semibold">
                     {item.email}
                   </h2>
-                  <div className="flex flex-wrap gap-x-6 gap-y-1 text-sm">
+                  <div className="invite-record-status flex flex-wrap gap-x-6 gap-y-2 text-xs text-[var(--muted)]">
                     <p>
                       Stored invitation state:{" "}
                       <strong>{labels[item.status]}</strong>
@@ -333,7 +335,9 @@ function Invitations({ roleId }: { roleId: string }) {
                       </strong>
                     </p>
                   </div>
-                  <p className="text-sm">{deliveryGuidance(item)}</p>
+                  <p className="text-sm text-[var(--muted)]">
+                    {deliveryGuidance(item)}
+                  </p>
                   {item.delivery_state === "uncertain" ||
                   item.delivery_state === "expired" ||
                   item.delivery_state === "cancelled" ? (
@@ -346,22 +350,24 @@ function Invitations({ roleId }: { roleId: string }) {
                         : "Then review and confirm a new invitation using the issuance form."}
                     </p>
                   ) : null}
-                  <p className="break-all text-sm text-slate-600">
-                    Profile ID: {item.role_profile_id}
-                  </p>
-                  <p className="text-sm text-slate-600">
+                  <p className="text-xs text-[var(--muted)]">
                     Created {formatDate(item.created_at)} (UTC) · Expires{" "}
                     {formatDate(item.expires_at)} (UTC)
                   </p>
-                  <p className="text-sm text-slate-600">
-                    {item.sent_at
-                      ? `Sent ${formatDate(item.sent_at)} (UTC)`
-                      : "No sent time recorded"}{" "}
-                    ·{" "}
-                    {item.revoked_at
-                      ? `Revoked ${formatDate(item.revoked_at)} (UTC)`
-                      : "No revocation time recorded"}
-                  </p>
+                  <div className="invite-record-details space-y-1 text-xs text-[var(--muted)]">
+                    <p className="break-all">
+                      Profile ID: {item.role_profile_id}
+                    </p>
+                    <p>
+                      {item.sent_at
+                        ? `Sent ${formatDate(item.sent_at)} (UTC)`
+                        : "No sent time recorded"}{" "}
+                      ·{" "}
+                      {item.revoked_at
+                        ? `Revoked ${formatDate(item.revoked_at)} (UTC)`
+                        : "No revocation time recorded"}
+                    </p>
+                  </div>
                   {item.status !== "revoked" ? (
                     <button
                       className={button}

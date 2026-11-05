@@ -183,7 +183,7 @@ export function RoleProfileWorkspace({ roleId }: { roleId: string }) {
   if (state.status === "loading") {
     return (
       <main
-        className="workspace-shell mx-auto max-w-6xl px-4 py-6 sm:px-8"
+        className="workspace-shell profile-workspace mx-auto max-w-6xl px-4 py-6 sm:px-8"
         id="main-content"
       >
         <LoadingState label="Loading role profile" />
@@ -194,11 +194,11 @@ export function RoleProfileWorkspace({ roleId }: { roleId: string }) {
   if (state.status === "error") {
     return (
       <main
-        className="workspace-shell mx-auto max-w-6xl px-4 py-6 sm:px-8"
+        className="workspace-shell profile-workspace mx-auto max-w-6xl px-4 py-6 sm:px-8"
         id="main-content"
       >
         <Link
-          className="inline-flex min-h-11 items-center rounded text-sm font-semibold text-teal-800 hover:underline focus-visible:ring-2 focus-visible:ring-teal-700"
+          className="inline-flex min-h-11 items-center rounded text-sm font-semibold text-violet-800 hover:underline focus-visible:ring-2 focus-visible:ring-violet-700"
           href="/roles"
         >
           ← Back to roles
@@ -233,62 +233,55 @@ export function RoleProfileWorkspace({ roleId }: { roleId: string }) {
 
   return (
     <main
-      className="workspace-shell mx-auto max-w-6xl px-4 py-6 sm:px-8"
+      className="workspace-shell profile-workspace mx-auto max-w-6xl px-4 py-6 sm:px-8"
       id="main-content"
     >
       <div aria-atomic="true" aria-live="polite" className="sr-only">
         {announcement}
       </div>
       <Link
-        className="inline-flex min-h-11 items-center rounded text-sm font-semibold text-teal-800 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-700"
+        className="profile-breadcrumbs inline-flex min-h-11 items-center rounded text-sm font-medium text-[var(--muted)] hover:text-[var(--text)] focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
         href="/roles"
       >
         ← Back to roles
       </Link>
 
-      {canManageInvitations(state.user.role) ? (
-        <Link
-          className="ml-5 inline-flex min-h-11 items-center rounded text-sm font-semibold text-teal-800 underline focus-visible:ring-2 focus-visible:ring-teal-700"
-          href={`/roles/${roleId}/invites`}
-        >
-          Manage invitations
-        </Link>
-      ) : null}
-      <header className="mt-4 border-b border-slate-200 pb-5">
-        <div className="flex flex-col justify-between gap-6 md:flex-row md:items-start">
+      <header className="profile-page-header mt-4 border-b border-[var(--border)] pb-6">
+        <div className="flex flex-col justify-between gap-5 xl:flex-row xl:items-center">
           <div className="min-w-0 break-words">
             <div className="flex flex-wrap items-center gap-3">
-              <p className="text-xs font-medium text-teal-800">
+              <p className="text-xs font-medium text-[var(--muted)]">
                 {state.role.department}
               </p>
               <StatusBadge status={state.role.status} />
             </div>
-            <h1 className="workspace-title mt-2 break-words text-2xl font-semibold tracking-tight text-slate-900 sm:text-[28px]">
+            <h1 className="workspace-title mt-3 break-words text-2xl font-semibold tracking-tight text-slate-900 sm:text-[28px]">
               {state.role.title}
             </h1>
-            <p className="mt-3 text-sm text-slate-600">
+            <p className="mt-2 text-sm text-[var(--muted)]">
               {state.role.location} · Created{" "}
               {formatDate(state.role.created_at)}
             </p>
           </div>
-          <div className="text-sm">
-            <span className="block font-semibold text-slate-900">
-              Signed in as
-            </span>
-            <span className="text-slate-600">{state.user.name}</span>
-            <span className="block text-xs capitalize text-slate-600">
-              {state.user.role.replace("_", " ")}
-            </span>
+          <div className="profile-page-actions flex shrink-0 flex-wrap items-center gap-2">
+            <Link
+              href={`/roles/${roleId}/reports`}
+              className="action-secondary"
+            >
+              View recruiter reports
+            </Link>
+            {canManageInvitations(state.user.role) ? (
+              <Link
+                className="action-primary"
+                href={`/roles/${roleId}/invites`}
+              >
+                Manage invitations
+              </Link>
+            ) : null}
           </div>
         </div>
-        <Link
-          href={`/roles/${roleId}/reports`}
-          className="action-secondary mt-4 inline-flex min-h-11 items-center rounded-md border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-teal-700"
-        >
-          View recruiter reports
-        </Link>
-        <details className="mt-4 border-t border-slate-200 pt-2">
-          <summary className="min-h-11 cursor-pointer content-center py-2 font-semibold text-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-700">
+        <details className="profile-source mt-5 border-t border-[var(--border)] pt-2">
+          <summary className="min-h-11 cursor-pointer content-center py-2 text-sm font-medium text-[var(--muted)] focus-visible:ring-2 focus-visible:ring-[var(--accent)]">
             Source job description
           </summary>
           <p className="mt-4 whitespace-pre-wrap break-words text-sm leading-7 text-slate-700">
@@ -311,11 +304,14 @@ export function RoleProfileWorkspace({ roleId }: { roleId: string }) {
         }}
       />
 
-      <div className="mt-6 grid gap-6 lg:grid-cols-[14rem_minmax(0,1fr)]">
-        <aside aria-labelledby="version-history-title">
+      <div className="profile-context-layout mt-8 grid gap-8 lg:grid-cols-[12rem_minmax(0,1fr)]">
+        <aside
+          aria-labelledby="version-history-title"
+          className="profile-version-nav"
+        >
           <div className="lg:sticky lg:top-5">
             <h2
-              className="font-semibold text-slate-950"
+              className="text-xs font-medium text-[var(--muted)]"
               id="version-history-title"
             >
               Version history
@@ -332,10 +328,10 @@ export function RoleProfileWorkspace({ roleId }: { roleId: string }) {
                       aria-current={
                         profile.id === selectedProfile?.id ? "true" : undefined
                       }
-                      className={`w-full min-h-11 rounded-md border px-3 py-3 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-700 ${
+                      className={`profile-version-button w-full min-h-11 rounded-lg border px-3 py-3 text-left transition focus-visible:ring-2 focus-visible:ring-[var(--accent)] ${
                         profile.id === selectedProfile?.id
-                          ? "border-teal-300 bg-teal-50"
-                          : "border-transparent hover:border-slate-200 hover:bg-slate-50"
+                          ? "border-[var(--border)] bg-[var(--canvas)]"
+                          : "border-transparent hover:bg-[var(--canvas)]"
                       }`}
                       onClick={() => setSelectedProfileId(profile.id)}
                       type="button"
@@ -361,12 +357,17 @@ export function RoleProfileWorkspace({ roleId }: { roleId: string }) {
           </div>
         </aside>
 
-        <section aria-labelledby="profile-review-title" className="min-w-0">
+        <section
+          aria-labelledby="profile-review-title"
+          className="profile-reading-pane min-w-0"
+        >
           <div className="mb-5 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
             <div>
-              <p className="text-xs font-medium text-teal-800">Human review</p>
+              <p className="text-xs font-medium text-[var(--muted)]">
+                Human review
+              </p>
               <h2
-                className="mt-1 text-xl font-semibold tracking-tight text-slate-900"
+                className="mt-1 text-xl font-medium tracking-tight text-[var(--text)]"
                 id="profile-review-title"
               >
                 {selectedProfile
@@ -395,18 +396,18 @@ export function RoleProfileWorkspace({ roleId }: { roleId: string }) {
                 className="surface rounded-lg border border-slate-200 bg-white p-4 sm:p-5"
               >
                 <h3
-                  className="text-lg font-semibold text-teal-950"
+                  className="text-lg font-semibold text-violet-950"
                   id="extraction-title"
                 >
                   Generate a structured draft
                 </h3>
-                <p className="mt-2 text-sm leading-6 text-teal-900">
+                <p className="mt-2 text-sm leading-6 text-violet-900">
                   Extract all six construct ratings from the stored job
                   description. The result remains a draft until a hiring manager
                   reviews and approves it.
                 </p>
                 <button
-                  className="mt-4 action-primary min-h-11 rounded-md bg-[var(--accent,#0f766e)] px-5 py-2.5 text-sm font-semibold text-white hover:bg-teal-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-700 focus-visible:ring-offset-2 disabled:cursor-wait disabled:opacity-70"
+                  className="mt-4 action-primary min-h-11 rounded-md bg-[var(--accent,#6253c7)] px-5 py-2.5 text-sm font-semibold text-white hover:bg-violet-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-700 focus-visible:ring-offset-2 disabled:cursor-wait disabled:opacity-70"
                   disabled={extracting}
                   onClick={() => void handleExtraction()}
                   type="button"
@@ -426,7 +427,7 @@ export function RoleProfileWorkspace({ roleId }: { roleId: string }) {
               </section>
 
               <details className="border-t border-slate-200 pt-3">
-                <summary className="min-h-11 cursor-pointer content-center py-2 font-semibold text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-700">
+                <summary className="min-h-11 cursor-pointer content-center py-2 font-semibold text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-700">
                   Create a manual draft instead
                 </summary>
                 <div className="mt-5">
@@ -479,7 +480,7 @@ export function RoleProfileWorkspace({ roleId }: { roleId: string }) {
 
           {canStartReplacement && !startingReplacement ? (
             <button
-              className="mt-5 action-secondary min-h-11 rounded-md border border-teal-700 bg-white px-5 py-2.5 text-sm font-semibold text-teal-800 hover:bg-teal-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-700 focus-visible:ring-offset-2"
+              className="mt-5 action-secondary min-h-11 rounded-md border border-violet-700 bg-white px-5 py-2.5 text-sm font-semibold text-violet-800 hover:bg-violet-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-700 focus-visible:ring-offset-2"
               onClick={() => setStartingReplacement(true)}
               type="button"
             >
@@ -515,7 +516,7 @@ export function RoleProfileWorkspace({ roleId }: { roleId: string }) {
                 role. Approval freezes this version for downstream use.
               </p>
               <button
-                className="action-primary mt-4 min-h-11 rounded-md bg-[var(--accent,#0f766e)] px-5 py-2.5 text-sm font-semibold text-white hover:bg-teal-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-700 focus-visible:ring-offset-2"
+                className="action-primary mt-4 min-h-11 rounded-md bg-[var(--accent,#6253c7)] px-5 py-2.5 text-sm font-semibold text-white hover:bg-violet-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-700 focus-visible:ring-offset-2"
                 disabled={approving}
                 onClick={() => void handleApproval(selectedProfile)}
                 type="button"
@@ -611,10 +612,10 @@ function ProfileEditor({
 
   return (
     <form
-      className="surface space-y-5 rounded-lg border border-slate-200 bg-white p-4 sm:p-5"
+      className="profile-editor surface space-y-5 rounded-lg border border-[var(--border)] bg-white p-4 sm:p-6"
       onSubmit={handleSubmit}
     >
-      <p className="border-l-2 border-teal-700 pl-4 text-sm leading-6 text-slate-700">
+      <p className="border-l-2 border-violet-700 pl-4 text-sm leading-6 text-slate-700">
         Evidence must be copied verbatim from the source job description.
         Ratings describe role behavior on a 1–5 scale; they are not candidate
         scores.
@@ -662,7 +663,7 @@ function ProfileEditor({
                         type="radio"
                         value={rating}
                       />
-                      <span className="grid min-h-11 place-items-center rounded-lg border border-slate-300 bg-white text-sm font-semibold text-slate-700 peer-checked:border-teal-700 peer-checked:bg-teal-50 peer-checked:text-teal-900 peer-focus-visible:ring-2 peer-focus-visible:ring-teal-700 peer-focus-visible:ring-offset-2">
+                      <span className="grid min-h-11 place-items-center rounded-lg border border-slate-300 bg-white text-sm font-semibold text-slate-700 peer-checked:border-violet-700 peer-checked:bg-violet-50 peer-checked:text-violet-900 peer-focus-visible:ring-2 peer-focus-visible:ring-violet-700 peer-focus-visible:ring-offset-2">
                         {rating}
                       </span>
                     </label>
@@ -742,7 +743,7 @@ function ProfileEditor({
             : `Saves as version ${(profile?.version ?? 0) + 1}; version ${profile?.version} remains unchanged.`}
         </p>
         <button
-          className="action-primary min-h-11 shrink-0 rounded-md bg-[var(--accent,#0f766e)] px-5 py-2.5 text-sm font-semibold text-white hover:bg-teal-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-700 focus-visible:ring-offset-2"
+          className="action-primary min-h-11 shrink-0 rounded-md bg-[var(--accent,#6253c7)] px-5 py-2.5 text-sm font-semibold text-white hover:bg-violet-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-700 focus-visible:ring-offset-2"
           disabled={saving}
           type="submit"
         >
@@ -759,9 +760,9 @@ function ProfileEditor({
 
 function ReadonlyProfile({ profile }: { profile: RoleProfile }) {
   return (
-    <div className="surface space-y-4 rounded-lg border border-slate-200 bg-white p-4 sm:p-5">
+    <div className="profile-constructs space-y-2">
       {profile.status === "approved" ? (
-        <p className="rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm leading-6 text-slate-900">
+        <p className="profile-frozen-note mb-5 border-l-2 border-[var(--accent)] bg-[var(--canvas)] px-4 py-3 text-sm leading-6 text-[var(--muted)]">
           Approved versions are frozen. Create a new complete draft to propose
           future changes.
         </p>
@@ -771,16 +772,16 @@ function ReadonlyProfile({ profile }: { profile: RoleProfile }) {
         return (
           <article
             aria-labelledby={`construct-${profile.id}-${construct.key}`}
-            className="min-w-0 border-t border-slate-200 py-5"
+            className="profile-construct min-w-0 border-t border-[var(--border)] py-6"
             key={construct.key}
           >
-            <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
+            <div className="profile-construct-heading flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
               <div>
-                <p className="text-xs font-medium text-slate-600">
+                <p className="text-xs font-medium text-[var(--muted)]">
                   Construct {index + 1} of 6
                 </p>
                 <h3
-                  className="mt-1 text-lg font-semibold text-slate-950"
+                  className="mt-1 text-lg font-medium text-[var(--text)]"
                   id={`construct-${profile.id}-${construct.key}`}
                 >
                   {definition.label}
@@ -789,18 +790,29 @@ function ReadonlyProfile({ profile }: { profile: RoleProfile }) {
                   {definition.role_prompt}
                 </p>
               </div>
-              <div className="flex shrink-0 flex-wrap gap-2">
-                <span className="rounded-lg bg-teal-50 px-3 py-2 text-sm font-semibold text-teal-900">
+              <div className="profile-construct-rating flex shrink-0 flex-col gap-1.5 sm:items-end">
+                <span className="text-sm font-medium text-[var(--text)]">
                   Rating {construct.rating}/5
                 </span>
-                <span className="rounded-lg bg-slate-100 px-3 py-2 text-sm font-semibold capitalize text-slate-700">
+                <span
+                  className="profile-rating-indicator flex gap-1"
+                  aria-hidden="true"
+                >
+                  {[1, 2, 3, 4, 5].map((value) => (
+                    <span
+                      key={value}
+                      className={`h-1 w-4 rounded-sm ${value <= construct.rating ? "bg-[var(--accent)]" : "bg-[var(--border)]"}`}
+                    />
+                  ))}
+                </span>
+                <span className="text-xs capitalize text-[var(--muted)]">
                   {construct.confidence} confidence
                 </span>
               </div>
             </div>
-            <div className="mt-5 grid gap-5 border-t border-slate-100 pt-5 lg:grid-cols-2">
+            <div className="profile-evidence-grid mt-5 grid gap-5 xl:grid-cols-2">
               <div>
-                <h4 className="text-sm font-semibold text-slate-800">
+                <h4 className="text-xs font-medium text-[var(--muted)]">
                   Review rationale
                 </h4>
                 <p className="mt-2 text-sm leading-6 text-slate-700">
@@ -808,13 +820,13 @@ function ReadonlyProfile({ profile }: { profile: RoleProfile }) {
                 </p>
               </div>
               <div>
-                <h4 className="text-sm font-semibold text-slate-800">
+                <h4 className="text-xs font-medium text-[var(--muted)]">
                   Source evidence
                 </h4>
                 <ul className="mt-2 space-y-2">
                   {construct.evidence.map((excerpt, excerptIndex) => (
                     <li
-                      className="border-l-2 border-teal-300 pl-3 text-sm leading-6 text-slate-700"
+                      className="border-l-2 border-[var(--border)] pl-3 text-sm leading-6 text-[var(--muted)]"
                       key={`${construct.key}-${excerptIndex}`}
                     >
                       “{excerpt}”

@@ -7,10 +7,8 @@ import type { RoleProfile } from "../../../../lib/contracts";
 import { issueInvitation } from "../../../../lib/invitation-issuance-client";
 import { InvitationCreateSchema } from "../../../../lib/invitation-issuance-contracts";
 
-const button =
-  "action-secondary min-h-11 rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700";
-const field =
-  "mt-1 block min-h-11 w-full min-w-0 rounded-md border border-slate-300 bg-white p-2 text-base font-normal focus-visible:outline-2 focus-visible:outline-teal-700";
+const button = "action-secondary disabled:opacity-50";
+const field = "field-control mt-2 block min-w-0 text-base font-normal";
 export function InvitationIssueForm({
   roleId,
   onIssued,
@@ -144,19 +142,19 @@ export function InvitationIssueForm({
   return (
     <section
       aria-labelledby="issue-heading"
-      className="surface space-y-4 border-y border-slate-200 bg-white px-4 py-4"
+      className="invite-composer space-y-4 border-b border-[var(--border)] bg-white py-6"
     >
-      <h2 id="issue-heading" className="text-lg font-semibold">
+      <h2 id="issue-heading" className="text-base font-semibold">
         Issue invitation
       </h2>
-      <p className="max-w-3xl text-sm leading-6 text-slate-600">
-        The server checks role availability, profile approval, expiry policy,
-        and assessment eligibility when issuing.
+      <p className="max-w-3xl text-sm leading-6 text-[var(--muted)]">
+        Invite a candidate using an approved profile. Review the recipient and
+        expiry before sending.
       </p>
       {error ? <div role="alert">{error}</div> : null}
       {unauthorized ? (
         <Link
-          className="inline-flex min-h-11 items-center text-teal-700 underline focus-visible:outline-2 focus-visible:outline-teal-700"
+          className="inline-flex min-h-11 items-center text-[var(--accent)] underline focus-visible:outline-2 focus-visible:outline-[var(--accent)]"
           href={`/sign-in?returnTo=${encodeURIComponent(`/roles/${roleId}/invites`)}`}
         >
           Sign in to issue invitations
@@ -192,7 +190,7 @@ export function InvitationIssueForm({
         >
           <fieldset
             disabled={disabled || busy || done || needsNewRequest}
-            className="grid min-w-0 gap-4 md:grid-cols-2"
+            className="grid min-w-0 gap-4 md:grid-cols-2 xl:grid-cols-[minmax(0,1.25fr)_minmax(0,1.25fr)]"
           >
             <label className="field-label block min-w-0 text-sm font-medium">
               Recipient email
@@ -222,7 +220,7 @@ export function InvitationIssueForm({
                 <option value="">Select a version</option>
                 {profiles.map((profile) => (
                   <option key={profile.id} value={profile.id}>
-                    Version {profile.version} — {profile.id}
+                    Version {profile.version}
                   </option>
                 ))}
               </select>
@@ -255,7 +253,7 @@ export function InvitationIssueForm({
           </fieldset>
           {preview && parsed.success && selected ? (
             <div
-              className="space-y-3 border-l-4 border-teal-700 pl-4 text-sm [overflow-wrap:anywhere]"
+              className="space-y-3 rounded-lg border border-[var(--border)] bg-[var(--canvas)] p-4 text-sm [overflow-wrap:anywhere]"
               aria-label="Invitation preview"
             >
               <h3 className="font-semibold">Confirm invitation request</h3>
@@ -271,7 +269,7 @@ export function InvitationIssueForm({
               </p>
               <button
                 type="button"
-                className="action-primary min-h-11 rounded-md bg-teal-700 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700"
+                className="action-primary disabled:opacity-50"
                 disabled={disabled || busy || done || needsNewRequest}
                 onClick={() => void confirm()}
               >

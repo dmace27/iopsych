@@ -6,92 +6,129 @@ import { useEffect, useRef, useState } from "react";
 import { ApiClientError, getCurrentUser } from "../../lib/api-client";
 import type { CurrentUser } from "../../lib/contracts";
 import { isInternalAccountPath, signInHref } from "../../lib/safe-return-to";
+import { StudioIcon } from "./studio-icon";
 
 /** Keep bearer-token candidate pages separate from the internal workspace UI. */
 export function SiteHeader() {
   const pathname = usePathname();
   const candidatePage =
     pathname === "/candidate" || pathname.startsWith("/candidate/");
+  const workspacePage = isInternalAccountPath(pathname);
+  const section = pathname.includes("/invites")
+    ? "Invitations"
+    : pathname.includes("/reports")
+      ? "Reports"
+      : pathname === "/privacy"
+        ? "Privacy"
+        : pathname === "/accounts"
+          ? "Accounts"
+          : pathname === "/roles"
+            ? "Roles"
+            : "Role profile";
 
   return (
-    <header className="site-header">
-      <div className="site-header-inner">
-        {candidatePage ? (
-          <div className="site-brand">
-            <BrandMark />
-            <span>
-              <span className="block text-sm font-bold tracking-tight text-slate-950">
-                IOPsych
+    <>
+      <header
+        className="site-header"
+        data-mode={workspacePage ? "workspace" : "public"}
+      >
+        <div className="site-header-inner">
+          {candidatePage ? (
+            <div className="site-brand">
+              <BrandMark />
+              <span>
+                <span className="block text-sm font-bold tracking-tight text-slate-950">
+                  IOPsych
+                </span>
+                <span className="block text-xs text-slate-500">
+                  Candidate assessment
+                </span>
               </span>
-              <span className="block text-xs text-slate-500">
-                Candidate assessment
-              </span>
-            </span>
-          </div>
-        ) : (
-          <Link className="site-brand" href="/roles">
-            <BrandMark />
-            <span>
-              <span className="block text-sm font-bold tracking-tight text-slate-950">
-                IOPsych
-              </span>
-              <span className="block text-xs text-slate-500">Role studio</span>
-            </span>
-          </Link>
-        )}
-        {candidatePage ? (
-          <span className="text-xs font-semibold text-slate-500">
-            Secure invitation
-          </span>
-        ) : (
-          <nav aria-label="Primary navigation">
-            <div className="site-navigation">
-              <Link
-                className="site-nav-link"
-                href="/roles"
-                aria-current={
-                  pathname === "/roles"
-                    ? "page"
-                    : pathname.startsWith("/roles/") ||
-                        pathname.startsWith("/reports/")
-                      ? "location"
-                      : undefined
-                }
-              >
-                Roles
-              </Link>
-              <Link
-                className="site-nav-link"
-                href="/privacy"
-                aria-current={pathname === "/privacy" ? "page" : undefined}
-              >
-                Privacy
-              </Link>
-              {isInternalAccountPath(pathname) ? (
-                <AccountControls key={pathname} pathname={pathname} />
-              ) : (
-                <Link
-                  href="/sign-in"
-                  className="site-nav-link"
-                  aria-current={pathname === "/sign-in" ? "page" : undefined}
-                >
-                  Sign in
-                </Link>
-              )}
             </div>
-          </nav>
-        )}
-      </div>
-    </header>
+          ) : (
+            <Link className="site-brand" href="/roles">
+              <BrandMark />
+              <span>
+                <span className="block text-sm font-bold tracking-tight text-slate-950">
+                  IOPsych
+                </span>
+                <span className="block text-xs text-slate-500">
+                  Role studio
+                </span>
+              </span>
+            </Link>
+          )}
+          {candidatePage ? (
+            <span className="text-xs font-semibold text-slate-500">
+              Secure invitation
+            </span>
+          ) : (
+            <nav aria-label="Primary navigation">
+              <div className="site-navigation">
+                {workspacePage ? (
+                  <span className="site-nav-label" aria-hidden="true">
+                    Workspace
+                  </span>
+                ) : null}
+                <Link
+                  className="site-nav-link"
+                  href="/roles"
+                  aria-current={
+                    pathname === "/roles"
+                      ? "page"
+                      : pathname.startsWith("/roles/") ||
+                          pathname.startsWith("/reports/")
+                        ? "location"
+                        : undefined
+                  }
+                >
+                  <StudioIcon name="roles" />
+                  Roles
+                </Link>
+                <Link
+                  className="site-nav-link"
+                  href="/privacy"
+                  aria-current={pathname === "/privacy" ? "page" : undefined}
+                >
+                  <StudioIcon name="privacy" />
+                  Privacy
+                </Link>
+                {isInternalAccountPath(pathname) ? (
+                  <AccountControls key={pathname} pathname={pathname} />
+                ) : (
+                  <Link
+                    href="/sign-in"
+                    className="site-nav-link"
+                    aria-current={pathname === "/sign-in" ? "page" : undefined}
+                  >
+                    Sign in
+                  </Link>
+                )}
+              </div>
+            </nav>
+          )}
+        </div>
+      </header>
+      {workspacePage ? (
+        <div className="workspace-topbar">
+          <div className="workspace-breadcrumb">
+            <span>Role studio</span>
+            <span aria-hidden="true">/</span>
+            <span>{section}</span>
+          </div>
+          <span className="workspace-private">
+            <StudioIcon name="lock" />
+            Private workspace
+          </span>
+        </div>
+      ) : null}
+    </>
   );
 }
 
 function BrandMark() {
   return (
-    <span
-      aria-hidden="true"
-      className="grid size-8 place-items-center rounded-md bg-[var(--accent)] text-xs font-semibold text-white"
-    >
+    <span aria-hidden="true" className="brand-mark">
       IO
     </span>
   );
@@ -168,6 +205,7 @@ function AccountControls({ pathname }: { pathname: string }) {
           className="site-nav-link"
           aria-current={pathname === "/accounts" ? "page" : undefined}
         >
+          <StudioIcon name="accounts" />
           Accounts
         </Link>
       ) : null}
@@ -177,10 +215,22 @@ function AccountControls({ pathname }: { pathname: string }) {
         ) : null}
         {account ? (
           <div className="site-account-identity">
+            <span className="account-avatar" aria-hidden="true">
+              {account.name
+                .split(" ")
+                .map((part) => part[0])
+                .slice(0, 2)
+                .join("")}
+            </span>
             <p className="font-medium text-slate-900">
               {account.name} · {account.role.replaceAll("_", " ")}
             </p>
-            <p className="text-xs">Organization: {account.organization_id}</p>
+            <details className="account-organization">
+              <summary>
+                {account.organization_name ?? "Organization details"}
+              </summary>
+              <p className="text-xs">Organization: {account.organization_id}</p>
+            </details>
           </div>
         ) : null}
         {status === "expired" ? (

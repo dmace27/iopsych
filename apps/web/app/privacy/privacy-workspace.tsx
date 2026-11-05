@@ -337,13 +337,16 @@ export function PrivacyWorkspace() {
   );
   return (
     <main
-      className="workspace-shell mx-auto max-w-6xl px-5 py-8 text-slate-900 sm:px-8"
+      className="workspace-shell admin-workspace mx-auto max-w-6xl px-5 py-8 text-slate-900 sm:px-8"
       id="main-content"
     >
       <div aria-live="polite" className="sr-only">
         {announcement}
       </div>
-      <header className="border-b border-slate-200 pb-5">
+      <header className="admin-header border-b border-[var(--border)] pb-6">
+        <p className="mb-2 text-xs font-medium text-[var(--muted)]">
+          Workspace / Data rights
+        </p>
         <h1 className="workspace-title text-2xl font-semibold text-slate-950">
           Candidate privacy
         </h1>
@@ -353,12 +356,15 @@ export function PrivacyWorkspace() {
         </p>
       </header>
 
-      <section aria-labelledby="retention-title" className="mt-6">
-        <div className="surface border-b border-slate-200 bg-white p-4">
+      <section
+        aria-labelledby="retention-title"
+        className="admin-retention mt-6"
+      >
+        <div className="rounded-lg border border-[var(--border)] bg-[var(--canvas)] p-5">
           <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-start">
             <div>
               <h2
-                className="text-lg font-semibold text-slate-950"
+                className="text-base font-semibold text-slate-950"
                 id="retention-title"
               >
                 Retention status
@@ -375,7 +381,7 @@ export function PrivacyWorkspace() {
               </p>
             </div>
             <button
-              className="action-secondary min-h-11 rounded-md border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-teal-700"
+              className="action-secondary min-h-11 rounded-md border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
               disabled={working || lookupLoading}
               onClick={() => void handleRetention()}
               type="button"
@@ -383,7 +389,7 @@ export function PrivacyWorkspace() {
               Run retention now
             </button>
           </div>
-          <dl className="mt-4 grid grid-cols-2 gap-4 border-t border-slate-200 pt-4 sm:grid-cols-4">
+          <dl className="mt-5 grid grid-cols-2 gap-x-6 gap-y-4 border-t border-[var(--border)] pt-4 sm:grid-cols-4">
             {[
               ["Active", state.privacy.active_assessments],
               ["Due", state.privacy.due_assessments],
@@ -391,8 +397,8 @@ export function PrivacyWorkspace() {
               ["Total", state.privacy.total_assessments],
             ].map(([label, value]) => (
               <div key={label}>
-                <dt className="text-sm text-slate-600">{label}</dt>
-                <dd className="mt-1 text-xl font-semibold text-slate-950">
+                <dt className="text-xs text-[var(--muted)]">{label}</dt>
+                <dd className="mt-1 text-xl font-medium tabular-nums text-[var(--text)]">
                   {value}
                 </dd>
               </div>
@@ -403,9 +409,12 @@ export function PrivacyWorkspace() {
 
       <section
         aria-labelledby="lookup-title"
-        className="surface mt-6 border-b border-slate-200 bg-white p-4"
+        className="admin-section mt-8 border-b border-[var(--border)] pb-7"
       >
-        <h2 id="lookup-title" className="text-lg font-semibold text-slate-950">
+        <h2
+          id="lookup-title"
+          className="text-base font-semibold text-slate-950"
+        >
           Find an assessment
         </h2>
         <p className="mt-2 text-sm text-slate-600">
@@ -449,7 +458,7 @@ export function PrivacyWorkspace() {
             />
           </label>
           <button
-            className="action-primary mt-4 min-h-11 justify-self-start rounded-md bg-teal-700 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700"
+            className="action-primary mt-4 min-h-11 justify-self-start rounded-md bg-[var(--text)] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)]"
             disabled={
               lookupLoading ||
               working ||
@@ -508,7 +517,7 @@ export function PrivacyWorkspace() {
                     </p>
                     <button
                       type="button"
-                      className="action-secondary mt-3 min-h-11 max-w-full rounded-md border border-slate-300 px-4 py-2 text-sm font-semibold text-teal-700 focus-visible:outline-2 focus-visible:outline-teal-700"
+                      className="action-secondary mt-3 min-h-11 max-w-full rounded-md border border-slate-300 px-4 py-2 text-sm font-semibold text-[var(--accent)] focus-visible:outline-2 focus-visible:outline-[var(--accent)]"
                       disabled={working}
                       aria-pressed={assessmentId === item.assessment_id}
                       onClick={() => selectAssessment(item.assessment_id)}
@@ -522,7 +531,7 @@ export function PrivacyWorkspace() {
             {lookupResult.next_cursor ? (
               <button
                 type="button"
-                className="action-secondary mt-4 min-h-11 rounded-md border border-slate-300 px-4 text-sm font-semibold focus-visible:outline-2 focus-visible:outline-teal-700"
+                className="action-secondary mt-4 min-h-11 rounded-md border border-slate-300 px-4 text-sm font-semibold focus-visible:outline-2 focus-visible:outline-[var(--accent)]"
                 disabled={working}
                 onClick={() => void handleLookup(true)}
               >
@@ -535,9 +544,12 @@ export function PrivacyWorkspace() {
 
       <section
         aria-labelledby="rights-title"
-        className="surface mt-6 border-b border-slate-200 bg-white p-4 [overflow-wrap:anywhere]"
+        className="admin-section mt-7 border-b border-[var(--border)] pb-7 [overflow-wrap:anywhere]"
       >
-        <h2 className="text-lg font-semibold text-slate-950" id="rights-title">
+        <h2
+          className="text-base font-semibold text-slate-950"
+          id="rights-title"
+        >
           Complete a data-rights request
         </h2>
         <label className="field-label mt-4 block max-w-2xl text-sm font-medium text-slate-800">
@@ -554,7 +566,7 @@ export function PrivacyWorkspace() {
         </label>
         <div className="mt-4 flex flex-wrap gap-3">
           <button
-            className="action-secondary min-h-11 rounded-md border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-teal-700"
+            className="action-secondary min-h-11 rounded-md border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-[var(--accent)]"
             disabled={!validAssessmentId || working || lookupLoading}
             onClick={() => void handleExport()}
             type="button"
@@ -562,7 +574,7 @@ export function PrivacyWorkspace() {
             Create JSON export
           </button>
           <button
-            className="min-h-11 rounded-md border border-rose-700 px-4 py-2 text-sm font-semibold text-rose-800 disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-teal-700"
+            className="min-h-11 rounded-md border border-rose-700 px-4 py-2 text-sm font-semibold text-rose-800 disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-[var(--accent)]"
             disabled={!validAssessmentId || working || lookupLoading}
             onClick={() => setConfirmingDeletion(true)}
             type="button"
@@ -570,7 +582,7 @@ export function PrivacyWorkspace() {
             Prepare anonymization
           </button>
           <button
-            className="action-secondary min-h-11 rounded-md border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-teal-700"
+            className="action-secondary min-h-11 rounded-md border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-[var(--accent)]"
             disabled={!validAssessmentId || working || lookupLoading}
             onClick={() => void load(assessmentId.trim())}
             type="button"
@@ -586,7 +598,7 @@ export function PrivacyWorkspace() {
               audit tombstones remain.
             </p>
             <button
-              className="mt-3 min-h-11 rounded-md bg-rose-800 px-4 py-2 text-sm font-semibold text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700"
+              className="mt-3 min-h-11 rounded-md bg-rose-800 px-4 py-2 text-sm font-semibold text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)]"
               disabled={working}
               onClick={() => void handleDeletion()}
               type="button"
@@ -596,7 +608,7 @@ export function PrivacyWorkspace() {
             <button
               type="button"
               disabled={working}
-              className="ml-3 min-h-11 px-4 text-sm font-semibold focus-visible:outline-2 focus-visible:outline-teal-700"
+              className="ml-3 min-h-11 px-4 text-sm font-semibold focus-visible:outline-2 focus-visible:outline-[var(--accent)]"
               onClick={() => setConfirmingDeletion(false)}
             >
               Cancel anonymization
@@ -615,12 +627,12 @@ export function PrivacyWorkspace() {
           </p>
         ) : null}
         {exported && exportDownload ? (
-          <div className="mt-5 border-l-4 border-teal-700 bg-teal-50 p-4">
-            <p className="text-sm font-bold text-teal-950">
+          <div className="mt-5 border-l-4 border-[var(--accent)] bg-violet-50 p-4">
+            <p className="text-sm font-bold text-violet-950">
               Export ready for {exported.invitation.email}
             </p>
             <a
-              className="mt-3 inline-flex min-h-11 items-center font-semibold text-teal-700 underline focus-visible:outline-2 focus-visible:outline-teal-700"
+              className="mt-3 inline-flex min-h-11 items-center font-semibold text-[var(--accent)] underline focus-visible:outline-2 focus-visible:outline-[var(--accent)]"
               download={`candidate-data-${exported.assessment.id}.json`}
               href={exportDownload}
             >
@@ -630,8 +642,8 @@ export function PrivacyWorkspace() {
         ) : null}
       </section>
 
-      <section aria-labelledby="audit-title" className="mt-6">
-        <h2 className="text-lg font-semibold text-slate-950" id="audit-title">
+      <section aria-labelledby="audit-title" className="admin-section mt-7">
+        <h2 className="text-base font-semibold text-slate-950" id="audit-title">
           Immutable audit history
         </h2>
         <p className="mt-2 break-all text-sm text-slate-600">
@@ -653,7 +665,7 @@ export function PrivacyWorkspace() {
         ) : (
           <ul
             aria-label="Audit events"
-            className="record-list surface mt-4 divide-y divide-slate-200 border-y border-slate-200 bg-white"
+            className="record-list admin-audit-list mt-4 divide-y divide-[var(--border)] bg-white"
           >
             {state.auditEvents.map((event) => (
               <li className="record-row min-w-0 p-4" key={event.id}>
@@ -669,7 +681,7 @@ export function PrivacyWorkspace() {
                 <p className="mt-2 break-all text-xs text-slate-600">
                   Actor: {event.actor_id ?? "system"}
                 </p>
-                <pre className="mt-2 max-w-full overflow-x-auto whitespace-pre-wrap bg-slate-50 p-3 text-xs text-slate-700 [overflow-wrap:anywhere]">
+                <pre className="mt-2 max-w-full overflow-x-auto whitespace-pre-wrap rounded-md bg-[var(--canvas)] p-3 text-xs text-[var(--muted)] [overflow-wrap:anywhere]">
                   {JSON.stringify(event.details, null, 2)}
                 </pre>
               </li>
@@ -678,7 +690,7 @@ export function PrivacyWorkspace() {
         )}
         {state.auditHasMore ? (
           <button
-            className="action-secondary mt-4 min-h-11 rounded-md border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-teal-700"
+            className="action-secondary mt-4 min-h-11 rounded-md border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-[var(--accent)]"
             disabled={auditLoadingMore || working || lookupLoading}
             onClick={() => void handleLoadMoreAudit()}
             type="button"

@@ -1,0 +1,55 @@
+{
+  "scope": "Frontend UI refresh on codex/ui-refresh; application UI inspired by the annotated Mobbin reference board.",
+  "local_app": "http://127.0.0.1:3101/roles",
+  "implemented": [
+    "Persistent responsive workspace navigation and contextual header",
+    "Compact searchable, filterable and sortable role records",
+    "Contextual role/profile evidence and report reading",
+    "Editorial sign-in and focused candidate consent/assessment",
+    "Compact invitation, account and privacy administration presentation"
+  ],
+  "checks": {
+    "frontend_tests": {
+      "passed": 644,
+      "files": 51,
+      "coverage_statement_percent": 94.31,
+      "coverage_branch_percent": 91.34,
+      "configured_gates": "passed"
+    },
+    "eslint": "passed, zero warnings",
+    "typescript": "passed",
+    "production_build": "passed",
+    "final_invitation_copy_tests": 17,
+    "git_diff_check": "passed",
+    "formatting": "passed for all changed frontend files",
+    "final_invitation_copy_note": "17 focused tests and production rebuild passed after the last instructional-copy simplification"
+  },
+  "browser_checks": [
+    "Actual synthetic consent, all six forced-choice blocks, review, submission and report generation",
+    "Role search reset returns keyboard focus; create cancellation returns initiating focus",
+    "Roles, profile, reports, consent, assessment and invitations reflow without horizontal overflow at narrow widths",
+    "Short 1000x300 desktop sidebar scrolls and sign-out remains keyboard reachable",
+    "Recruiter privacy access remains denied",
+    "Fresh synthetic recruiter session left open",
+    "Sign-in mobile form reflows at390px without horizontal overflow"
+  ],
+  "boundaries": [
+    "Browser checks use synthetic local data; no real email, external providers or public deployment",
+    "Account and privacy administrator components are covered by focused tests; a configured provider-admin browser session was not exercised",
+    "No new automated axe or manual screen-reader acceptance claim"
+  ],
+  "screenshots": [
+    "candidate-desktop.png",
+    "candidate-mobile.png",
+    "consent-mobile.png",
+    "invitations-desktop.png",
+    "invitations-mobile.png",
+    "profile-mobile.png",
+    "report-desktop.png",
+    "report-mobile.png",
+    "roles-desktop.png",
+    "roles-mobile.png",
+    "sign-in-desktop.png",
+    "sign-in-mobile.png"
+  ]
+}

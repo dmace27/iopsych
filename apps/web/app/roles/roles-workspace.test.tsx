@@ -67,6 +67,61 @@ describe("RolesWorkspace", () => {
 
   afterEach(cleanup);
 
+  it("searches, filters and sorts actual organization records without hiding the reset path", async () => {
+    apiMocks.getRoles.mockResolvedValue([
+      {
+        ...role(),
+        title: "Platform Engineer",
+        created_at: "2026-09-25T12:00:00Z",
+      },
+      {
+        ...role(),
+        id: ORGANIZATION_ID,
+        title: "Research Associate",
+        department: "Science",
+        status: "archived",
+        created_at: "2026-09-26T12:00:00Z",
+      },
+    ]);
+    apiMocks.getCurrentUser.mockResolvedValue(currentUser("recruiter"));
+    const user = userEvent.setup();
+    render(<RolesWorkspace />);
+    await screen.findByRole("link", { name: /Research Associate/ });
+    const records = screen.getByRole("region", { name: "Organization roles" });
+    expect(within(records).getAllByRole("link")[0]).toHaveTextContent(
+      "Research Associate",
+    );
+    await user.selectOptions(
+      screen.getByRole("combobox", { name: "Sort roles" }),
+      "title",
+    );
+    expect(within(records).getAllByRole("link")[0]).toHaveTextContent(
+      "Platform Engineer",
+    );
+    await user.type(
+      screen.getByRole("searchbox", { name: "Search roles" }),
+      "science",
+    );
+    expect(within(records).getAllByRole("link")).toHaveLength(1);
+    expect(within(records).getByRole("link")).toHaveTextContent(
+      "Research Associate",
+    );
+    await user.click(screen.getByRole("button", { name: "Drafts" }));
+    expect(screen.getByText("No matching roles")).toBeVisible();
+    await user.click(screen.getByRole("button", { name: "Clear filters" }));
+    expect(within(records).getAllByRole("link")).toHaveLength(2);
+    expect(screen.getByRole("searchbox", { name: "Search roles" })).toHaveValue(
+      "",
+    );
+    expect(
+      screen.getByRole("searchbox", { name: "Search roles" }),
+    ).toHaveFocus();
+    expect(screen.getByRole("button", { name: "All roles" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+  });
+
   it("supports keyboard-accessible recruiter role creation", async () => {
     apiMocks.getRoles.mockResolvedValue([]);
     apiMocks.getCurrentUser.mockResolvedValue(currentUser("recruiter"));

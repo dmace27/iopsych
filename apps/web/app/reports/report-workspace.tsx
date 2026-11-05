@@ -42,7 +42,7 @@ function ReportError({
       />
       {error.unauthorized ? (
         <Link
-          className="inline-flex min-h-11 items-center rounded font-semibold text-teal-800 underline focus-visible:ring-2 focus-visible:ring-teal-700"
+          className="inline-flex min-h-11 items-center rounded font-semibold text-violet-800 underline focus-visible:ring-2 focus-visible:ring-violet-700"
           href={`/sign-in?returnTo=${encodeURIComponent(returnTo)}`}
         >
           Sign in to view reports
@@ -76,10 +76,10 @@ function ReportReader({ reportId }: { reportId: string }) {
   return (
     <main
       id="main-content"
-      className="workspace-shell mx-auto max-w-6xl space-y-6 px-4 py-6 text-slate-900 sm:px-8"
+      className="workspace-shell report-workspace mx-auto max-w-6xl space-y-6 px-4 py-6 text-slate-900 sm:px-8"
     >
       <Link
-        className="inline-flex min-h-11 items-center rounded font-semibold text-teal-800 underline focus-visible:ring-2 focus-visible:ring-teal-700"
+        className="profile-breadcrumbs inline-flex min-h-11 items-center rounded text-sm font-medium text-[var(--muted)] hover:text-[var(--text)] focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
         href="/roles"
       >
         ← Back to roles
@@ -203,17 +203,20 @@ function RoleReports({ roleId }: { roleId: string }) {
   return (
     <main
       id="main-content"
-      className="workspace-shell mx-auto max-w-6xl space-y-6 px-4 py-6 text-slate-900 sm:px-8"
+      className="workspace-shell report-workspace mx-auto max-w-6xl space-y-6 px-4 py-6 text-slate-900 sm:px-8"
     >
       <Link
-        className="inline-flex min-h-11 items-center rounded font-semibold text-teal-800 underline focus-visible:ring-2 focus-visible:ring-teal-700"
+        className="profile-breadcrumbs inline-flex min-h-11 items-center rounded text-sm font-medium text-[var(--muted)] hover:text-[var(--text)] focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
         href={`/roles/${roleId}`}
       >
         ← Back to role profile
       </Link>
-      <header>
+      <header className="report-page-header border-b border-[var(--border)] pb-6">
+        <p className="mb-2 text-xs font-medium text-[var(--muted)]">
+          Recruiter reports
+        </p>
         <h1 className="workspace-title text-2xl font-semibold text-slate-950">
-          {title ? `${title}: recruiter reports` : "Recruiter reports"}
+          {title ?? "Recruiter reports"}
         </h1>
         <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
           Submitted assessments, in submission order. Each report compares six
@@ -221,102 +224,116 @@ function RoleReports({ roleId }: { roleId: string }) {
           invitation. There is no overall score or candidate ranking.
         </p>
       </header>
-      {error ? (
-        <ReportError
-          error={error}
-          retry={() => {
-            setTitle(null);
-            setError(null);
-            setAttempt((value) => value + 1);
-          }}
-          returnTo={`/roles/${roleId}/reports`}
-        />
-      ) : !title ? (
-        <LoadingState label="Loading submitted assessments" />
-      ) : sources.length === 0 ? (
-        <EmptyState
-          title="No submitted assessments yet"
-          description="Reports become available after a candidate consents and submits an assessment for an approved role profile."
-        />
-      ) : (
-        <section
-          aria-labelledby="sources-heading"
-          className="surface overflow-hidden rounded-lg border border-slate-200 bg-white"
-        >
-          <h2
-            id="sources-heading"
-            className="border-b border-slate-200 px-4 py-4 text-base font-semibold"
-          >
-            Submitted assessments
-          </h2>
-          <ul className="record-list divide-y divide-slate-200">
-            {sources.map((source) => (
-              <li
-                key={source.assessment_id}
-                className="record-row flex flex-wrap items-center justify-between gap-x-6 gap-y-2 px-4 py-3"
+      <div
+        className="report-context-layout"
+        data-reading={selected ? "true" : undefined}
+      >
+        <div className="report-source-pane min-w-0 space-y-5">
+          {error ? (
+            <ReportError
+              error={error}
+              retry={() => {
+                setTitle(null);
+                setError(null);
+                setAttempt((value) => value + 1);
+              }}
+              returnTo={`/roles/${roleId}/reports`}
+            />
+          ) : !title ? (
+            <LoadingState label="Loading submitted assessments" />
+          ) : sources.length === 0 ? (
+            <EmptyState
+              title="No submitted assessments yet"
+              description="Reports become available after a candidate consents and submits an assessment for an approved role profile."
+            />
+          ) : (
+            <section
+              aria-labelledby="sources-heading"
+              className="report-source-list overflow-hidden rounded-lg border border-[var(--border)] bg-white"
+            >
+              <h2
+                id="sources-heading"
+                className="border-b border-[var(--border)] bg-[var(--canvas)] px-4 py-3 text-xs font-medium text-[var(--muted)]"
               >
-                <div className="min-w-0">
-                  <h3 className="break-all font-semibold text-slate-950">
-                    {source.candidate_email}
-                  </h3>
-                  <p className="mt-1 text-sm text-slate-600">
-                    Profile version {source.role_profile_version} ·{" "}
-                    {source.submitted_at
-                      ? `Submitted ${formatDate(source.submitted_at)} (UTC)`
-                      : "Submission time unavailable"}
-                  </p>
-                </div>
+                Submitted assessments
+              </h2>
+              <ul className="divide-y divide-[var(--border)]">
+                {sources.map((source) => (
+                  <li
+                    key={source.assessment_id}
+                    className="report-source-row record-row flex flex-wrap items-center justify-between gap-x-6 gap-y-3 px-4 py-4"
+                    data-selected={
+                      selected?.report.assessment_id === source.assessment_id
+                        ? "true"
+                        : undefined
+                    }
+                  >
+                    <div className="min-w-0">
+                      <h3 className="break-all text-sm font-medium text-[var(--text)]">
+                        {source.candidate_email}
+                      </h3>
+                      <p className="mt-1 text-xs leading-5 text-[var(--muted)]">
+                        Profile version {source.role_profile_version} ·{" "}
+                        {source.submitted_at
+                          ? `Submitted ${formatDate(source.submitted_at)} (UTC)`
+                          : "Submission time unavailable"}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      disabled={busy !== null}
+                      onClick={() => void open(source)}
+                      className="action-secondary min-h-11 rounded-md px-4 py-2 text-sm font-medium disabled:opacity-50"
+                      aria-label={`${source.report_id ? "View" : "Generate"} report for ${source.candidate_email}`}
+                    >
+                      {busy === source.assessment_id
+                        ? "Loading report…"
+                        : source.report_id
+                          ? "View report"
+                          : "Generate report"}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+              {hasMore ? (
                 <button
                   type="button"
                   disabled={busy !== null}
-                  onClick={() => void open(source)}
-                  className="action-secondary min-h-11 rounded-md border border-slate-300 px-4 py-2 text-sm font-semibold text-teal-900 hover:bg-slate-50 disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-teal-700"
-                  aria-label={`${source.report_id ? "View" : "Generate"} report for ${source.candidate_email}`}
+                  onClick={() => void more()}
+                  className="action-secondary m-4 min-h-11 rounded-md border border-slate-300 px-4 text-sm font-semibold disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-violet-700"
                 >
-                  {busy === source.assessment_id
-                    ? "Loading report…"
-                    : source.report_id
-                      ? "View report"
-                      : "Generate report"}
+                  {busy === "more" ? "Loading…" : "Load more assessments"}
                 </button>
-              </li>
-            ))}
-          </ul>
-          {hasMore ? (
-            <button
-              type="button"
-              disabled={busy !== null}
-              onClick={() => void more()}
-              className="action-secondary m-4 min-h-11 rounded-md border border-slate-300 px-4 text-sm font-semibold disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-teal-700"
-            >
-              {busy === "more" ? "Loading…" : "Load more assessments"}
-            </button>
+              ) : null}
+            </section>
+          )}
+          {busy && busy !== "more" ? (
+            <LoadingState label="Loading report" />
           ) : null}
-        </section>
-      )}
-      {busy && busy !== "more" ? <LoadingState label="Loading report" /> : null}
-      {actionError ? (
-        <ReportError
-          error={actionError}
-          retry={() => retryAction.current()}
-          returnTo={`/roles/${roleId}/reports`}
-        />
-      ) : null}
-      {selected ? (
-        <div className="space-y-5">
-          <Link
-            className="inline-flex min-h-11 items-center rounded font-semibold text-teal-800 underline focus-visible:ring-2 focus-visible:ring-teal-700"
-            href={`/reports/${selected.report.id}`}
-          >
-            Open saved report link
-          </Link>
-          <ReportDetail
-            key={selected.report.id}
-            report={selected.report}
-            candidateEmail={selected.email}
-          />
+          {actionError ? (
+            <ReportError
+              error={actionError}
+              retry={() => retryAction.current()}
+              returnTo={`/roles/${roleId}/reports`}
+            />
+          ) : null}
         </div>
-      ) : null}
+        {selected ? (
+          <div className="report-reading-pane min-w-0 space-y-5">
+            <Link
+              className="inline-flex min-h-11 items-center rounded text-sm font-medium text-[var(--accent)] underline focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
+              href={`/reports/${selected.report.id}`}
+            >
+              Open saved report link
+            </Link>
+            <ReportDetail
+              key={selected.report.id}
+              report={selected.report}
+              candidateEmail={selected.email}
+            />
+          </div>
+        ) : null}
+      </div>
     </main>
   );
 }

@@ -23,7 +23,7 @@ export function SignInForm({
 
   if (!localLogin && !tokenLogin) {
     return (
-      <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
+      <div className="signin-form">
         {providerError ? (
           <p role="alert" className="mb-4 text-rose-900">
             {providerError === "configuration"
@@ -32,7 +32,7 @@ export function SignInForm({
           </p>
         ) : null}
         <a
-          className="inline-block min-h-11 rounded-xl bg-teal-800 px-5 py-3 font-bold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-700 focus-visible:ring-offset-2"
+          className="action-primary flex min-h-12 w-full items-center justify-center gap-3 rounded-lg bg-[var(--text)] px-5 py-3 text-sm font-medium text-white focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--accent)]"
           href={`/api/auth/login?${new URLSearchParams({ returnTo: safeReturnTo(returnTo) })}`}
         >
           Sign in with Auth0
@@ -86,15 +86,12 @@ export function SignInForm({
   }
 
   return (
-    <form
-      className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8"
-      onSubmit={handleSubmit}
-    >
+    <form className="signin-form" onSubmit={handleSubmit}>
       {localLogin ? (
-        <label className="block text-sm font-bold text-slate-800">
+        <label className="block text-sm font-medium text-[var(--text)]">
           Synthetic local account
           <select
-            className="field-control mt-2"
+            className="field-control mt-3 min-h-12 rounded-lg"
             name="identity"
             disabled={submitting}
           >
@@ -107,7 +104,7 @@ export function SignInForm({
           </select>
         </label>
       ) : (
-        <label className="block text-sm font-bold text-slate-800">
+        <label className="block text-sm font-medium text-[var(--text)]">
           Internal access token
           <span className="mt-1 block text-xs font-normal leading-5 text-slate-500">
             Tokens are validated by the API before a session is created.
@@ -125,14 +122,14 @@ export function SignInForm({
       )}
       {error ? (
         <p
-          className="mt-4 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-900"
+          className="mt-4 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-900"
           role="alert"
         >
           {error}
         </p>
       ) : null}
       <button
-        className="mt-5 min-h-11 rounded-xl bg-teal-800 px-5 py-2.5 text-sm font-bold text-white hover:bg-teal-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-700 focus-visible:ring-offset-2"
+        className="action-primary mt-5 flex min-h-12 w-full items-center justify-center rounded-lg bg-[var(--text)] px-5 py-3 text-sm font-medium text-white transition hover:bg-[#373740] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--accent)]"
         disabled={submitting}
         type="submit"
       >

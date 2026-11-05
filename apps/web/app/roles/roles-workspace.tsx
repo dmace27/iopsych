@@ -13,6 +13,7 @@ import {
 import type { CurrentUser, Role, RoleCreateInput } from "../../lib/contracts";
 import { canEditRoles, formatDate } from "../../lib/role-ui";
 import { StatusBadge } from "../ui/status-badge";
+import { StudioIcon } from "../ui/studio-icon";
 import { EmptyState, ErrorState, LoadingState } from "../ui/workspace-states";
 
 type LoadState =
@@ -34,12 +35,34 @@ function errorMessage(error: unknown): string {
 export function RolesWorkspace() {
   const router = useRouter();
   const titleInput = useRef<HTMLInputElement>(null);
+  const searchInput = useRef<HTMLInputElement>(null);
   const createButton = useRef<HTMLButtonElement>(null);
   const [state, setState] = useState<LoadState>({ status: "loading" });
   const [showCreate, setShowCreate] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [announcement, setAnnouncement] = useState("");
+  const [query, setQuery] = useState("");
+  const [roleFilter, setRoleFilter] = useState<Role["status"] | "all">("all");
+  const [sort, setSort] = useState("newest");
+  const visibleRoles =
+    state.status === "ready"
+      ? state.roles
+          .filter(
+            (role) =>
+              (roleFilter === "all" || role.status === roleFilter) &&
+              `${role.title} ${role.department} ${role.location}`
+                .toLocaleLowerCase()
+                .includes(query.trim().toLocaleLowerCase()),
+          )
+          .sort((a, b) =>
+            sort === "title"
+              ? a.title.localeCompare(b.title)
+              : sort === "oldest"
+                ? Date.parse(a.created_at) - Date.parse(b.created_at)
+                : Date.parse(b.created_at) - Date.parse(a.created_at),
+          )
+      : [];
 
   /** Reload after an explicit retry and expose progress immediately. */
   async function load() {
@@ -100,12 +123,13 @@ export function RolesWorkspace() {
       <div aria-live="polite" className="sr-only">
         {announcement}
       </div>
-      <div className="flex flex-col justify-between gap-4 border-b border-slate-200 pb-5 sm:flex-row sm:items-center">
+      <div className="roles-page-header">
         <div>
+          <p className="workspace-eyebrow">Your workspace</p>
           <h1 className="workspace-title text-2xl font-semibold tracking-tight text-slate-900 sm:text-[28px]">
             Roles
           </h1>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
+          <p>
             Define role requirements and review evidence before human approval.
           </p>
         </div>
@@ -114,10 +138,11 @@ export function RolesWorkspace() {
             ref={createButton}
             aria-expanded={showCreate}
             aria-controls="create-role-form"
-            className="action-primary inline-flex min-h-11 items-center justify-center rounded-md bg-[var(--accent,#0f766e)] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-teal-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-700 focus-visible:ring-offset-2"
+            className="action-primary"
             onClick={() => setShowCreate((visible) => !visible)}
             type="button"
           >
+            <StudioIcon name="plus" />
             {showCreate ? "Close form" : "Create role"}
           </button>
         ) : null}
@@ -225,20 +250,68 @@ export function RolesWorkspace() {
         </section>
       ) : null}
 
-      <section aria-labelledby="role-list-title" className="mt-6">
-        <div className="mb-3 flex items-center justify-between gap-4">
-          <h2
-            className="text-base font-semibold text-slate-900"
-            id="role-list-title"
-          >
-            Organization roles
-          </h2>
-          {state.status === "ready" ? (
-            <span className="text-sm text-slate-600">
-              {state.roles.length} {state.roles.length === 1 ? "role" : "roles"}
-            </span>
-          ) : null}
-        </div>
+      <section aria-labelledby="role-list-title" className="roles-library">
+        <h2 className="sr-only" id="role-list-title">
+          Organization roles
+        </h2>
+        {state.status === "ready" ? (
+          <div className="roles-toolbar">
+            <div
+              className="roles-view-tabs"
+              role="group"
+              aria-label="Filter roles by status"
+            >
+              {(
+                [
+                  ["all", "All roles"],
+                  ["active", "Active"],
+                  ["draft", "Drafts"],
+                  ["archived", "Archived"],
+                ] as const
+              ).map(([value, label]) => (
+                <button
+                  type="button"
+                  key={value}
+                  aria-pressed={roleFilter === value}
+                  onClick={() => setRoleFilter(value)}
+                >
+                  {label}
+                  <span className="roles-tab-count" aria-hidden="true">
+                    {value === "all"
+                      ? state.roles.length
+                      : state.roles.filter((role) => role.status === value)
+                          .length}
+                  </span>
+                </button>
+              ))}
+            </div>
+            <div className="roles-toolbar-actions">
+              <label className="roles-search">
+                <span className="sr-only">Search roles</span>
+                <StudioIcon name="search" />
+                <input
+                  ref={searchInput}
+                  type="search"
+                  placeholder="Search roles…"
+                  value={query}
+                  onChange={(event) => setQuery(event.target.value)}
+                />
+              </label>
+              <label>
+                <span className="sr-only">Sort roles</span>
+                <select
+                  className="roles-sort"
+                  value={sort}
+                  onChange={(event) => setSort(event.target.value)}
+                >
+                  <option value="newest">Newest first</option>
+                  <option value="oldest">Oldest first</option>
+                  <option value="title">Title A–Z</option>
+                </select>
+              </label>
+            </div>
+          </div>
+        ) : null}
 
         {state.status === "loading" ? (
           <LoadingState label="Loading roles" />
@@ -260,42 +333,76 @@ export function RolesWorkspace() {
             title="No roles yet"
           />
         ) : null}
-        {state.status === "ready" && state.roles.length > 0 ? (
-          <ul className="record-list surface divide-y divide-slate-200 overflow-hidden rounded-lg border border-slate-200 bg-white">
-            {state.roles.map((role) => (
-              <li key={role.id}>
-                <Link
-                  className="record-row group grid min-h-11 gap-3 px-4 py-4 transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-teal-700 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center"
-                  href={`/roles/${role.id}`}
-                >
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="min-w-0">
-                      <h3 className="break-words text-base font-semibold text-slate-900 group-hover:text-teal-900">
-                        {role.title}
-                      </h3>
-                      <p className="mt-1 break-words text-sm text-slate-600">
-                        {role.department} · {role.location}
-                      </p>
+        {state.status === "ready" &&
+        state.roles.length > 0 &&
+        visibleRoles.length === 0 ? (
+          <EmptyState
+            title="No matching roles"
+            description="Try a different title, department, location, or status."
+          >
+            <button
+              className="action-secondary"
+              type="button"
+              onClick={() => {
+                setQuery("");
+                setRoleFilter("all");
+                searchInput.current?.focus();
+              }}
+            >
+              Clear filters
+            </button>
+          </EmptyState>
+        ) : null}
+        {state.status === "ready" && visibleRoles.length > 0 ? (
+          <div className="roles-table">
+            <div className="roles-table-heading" aria-hidden="true">
+              <span>Role</span>
+              <span>Status</span>
+              <span>Created</span>
+              <span />
+            </div>
+            <ul className="record-list divide-y divide-slate-200 bg-white">
+              {visibleRoles.map((role) => (
+                <li key={role.id}>
+                  <Link className="role-record" href={`/roles/${role.id}`}>
+                    <div className="role-record-title">
+                      <span className="role-record-mark" aria-hidden="true">
+                        <StudioIcon name="roles" />
+                      </span>
+                      <div className="min-w-0">
+                        <h3 className="break-words text-base font-semibold text-slate-900 group-hover:text-teal-900">
+                          {role.title}
+                        </h3>
+                        <p className="mt-1 break-words text-sm text-slate-600">
+                          {role.department} · {role.location}
+                        </p>
+                      </div>
                     </div>
-                    <StatusBadge status={role.status} />
-                  </div>
-                  <div className="flex items-center gap-4 text-xs text-slate-600">
-                    <span>Created {formatDate(role.created_at)}</span>
-                    <span
-                      aria-hidden="true"
-                      className="ml-auto text-lg text-teal-700"
-                    >
-                      →
+                    <div>
+                      <StatusBadge status={role.status} />
+                    </div>
+                    <span className="role-record-date">
+                      Created {formatDate(role.created_at)}
                     </span>
-                  </div>
-                </Link>
-              </li>
-            ))}
-          </ul>
+                    <span aria-hidden="true" className="role-record-arrow">
+                      <StudioIcon name="arrow" />
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
+        {state.status === "ready" && state.roles.length > 0 ? (
+          <p className="roles-list-caption" aria-live="polite">
+            {visibleRoles.length} of {state.roles.length}{" "}
+            {state.roles.length === 1 ? "role" : "roles"}
+          </p>
         ) : null}
       </section>
 
-      <aside className="mt-6 border-t border-slate-200 py-4 text-slate-700">
+      <aside className="roles-principle">
+        <StudioIcon name="privacy" />
         <div>
           <p className="text-sm font-semibold">
             Human judgment stays in the loop.

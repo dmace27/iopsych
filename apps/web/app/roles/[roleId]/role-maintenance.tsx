@@ -16,7 +16,7 @@ const fields = [
   ["job_description", "Job description", 100_000],
 ] as const;
 const buttonClass =
-  "min-h-11 rounded-lg border border-slate-400 px-4 py-2 font-bold focus-visible:ring-2 focus-visible:ring-teal-700 disabled:opacity-50";
+  "action-secondary min-h-11 rounded-md border border-[var(--border)] px-3 py-2 text-sm font-medium focus-visible:ring-2 focus-visible:ring-[var(--accent)] disabled:opacity-50";
 
 export function RoleMaintenance({
   role,
@@ -120,31 +120,42 @@ export function RoleMaintenance({
   return (
     <section
       aria-labelledby="role-maintenance-title"
-      className="mt-6 space-y-4 rounded-2xl border border-slate-200 bg-white p-6"
+      className="profile-maintenance mt-5 grid gap-3 border-b border-[var(--border)] pb-5 md:grid-cols-[minmax(0,1fr)_auto]"
     >
-      <h2
-        id="role-maintenance-title"
-        ref={heading}
-        tabIndex={-1}
-        className="text-xl font-bold"
+      <div className="profile-maintenance-copy">
+        <h2
+          id="role-maintenance-title"
+          ref={heading}
+          tabIndex={-1}
+          className="text-sm font-medium text-[var(--text)]"
+        >
+          Role maintenance
+        </h2>
+        <p className="mt-1 max-w-xl text-xs leading-5 text-[var(--muted)]">
+          Archiving preserves profile and audit history and blocks new writes.
+          It does not delete candidate data.
+        </p>
+      </div>
+      <p
+        role="status"
+        className={
+          notice ? "text-sm text-[var(--muted)] md:col-span-2" : "sr-only"
+        }
       >
-        Role maintenance
-      </h2>
-      <p>
-        Archiving preserves profile and audit history and blocks new writes. It
-        does not delete candidate data.
+        {notice}
       </p>
-      <p role="status">{notice}</p>
       {role.status === "archived" ? (
-        <p>This archived role is read-only.</p>
+        <p className="text-sm text-[var(--muted)]">
+          This archived role is read-only.
+        </p>
       ) : !writable ? (
-        <p>
+        <p className="text-sm text-[var(--muted)]">
           Only administrators and recruiters can edit details or archive this
           role.
         </p>
       ) : (
         <>
-          <div className="flex gap-3">
+          <div className="flex flex-wrap gap-2 md:col-start-2 md:row-start-1 md:self-center">
             <button
               ref={editButton}
               className={buttonClass}
@@ -177,15 +188,18 @@ export function RoleMaintenance({
             </button>
           </div>
           {editing ? (
-            <form onSubmit={save} className="space-y-4">
-              <p>
+            <form
+              onSubmit={save}
+              className="mt-3 space-y-4 border-t border-[var(--border)] pt-5 md:col-span-2"
+            >
+              <p className="text-sm text-[var(--muted)]">
                 Changes update role metadata only. Existing profile versions and
                 approvals remain unchanged.
               </p>
               <fieldset disabled={busy} className="space-y-4">
                 <legend className="sr-only">Role details</legend>
                 {fields.map(([key, label, limit]) => (
-                  <label key={key} className="block font-bold">
+                  <label key={key} className="block text-sm font-medium">
                     {label}
                     <span className="block text-sm font-normal">
                       Required; up to {limit.toLocaleString()} characters.
@@ -240,7 +254,7 @@ export function RoleMaintenance({
             ref={dialog}
             aria-labelledby="archive-role-title"
             aria-describedby="archive-role-description"
-            className="m-auto max-w-lg space-y-4 rounded-2xl p-6 backdrop:bg-black/40"
+            className="m-auto max-w-lg space-y-4 rounded-xl border border-[var(--border)] p-6 backdrop:bg-black/40"
             onCancel={(event) => {
               if (inFlight.current) event.preventDefault();
               else setConfirming(false);
@@ -249,7 +263,7 @@ export function RoleMaintenance({
               if (!inFlight.current) archiveButton.current?.focus();
             }}
           >
-            <h3 id="archive-role-title" className="text-xl font-bold">
+            <h3 id="archive-role-title" className="text-xl font-medium">
               Archive {role.title}?
             </h3>
             <p id="archive-role-description">

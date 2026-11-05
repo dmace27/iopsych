@@ -12,8 +12,7 @@ import type {
 } from "../../../../lib/invitation-contracts";
 import { formatDate } from "../../../../lib/role-ui";
 
-const button =
-  "action-secondary min-h-11 rounded-md border border-slate-300 px-4 py-2 text-sm font-semibold disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-teal-700";
+const button = "action-secondary disabled:opacity-50";
 const guidance: Record<ProviderInvitationDelivery["status"], string> = {
   queued: "Queued for a provider attempt. Receipt is not confirmed.",
   retrying:
@@ -129,7 +128,7 @@ export function ProviderDelivery({
   return (
     <section
       aria-label={`Provider delivery for ${invitation.email}, invitation ${invitation.id}`}
-      className="space-y-2 text-sm"
+      className="invite-provider flex flex-wrap items-start gap-2 border-t border-[var(--border)] pt-3 text-sm"
     >
       <button
         className={button}
@@ -139,7 +138,7 @@ export function ProviderDelivery({
         Check provider delivery
       </button>
       {delivery ? (
-        <div>
+        <div className="order-last w-full space-y-1 rounded-md bg-[var(--canvas)] p-3 text-xs leading-6 text-[var(--muted)]">
           <p>
             Provider delivery:{" "}
             <strong>{delivery.status.replaceAll("_", " ")}</strong>
@@ -157,7 +156,11 @@ export function ProviderDelivery({
           ) : null}
         </div>
       ) : null}
-      {message ? <p role="status">{message}</p> : null}
+      {message ? (
+        <p role="status" className="w-full text-sm">
+          {message}
+        </p>
+      ) : null}
       {eligible || uncertain ? (
         <button
           className={button}
